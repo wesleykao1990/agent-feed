@@ -1,0 +1,32 @@
+{
+  "protocol_version": "0.1",
+  "run_id": "run_rewards_monitor_20260817_001",
+  "idempotency_key": "idem_complete_rewards_monitor_001",
+  "status": "completed",
+  "completed_at": "2026-08-17T09:06:00+09:00",
+  "actual_scope": {
+    "source_ids": [
+      "jp.paypay.example"
+    ],
+    "subjects": [
+      "PayPay"
+    ],
+    "queries": [
+      "PayPay reward program official change"
+    ],
+    "metadata": {
+      "checked": true
+    }
+  },
+  "stats": {
+    "sources_attempted": 1,
+    "sources_succeeded": 1,
+    "findings_submitted": 1,
+    "evidence_submitted": 1,
+    "batches_submitted": 1
+  },
+  "errors": [],
+  "metadata": {
+    "synthetic": true
+  }
+}

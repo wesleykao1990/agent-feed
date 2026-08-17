@@ -1,0 +1,60 @@
+{
+  "generator": "scripts/generate_protocol_types.py",
+  "protocol_version": "0.1",
+  "schemas": [
+    {
+      "file": "begin-run.schema.json",
+      "id": "https://agent-feed.dev/schemas/begin-run.schema.json",
+      "typescript_root": "BeginRunRequest",
+      "python_root": "BeginRunRequest"
+    },
+    {
+      "file": "complete-run.schema.json",
+      "id": "https://agent-feed.dev/schemas/complete-run.schema.json",
+      "typescript_root": "CompleteRunRequest",
+      "python_root": "CompleteRunRequest"
+    },
+    {
+      "file": "delivery-event.schema.json",
+      "id": "https://agent-feed.dev/schemas/delivery-event.schema.json",
+      "typescript_root": "DeliveryEvent",
+      "python_root": "DeliveryEvent"
+    },
+    {
+      "file": "evidence.schema.json",
+      "id": "https://agent-feed.dev/schemas/evidence.schema.json",
+      "typescript_root": "SubmittedEvidence",
+      "python_root": "SubmittedEvidence"
+    },
+    {
+      "file": "finding.schema.json",
+      "id": "https://agent-feed.dev/schemas/finding.schema.json",
+      "typescript_root": "Finding",
+      "python_root": "Finding"
+    },
+    {
+      "file": "run-bundle.schema.json",
+      "id": "https://agent-feed.dev/schemas/run-bundle.schema.json",
+      "typescript_root": "RunBundle",
+      "python_root": "RunBundle"
+    },
+    {
+      "file": "run-envelope.schema.json",
+      "id": "https://agent-feed.dev/schemas/run-envelope.schema.json",
+      "typescript_root": "RunEnvelope",
+      "python_root": "RunEnvelope"
+    },
+    {
+      "file": "stream-expectation.schema.json",
+      "id": "https://agent-feed.dev/schemas/stream-expectation.schema.json",
+      "typescript_root": "StreamExpectation",
+      "python_root": "StreamExpectation"
+    },
+    {
+      "file": "submit-batch.schema.json",
+      "id": "https://agent-feed.dev/schemas/submit-batch.schema.json",
+      "typescript_root": "SubmitBatchRequest",
+      "python_root": "SubmitBatchRequest"
+    }
+  ]
+}

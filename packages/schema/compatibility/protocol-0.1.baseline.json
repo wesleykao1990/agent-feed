@@ -1,0 +1,1117 @@
+{
+  "protocol_version": "0.1",
+  "schemas": {
+    "begin-run.schema.json": {
+      "additionalProperties": false,
+      "properties": {
+        "expected_scope": {
+          "additionalProperties": false,
+          "properties": {
+            "metadata": {
+              "type": "object"
+            },
+            "queries": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "source_ids": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            },
+            "subjects": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "metadata",
+            "queries",
+            "source_ids",
+            "subjects"
+          ],
+          "type": "object"
+        },
+        "idempotency_key": {
+          "minLength": 8,
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object"
+        },
+        "parent_run_id": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "producer": {
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "producer_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "automation",
+                "chatgpt",
+                "claude",
+                "codex",
+                "custom_agent",
+                "human"
+              ],
+              "type": "string"
+            },
+            "version": {
+              "type": [
+                "null",
+                "string"
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "producer_id",
+            "type",
+            "version"
+          ],
+          "type": "object"
+        },
+        "protocol_version": {
+          "const": "0.1"
+        },
+        "started_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "stream_id": {
+          "pattern": "^[a-z0-9][a-z0-9._-]+$",
+          "type": "string"
+        },
+        "task": {
+          "additionalProperties": false,
+          "properties": {
+            "definition_id": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "definition_version": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "task_type": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "definition_id",
+            "definition_version",
+            "task_type"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "expected_scope",
+        "idempotency_key",
+        "metadata",
+        "parent_run_id",
+        "producer",
+        "protocol_version",
+        "started_at",
+        "stream_id",
+        "task"
+      ],
+      "type": "object"
+    },
+    "complete-run.schema.json": {
+      "additionalProperties": false,
+      "properties": {
+        "actual_scope": {
+          "additionalProperties": false,
+          "properties": {
+            "metadata": {
+              "type": "object"
+            },
+            "queries": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "source_ids": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            },
+            "subjects": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "metadata",
+            "queries",
+            "source_ids",
+            "subjects"
+          ],
+          "type": "object"
+        },
+        "completed_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "errors": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
+              },
+              "source_id": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              }
+            },
+            "required": [
+              "code",
+              "message",
+              "retryable",
+              "source_id"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "idempotency_key": {
+          "minLength": 8,
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object"
+        },
+        "protocol_version": {
+          "const": "0.1"
+        },
+        "run_id": {
+          "minLength": 8,
+          "type": "string"
+        },
+        "stats": {
+          "additionalProperties": false,
+          "properties": {
+            "batches_submitted": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "evidence_submitted": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "findings_submitted": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sources_attempted": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sources_succeeded": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "batches_submitted",
+            "evidence_submitted",
+            "findings_submitted",
+            "sources_attempted",
+            "sources_succeeded"
+          ],
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "cancelled",
+            "completed",
+            "failed",
+            "partial"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "actual_scope",
+        "completed_at",
+        "errors",
+        "idempotency_key",
+        "metadata",
+        "protocol_version",
+        "run_id",
+        "stats",
+        "status"
+      ],
+      "type": "object"
+    },
+    "delivery-event.schema.json": {
+      "additionalProperties": false,
+      "properties": {
+        "attempt": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "event_id": {
+          "minLength": 8,
+          "type": "string"
+        },
+        "event_type": {
+          "enum": [
+            "finding.submitted",
+            "run.completed",
+            "run.failed",
+            "run.partial",
+            "run.started"
+          ],
+          "type": "string"
+        },
+        "finding_id": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "payload": {
+          "type": "object"
+        },
+        "protocol_version": {
+          "const": "0.1"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "stream_id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "attempt",
+        "event_id",
+        "event_type",
+        "finding_id",
+        "occurred_at",
+        "payload",
+        "protocol_version",
+        "run_id",
+        "stream_id"
+      ],
+      "type": "object"
+    },
+    "evidence.schema.json": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact": {
+          "additionalProperties": false,
+          "properties": {
+            "media_type": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "size_bytes": {
+              "minimum": 0,
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "uri": {
+              "format": "uri",
+              "type": [
+                "null",
+                "string"
+              ]
+            }
+          },
+          "required": [
+            "media_type",
+            "size_bytes",
+            "uri"
+          ],
+          "type": "object"
+        },
+        "captured_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "content_hash": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "evidence_id": {
+          "minLength": 3,
+          "type": "string"
+        },
+        "excerpt": {
+          "maxLength": 5000,
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "handling": {
+          "additionalProperties": false,
+          "properties": {
+            "contains_personal_data": {
+              "type": "boolean"
+            },
+            "contains_secrets": {
+              "type": "boolean"
+            },
+            "redistribution_restricted": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "contains_personal_data",
+            "contains_secrets",
+            "redistribution_restricted"
+          ],
+          "type": "object"
+        },
+        "kind": {
+          "enum": [
+            "api",
+            "database",
+            "document",
+            "email",
+            "file",
+            "human_observation",
+            "other",
+            "social_post",
+            "web"
+          ],
+          "type": "string"
+        },
+        "locator": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "page": {
+                  "minimum": 1,
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "type": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "page",
+                "type",
+                "value"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "metadata": {
+          "type": "object"
+        },
+        "published_at": {
+          "format": "date-time",
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "source": {
+          "additionalProperties": false,
+          "properties": {
+            "publisher": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "source_id": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "uri": {
+              "format": "uri",
+              "type": [
+                "null",
+                "string"
+              ]
+            }
+          },
+          "required": [
+            "publisher",
+            "source_id",
+            "title",
+            "uri"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "artifact",
+        "captured_at",
+        "content_hash",
+        "evidence_id",
+        "excerpt",
+        "handling",
+        "kind",
+        "locator",
+        "metadata",
+        "published_at",
+        "source"
+      ],
+      "type": "object"
+    },
+    "finding.schema.json": {
+      "additionalProperties": false,
+      "properties": {
+        "assessment": {
+          "additionalProperties": false,
+          "properties": {
+            "agent_confidence": {
+              "maximum": 1,
+              "minimum": 0,
+              "type": [
+                "null",
+                "number"
+              ]
+            },
+            "evidence_completeness": {
+              "enum": [
+                "complete",
+                "lead_only",
+                "partial"
+              ],
+              "type": "string"
+            },
+            "novelty": {
+              "enum": [
+                "known",
+                "new",
+                "uncertain"
+              ],
+              "type": "string"
+            },
+            "source_authority_claim": {
+              "enum": [
+                "official_secondary",
+                "primary",
+                "third_party",
+                "unknown"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "agent_confidence",
+            "evidence_completeness",
+            "novelty",
+            "source_authority_claim"
+          ],
+          "type": "object"
+        },
+        "attributes": {
+          "type": "object"
+        },
+        "effective_time": {
+          "additionalProperties": false,
+          "properties": {
+            "effective_from": {
+              "format": "date-time",
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "effective_to": {
+              "format": "date-time",
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "occurred_at": {
+              "format": "date-time",
+              "type": [
+                "null",
+                "string"
+              ]
+            }
+          },
+          "required": [
+            "effective_from",
+            "effective_to",
+            "occurred_at"
+          ],
+          "type": "object"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "finding_id": {
+          "minLength": 3,
+          "type": "string"
+        },
+        "finding_type": {
+          "pattern": "^[a-z0-9][a-z0-9._-]+$",
+          "type": "string"
+        },
+        "producer_dedupe_key": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "routing_tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "security_flags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "subjects": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "name": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "type": {
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "type"
+            ],
+            "type": "object"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "summary": {
+          "maxLength": 5000,
+          "minLength": 3,
+          "type": "string"
+        }
+      },
+      "required": [
+        "assessment",
+        "attributes",
+        "effective_time",
+        "evidence_refs",
+        "finding_id",
+        "finding_type",
+        "producer_dedupe_key",
+        "routing_tags",
+        "security_flags",
+        "subjects",
+        "summary",
+        "title"
+      ],
+      "type": "object"
+    },
+    "run-bundle.schema.json": {
+      "additionalProperties": false,
+      "properties": {
+        "batches": {
+          "items": {
+            "$ref": "submit-batch.schema.json"
+          },
+          "type": "array"
+        },
+        "begin": {
+          "$ref": "begin-run.schema.json"
+        },
+        "complete": {
+          "$ref": "complete-run.schema.json"
+        },
+        "protocol_version": {
+          "const": "0.1"
+        },
+        "run_id": {
+          "minLength": 8,
+          "type": "string"
+        }
+      },
+      "required": [
+        "batches",
+        "begin",
+        "complete",
+        "protocol_version",
+        "run_id"
+      ],
+      "type": "object"
+    },
+    "run-envelope.schema.json": {
+      "$defs": {
+        "producer": {
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "producer_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "automation",
+                "chatgpt",
+                "claude",
+                "codex",
+                "custom_agent",
+                "human"
+              ],
+              "type": "string"
+            },
+            "version": {
+              "type": [
+                "null",
+                "string"
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "producer_id",
+            "type",
+            "version"
+          ],
+          "type": "object"
+        },
+        "scope": {
+          "additionalProperties": false,
+          "properties": {
+            "metadata": {
+              "type": "object"
+            },
+            "queries": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "source_ids": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            },
+            "subjects": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "metadata",
+            "queries",
+            "source_ids",
+            "subjects"
+          ],
+          "type": "object"
+        },
+        "stats": {
+          "additionalProperties": false,
+          "properties": {
+            "batches_submitted": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "evidence_submitted": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "findings_submitted": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sources_attempted": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "sources_succeeded": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "batches_submitted",
+            "evidence_submitted",
+            "findings_submitted",
+            "sources_attempted",
+            "sources_succeeded"
+          ],
+          "type": "object"
+        },
+        "task": {
+          "additionalProperties": false,
+          "properties": {
+            "definition_id": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "definition_version": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "task_type": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "definition_id",
+            "definition_version",
+            "task_type"
+          ],
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "actual_scope": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/scope"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "completed_at": {
+          "format": "date-time",
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "error_summary": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "expected_scope": {
+          "$ref": "#/$defs/scope"
+        },
+        "metadata": {
+          "type": "object"
+        },
+        "parent_run_id": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "producer": {
+          "$ref": "#/$defs/producer"
+        },
+        "protocol_version": {
+          "const": "0.1"
+        },
+        "run_id": {
+          "minLength": 8,
+          "type": "string"
+        },
+        "started_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "stats": {
+          "$ref": "#/$defs/stats"
+        },
+        "status": {
+          "enum": [
+            "cancelled",
+            "completed",
+            "failed",
+            "partial",
+            "running"
+          ],
+          "type": "string"
+        },
+        "stream_id": {
+          "pattern": "^[a-z0-9][a-z0-9._-]+$",
+          "type": "string"
+        },
+        "task": {
+          "$ref": "#/$defs/task"
+        }
+      },
+      "required": [
+        "actual_scope",
+        "completed_at",
+        "error_summary",
+        "expected_scope",
+        "metadata",
+        "parent_run_id",
+        "producer",
+        "protocol_version",
+        "run_id",
+        "started_at",
+        "stats",
+        "status",
+        "stream_id",
+        "task"
+      ],
+      "type": "object"
+    },
+    "stream-expectation.schema.json": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "evaluated_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "expected_cadence_seconds": {
+          "minimum": 3600,
+          "type": "integer"
+        },
+        "expected_scope": {
+          "additionalProperties": false,
+          "properties": {
+            "source_ids": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            },
+            "subjects": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "source_ids",
+            "subjects"
+          ],
+          "type": "object"
+        },
+        "grace_seconds": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "last_terminal_run_at": {
+          "format": "date-time",
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "liveness_status": {
+          "enum": [
+            "degraded",
+            "disabled",
+            "due",
+            "healthy",
+            "never_seen",
+            "overdue"
+          ],
+          "type": "string"
+        },
+        "next_due_at": {
+          "format": "date-time",
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "notes": {
+          "type": "string"
+        },
+        "owner": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "stream_id": {
+          "pattern": "^[a-z0-9][a-z0-9._-]+$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "enabled",
+        "evaluated_at",
+        "expected_cadence_seconds",
+        "expected_scope",
+        "grace_seconds",
+        "last_terminal_run_at",
+        "liveness_status",
+        "next_due_at",
+        "notes",
+        "owner",
+        "stream_id"
+      ],
+      "type": "object"
+    },
+    "submit-batch.schema.json": {
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "properties": {
+            "findings": {
+              "minItems": 1
+            }
+          }
+        },
+        {
+          "properties": {
+            "evidence": {
+              "minItems": 1
+            }
+          }
+        }
+      ],
+      "properties": {
+        "batch_id": {
+          "minLength": 3,
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "evidence.schema.json"
+          },
+          "maxItems": 500,
+          "type": "array"
+        },
+        "findings": {
+          "items": {
+            "$ref": "finding.schema.json"
+          },
+          "maxItems": 100,
+          "type": "array"
+        },
+        "idempotency_key": {
+          "minLength": 8,
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object"
+        },
+        "protocol_version": {
+          "const": "0.1"
+        },
+        "run_id": {
+          "minLength": 8,
+          "type": "string"
+        },
+        "sequence_number": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "submitted_at": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "batch_id",
+        "evidence",
+        "findings",
+        "idempotency_key",
+        "metadata",
+        "protocol_version",
+        "run_id",
+        "sequence_number",
+        "submitted_at"
+      ],
+      "type": "object"
+    }
+  }
+}

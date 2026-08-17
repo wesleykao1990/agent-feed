@@ -1,0 +1,158 @@
+{
+  "protocol_version": "0.1",
+  "run_id": "run_rewards_monitor_20260817_001",
+  "begin": {
+    "protocol_version": "0.1",
+    "idempotency_key": "idem_rewards_monitor_20260817_001",
+    "stream_id": "rewards-optimizer.source-monitor",
+    "producer": {
+      "producer_id": "openai-monitor-jp",
+      "type": "custom_agent",
+      "name": "Japan Rewards Semantic Monitor",
+      "version": "0.1.0"
+    },
+    "task": {
+      "task_type": "semantic_change_monitor",
+      "definition_id": "jro-eight-source-pilot",
+      "definition_version": "0.1"
+    },
+    "expected_scope": {
+      "source_ids": [
+        "jp.paypay.example"
+      ],
+      "subjects": [
+        "PayPay"
+      ],
+      "queries": [
+        "PayPay reward program official change"
+      ],
+      "metadata": {
+        "cadence": "daily"
+      }
+    },
+    "started_at": "2026-08-17T09:00:00+09:00",
+    "parent_run_id": null,
+    "metadata": {
+      "environment": "production-monitor"
+    }
+  },
+  "batches": [
+    {
+      "protocol_version": "0.1",
+      "run_id": "run_rewards_monitor_20260817_001",
+      "batch_id": "batch_001",
+      "idempotency_key": "idem_batch_rewards_monitor_001",
+      "sequence_number": 1,
+      "submitted_at": "2026-08-17T09:05:00+09:00",
+      "findings": [
+        {
+          "finding_id": "finding_paypay_route_001",
+          "finding_type": "rewards.program_change",
+          "title": "Synthetic payment funding-route change",
+          "summary": "Synthetic example: a payment program appears to announce a future funding-route change.",
+          "subjects": [
+            {
+              "type": "payment_program",
+              "id": "paypay",
+              "name": "PayPay"
+            }
+          ],
+          "effective_time": {
+            "occurred_at": "2026-08-17T08:00:00+09:00",
+            "effective_from": "2026-09-01T00:00:00+09:00",
+            "effective_to": null
+          },
+          "assessment": {
+            "novelty": "new",
+            "evidence_completeness": "partial",
+            "agent_confidence": 0.92,
+            "source_authority_claim": "primary"
+          },
+          "evidence_refs": [
+            "evidence_paypay_001"
+          ],
+          "producer_dedupe_key": "paypay|funding_route|2026-09-01",
+          "routing_tags": [
+            "rewards-optimizer",
+            "japan",
+            "funding-route"
+          ],
+          "attributes": {
+            "change_kind": "funding_route",
+            "canonical_source_capture_required": true
+          },
+          "security_flags": []
+        }
+      ],
+      "evidence": [
+        {
+          "evidence_id": "evidence_paypay_001",
+          "kind": "web",
+          "source": {
+            "uri": "https://example.com/official-change",
+            "title": "Illustrative official change notice",
+            "publisher": "Illustrative Publisher",
+            "source_id": "jp.paypay.example"
+          },
+          "captured_at": "2026-08-17T09:04:00+09:00",
+          "published_at": "2026-08-17T08:00:00+09:00",
+          "locator": {
+            "type": "heading",
+            "value": "Change details",
+            "page": null
+          },
+          "excerpt": "Synthetic example only: a payment-program route is changing.",
+          "content_hash": null,
+          "artifact": {
+            "uri": null,
+            "media_type": "text/html",
+            "size_bytes": null
+          },
+          "handling": {
+            "contains_personal_data": false,
+            "contains_secrets": false,
+            "redistribution_restricted": false
+          },
+          "metadata": {
+            "synthetic": true
+          }
+        }
+      ],
+      "metadata": {
+        "synthetic": true
+      }
+    }
+  ],
+  "complete": {
+    "protocol_version": "0.1",
+    "run_id": "run_rewards_monitor_20260817_001",
+    "idempotency_key": "idem_complete_rewards_monitor_001",
+    "status": "completed",
+    "completed_at": "2026-08-17T09:06:00+09:00",
+    "actual_scope": {
+      "source_ids": [
+        "jp.paypay.example"
+      ],
+      "subjects": [
+        "PayPay"
+      ],
+      "queries": [
+        "PayPay reward program official change"
+      ],
+      "metadata": {
+        "checked": true
+      }
+    },
+    "stats": {
+      "sources_attempted": 1,
+      "sources_succeeded": 1,
+      "findings_submitted": 1,
+      "evidence_submitted": 1,
+      "batches_submitted": 1
+    },
+    "errors": [],
+    "metadata": {
+      "synthetic": true
+    }
+  }
+}

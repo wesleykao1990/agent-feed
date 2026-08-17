@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-feed.dev/schemas/run-bundle.schema.json",
+  "title": "Portable Agent Feed Run Bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "run_id",
+    "begin",
+    "batches",
+    "complete"
+  ],
+  "properties": {
+    "protocol_version": {
+      "const": "0.1"
+    },
+    "begin": {
+      "$ref": "begin-run.schema.json"
+    },
+    "batches": {
+      "type": "array",
+      "items": {
+        "$ref": "submit-batch.schema.json"
+      }
+    },
+    "complete": {
+      "$ref": "complete-run.schema.json"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 8
+    }
+  }
+}
