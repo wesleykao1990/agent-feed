@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-feed.dev/schemas/submit-batch.schema.json",
+  "title": "Submit Batch Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "run_id",
+    "batch_id",
+    "idempotency_key",
+    "sequence_number",
+    "submitted_at",
+    "findings",
+    "evidence",
+    "metadata"
+  ],
+  "properties": {
+    "protocol_version": {
+      "const": "0.1"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 8
+    },
+    "batch_id": {
+      "type": "string",
+      "minLength": 3
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 8
+    },
+    "sequence_number": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "submitted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "findings": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "$ref": "finding.schema.json"
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "maxItems": 500,
+      "items": {
+        "$ref": "evidence.schema.json"
+      }
+    },
+    "metadata": {
+      "type": "object"
+    }
+  },
+  "anyOf": [
+    {
+      "properties": {
+        "findings": {
+          "minItems": 1
+        }
+      }
+    },
+    {
+      "properties": {
+        "evidence": {
+          "minItems": 1
+        }
+      }
+    }
+  ]
+}

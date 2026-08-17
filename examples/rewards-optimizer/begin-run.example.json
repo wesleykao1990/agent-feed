@@ -1,0 +1,35 @@
+{
+  "protocol_version": "0.1",
+  "idempotency_key": "idem_rewards_monitor_20260817_001",
+  "stream_id": "rewards-optimizer.source-monitor",
+  "producer": {
+    "producer_id": "openai-monitor-jp",
+    "type": "custom_agent",
+    "name": "Japan Rewards Semantic Monitor",
+    "version": "0.1.0"
+  },
+  "task": {
+    "task_type": "semantic_change_monitor",
+    "definition_id": "jro-eight-source-pilot",
+    "definition_version": "0.1"
+  },
+  "expected_scope": {
+    "source_ids": [
+      "jp.paypay.example"
+    ],
+    "subjects": [
+      "PayPay"
+    ],
+    "queries": [
+      "PayPay reward program official change"
+    ],
+    "metadata": {
+      "cadence": "daily"
+    }
+  },
+  "started_at": "2026-08-17T09:00:00+09:00",
+  "parent_run_id": null,
+  "metadata": {
+    "environment": "production-monitor"
+  }
+}

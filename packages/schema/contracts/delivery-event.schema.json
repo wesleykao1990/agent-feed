@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-feed.dev/schemas/delivery-event.schema.json",
+  "title": "Agent Feed Delivery Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "event_id",
+    "event_type",
+    "stream_id",
+    "run_id",
+    "finding_id",
+    "occurred_at",
+    "attempt",
+    "payload"
+  ],
+  "properties": {
+    "protocol_version": {
+      "const": "0.1"
+    },
+    "event_id": {
+      "type": "string",
+      "minLength": 8
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "run.started",
+        "finding.submitted",
+        "run.completed",
+        "run.partial",
+        "run.failed"
+      ]
+    },
+    "stream_id": {
+      "type": "string"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "finding_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "payload": {
+      "type": "object"
+    }
+  }
+}

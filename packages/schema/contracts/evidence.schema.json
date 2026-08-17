@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-feed.dev/schemas/evidence.schema.json",
+  "title": "Agent Feed Submitted Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evidence_id",
+    "kind",
+    "source",
+    "captured_at",
+    "published_at",
+    "locator",
+    "excerpt",
+    "content_hash",
+    "artifact",
+    "handling",
+    "metadata"
+  ],
+  "properties": {
+    "evidence_id": {
+      "type": "string",
+      "minLength": 3
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "web",
+        "document",
+        "email",
+        "api",
+        "social_post",
+        "database",
+        "human_observation",
+        "file",
+        "other"
+      ]
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "uri",
+        "title",
+        "publisher",
+        "source_id"
+      ],
+      "properties": {
+        "uri": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uri"
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "publisher": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "captured_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "published_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "locator": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "value",
+            "page"
+          ],
+          "properties": {
+            "type": {
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            },
+            "page": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1
+            }
+          }
+        }
+      ]
+    },
+    "excerpt": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 5000
+    },
+    "content_hash": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "uri",
+        "media_type",
+        "size_bytes"
+      ],
+      "properties": {
+        "uri": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uri"
+        },
+        "media_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "size_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        }
+      }
+    },
+    "handling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contains_personal_data",
+        "contains_secrets",
+        "redistribution_restricted"
+      ],
+      "properties": {
+        "contains_personal_data": {
+          "type": "boolean"
+        },
+        "contains_secrets": {
+          "type": "boolean"
+        },
+        "redistribution_restricted": {
+          "type": "boolean"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object"
+    }
+  }
+}

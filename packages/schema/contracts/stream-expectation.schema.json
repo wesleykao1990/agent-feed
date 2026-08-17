@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-feed.dev/schemas/stream-expectation.schema.json",
+  "title": "Agent Feed Stream Expectation and Liveness State",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "stream_id",
+    "expected_cadence_seconds",
+    "grace_seconds",
+    "enabled",
+    "expected_scope",
+    "last_terminal_run_at",
+    "next_due_at",
+    "evaluated_at",
+    "liveness_status",
+    "owner",
+    "notes"
+  ],
+  "properties": {
+    "stream_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]+$"
+    },
+    "expected_cadence_seconds": {
+      "type": "integer",
+      "minimum": 3600
+    },
+    "grace_seconds": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "enabled": {
+      "type": "boolean"
+    },
+    "expected_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_ids",
+        "subjects"
+      ],
+      "properties": {
+        "source_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "subjects": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "last_terminal_run_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "next_due_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "evaluated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "liveness_status": {
+      "type": "string",
+      "enum": [
+        "healthy",
+        "due",
+        "overdue",
+        "degraded",
+        "disabled",
+        "never_seen"
+      ]
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1
+    },
+    "notes": {
+      "type": "string"
+    }
+  }
+}

@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-feed.dev/schemas/begin-run.schema.json",
+  "title": "Begin Run Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "idempotency_key",
+    "stream_id",
+    "producer",
+    "task",
+    "expected_scope",
+    "started_at",
+    "parent_run_id",
+    "metadata"
+  ],
+  "properties": {
+    "protocol_version": {
+      "const": "0.1"
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 8
+    },
+    "stream_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]+$"
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "producer_id",
+        "type",
+        "name",
+        "version"
+      ],
+      "properties": {
+        "producer_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "chatgpt",
+            "claude",
+            "codex",
+            "custom_agent",
+            "human",
+            "automation"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_type",
+        "definition_id",
+        "definition_version"
+      ],
+      "properties": {
+        "task_type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "definition_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "definition_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "expected_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_ids",
+        "subjects",
+        "queries",
+        "metadata"
+      ],
+      "properties": {
+        "source_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "subjects": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "queries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "metadata": {
+          "type": "object"
+        }
+      }
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "parent_run_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "metadata": {
+      "type": "object"
+    }
+  }
+}

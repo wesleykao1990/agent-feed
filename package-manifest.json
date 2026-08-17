@@ -1,0 +1,30 @@
+{
+  "package_name": "agent-feed-foundation",
+  "version": "0.1.1",
+  "protocol_version": "0.1",
+  "research_cutoff": "2026-08-17",
+  "status": "build_ready_protocol_with_liveness_and_prototype",
+  "counts": {
+    "json_schemas": 9,
+    "example_run_bundles": 3,
+    "prototype_tests": 8
+  },
+  "canonical_files": {
+    "protocol": "docs/01_protocol.md",
+    "trust_model": "docs/02_trust_model.md",
+    "implementation_plan": "docs/03_implementation_plan.md",
+    "supabase_reference": "docs/08_supabase_reference.md",
+    "codex_prompt": "prompts/CODEX_INITIATING_PROMPT.md",
+    "run_schema": "packages/schema/contracts/run-envelope.schema.json",
+    "finding_schema": "packages/schema/contracts/finding.schema.json",
+    "evidence_schema": "packages/schema/contracts/evidence.schema.json",
+    "validation_report": "VALIDATION_REPORT.md",
+    "semantic_invariants": "docs/10_semantic_invariants.md",
+    "liveness_schema": "packages/schema/contracts/stream-expectation.schema.json",
+    "prototype": "prototype/README.md",
+    "hostile_fixture": "examples/security/hostile-run-bundle.json",
+    "liveness_test": "examples/postgres/001_liveness_and_immutability.sql",
+    "product_requirements": "docs/00_product_requirements.md",
+    "prd_index": "PRD.md"
+  }
+}

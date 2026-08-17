@@ -1,0 +1,16 @@
+{
+  "name": "agent-feed-foundation",
+  "version": "0.1.1",
+  "private": true,
+  "packageManager": "pnpm@10",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "validate:foundation": "python scripts/validate_package.py",
+    "checksums:check": "python scripts/generate_checksums.py --check",
+    "checksums:write": "python scripts/generate_checksums.py --write",
+    "prototype:test": "cd prototype && npm test",
+    "prototype:demo": "cd prototype && npm run demo"
+  }
+}

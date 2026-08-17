@@ -1,0 +1,59 @@
+{
+  "protocol_version": "0.1",
+  "run_id": "run_rewards_monitor_20260817_001",
+  "stream_id": "rewards-optimizer.source-monitor",
+  "producer": {
+    "producer_id": "openai-monitor-jp",
+    "type": "custom_agent",
+    "name": "Japan Rewards Semantic Monitor",
+    "version": "0.1.0"
+  },
+  "task": {
+    "task_type": "semantic_change_monitor",
+    "definition_id": "jro-eight-source-pilot",
+    "definition_version": "0.1"
+  },
+  "started_at": "2026-08-17T09:00:00+09:00",
+  "completed_at": "2026-08-17T09:06:00+09:00",
+  "status": "completed",
+  "expected_scope": {
+    "source_ids": [
+      "jp.paypay.example"
+    ],
+    "subjects": [
+      "PayPay"
+    ],
+    "queries": [
+      "PayPay reward program official change"
+    ],
+    "metadata": {
+      "cadence": "daily"
+    }
+  },
+  "actual_scope": {
+    "source_ids": [
+      "jp.paypay.example"
+    ],
+    "subjects": [
+      "PayPay"
+    ],
+    "queries": [
+      "PayPay reward program official change"
+    ],
+    "metadata": {
+      "checked": true
+    }
+  },
+  "stats": {
+    "sources_attempted": 1,
+    "sources_succeeded": 1,
+    "findings_submitted": 1,
+    "evidence_submitted": 1,
+    "batches_submitted": 1
+  },
+  "parent_run_id": null,
+  "error_summary": null,
+  "metadata": {
+    "synthetic": true
+  }
+}

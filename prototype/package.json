@@ -1,0 +1,13 @@
+{
+  "name": "@agent-feed/prototype",
+  "version": "0.1.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node --experimental-strip-types --check src/store.ts && node --experimental-strip-types --check src/server.ts",
+    "test": "node --experimental-strip-types --test test/*.test.ts",
+    "demo": "node --experimental-strip-types src/demo.ts",
+    "dev": "node --experimental-strip-types src/server.ts",
+    "start": "node --experimental-strip-types src/server.ts"
+  }
+}

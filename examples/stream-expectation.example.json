@@ -1,0 +1,20 @@
+{
+  "stream_id": "rewards-optimizer.payments.daily",
+  "expected_cadence_seconds": 86400,
+  "grace_seconds": 7200,
+  "enabled": true,
+  "expected_scope": {
+    "source_ids": [
+      "jp.paypay.example"
+    ],
+    "subjects": [
+      "PayPay"
+    ]
+  },
+  "last_terminal_run_at": "2026-08-17T09:06:00+09:00",
+  "next_due_at": "2026-08-18T11:06:00+09:00",
+  "evaluated_at": "2026-08-17T12:00:00+09:00",
+  "liveness_status": "healthy",
+  "owner": "rewards-operations",
+  "notes": "Synthetic example."
+}

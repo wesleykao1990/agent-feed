@@ -1,0 +1,228 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-feed.dev/schemas/run-envelope.schema.json",
+  "title": "Agent Feed Run Envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "run_id",
+    "stream_id",
+    "producer",
+    "task",
+    "started_at",
+    "completed_at",
+    "status",
+    "expected_scope",
+    "actual_scope",
+    "stats",
+    "parent_run_id",
+    "error_summary",
+    "metadata"
+  ],
+  "properties": {
+    "protocol_version": {
+      "const": "0.1"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 8
+    },
+    "stream_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]+$"
+    },
+    "producer": {
+      "$ref": "#/$defs/producer"
+    },
+    "task": {
+      "$ref": "#/$defs/task"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "running",
+        "completed",
+        "partial",
+        "failed",
+        "cancelled"
+      ]
+    },
+    "expected_scope": {
+      "$ref": "#/$defs/scope"
+    },
+    "actual_scope": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/scope"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "stats": {
+      "$ref": "#/$defs/stats"
+    },
+    "parent_run_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "error_summary": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "metadata": {
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_ids",
+        "subjects",
+        "queries",
+        "metadata"
+      ],
+      "properties": {
+        "source_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "subjects": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "queries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "metadata": {
+          "type": "object"
+        }
+      }
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "producer_id",
+        "type",
+        "name",
+        "version"
+      ],
+      "properties": {
+        "producer_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "chatgpt",
+            "claude",
+            "codex",
+            "custom_agent",
+            "human",
+            "automation"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_type",
+        "definition_id",
+        "definition_version"
+      ],
+      "properties": {
+        "task_type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "definition_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "definition_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "stats": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sources_attempted",
+        "sources_succeeded",
+        "findings_submitted",
+        "evidence_submitted",
+        "batches_submitted"
+      ],
+      "properties": {
+        "sources_attempted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sources_succeeded": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "findings_submitted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "evidence_submitted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "batches_submitted": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

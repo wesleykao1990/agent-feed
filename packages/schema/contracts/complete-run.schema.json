@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-feed.dev/schemas/complete-run.schema.json",
+  "title": "Complete Run Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "run_id",
+    "idempotency_key",
+    "status",
+    "completed_at",
+    "actual_scope",
+    "stats",
+    "errors",
+    "metadata"
+  ],
+  "properties": {
+    "protocol_version": {
+      "const": "0.1"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 8
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 8
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "partial",
+        "failed",
+        "cancelled"
+      ]
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "actual_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_ids",
+        "subjects",
+        "queries",
+        "metadata"
+      ],
+      "properties": {
+        "source_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "subjects": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "queries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "metadata": {
+          "type": "object"
+        }
+      }
+    },
+    "stats": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sources_attempted",
+        "sources_succeeded",
+        "findings_submitted",
+        "evidence_submitted",
+        "batches_submitted"
+      ],
+      "properties": {
+        "sources_attempted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sources_succeeded": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "findings_submitted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "evidence_submitted": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "batches_submitted": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "message",
+          "source_id",
+          "retryable"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "source_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object"
+    }
+  }
+}
