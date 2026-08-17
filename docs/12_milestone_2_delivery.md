@@ -5,10 +5,10 @@ Status: **implementation gate complete in this repository; operational follow-up
 This document is the canonical design and status record for Agent Feed
 Milestone 2. The current branch contains the protocol runtime, pure delivery
 core, consumer service, PostgreSQL delivery repository/outbox, webhook adapter,
-worker composition, transport-neutral API handlers, and explicit `0001` then
-`0002` migration loading. The combined acceptance is green: architecture 4,
+worker composition, transport-neutral API handlers, and explicit `0001`,
+`0002`, then `0003` migration loading. The combined acceptance is green: architecture 4,
 pure conformance 6, live PostgreSQL 3, protocol-runtime 5, delivery-core 18,
-delivery-consumer 10, persistence 10, webhook adapter 8, worker 6, and API 5.
+delivery-consumer 10, persistence 11, webhook adapter 8, worker 6, and API 5.
 All seven M2 packages/applications have clean installs, builds, and tests. The
 API remains transport-neutral without a deployable HTTP server; the worker has
 no production process/CLI entrypoint; and observability exporter/deployment
@@ -120,7 +120,7 @@ Owns the durable adapter. The additive
 `migrations/0002_durable_delivery.sql` foundation and a
 `PostgresDeliveryRepository` now exist, and the ingress store calls the
 transaction-aware outbox writer for begin/batch/complete paths. The loader
-explicitly applies `0001` then `0002` when called without an explicit SQL
+explicitly applies `0001`, `0002`, then the M1 hardening migration `0003` when called without an explicit SQL
 string; arbitrary directory discovery/gap checking is future operational work.
 The live repository/transaction acceptance is green (3/3), and the M1
 migration remains historical. The adapter owns SQL for:
@@ -319,7 +319,7 @@ not claim that deferred production deployment surfaces already exist:
 | Protocol runtime and exact wire signing | Accepted | 5 tests; clean install/build; production runtime paths use the public boundary |
 | Pure delivery worker/retry/lease ports | Accepted | 18 tests; clean install/build; live repository behavior covered by 3 PostgreSQL tests |
 | Consumer service/selectors/cursor contract | Accepted | 10 tests; clean install/build; live scope/cursor paths pass |
-| Additive M2 migration shape | Accepted for the explicit pair | Persistence suite 10/10 with PostgreSQL; loader remains explicit `0001` then `0002` |
+| Additive M2 migration shape | Accepted for the explicit sequence | Persistence suite 11/11 with PostgreSQL; loader remains explicit `0001`, `0002`, then `0003` |
 | Atomic outbox | Accepted | Live PostgreSQL transactional outbox/fan-out/immutability coverage passes |
 | Durable subscriptions/delivery repository | Accepted | Live PostgreSQL lease/retry/ack/DLQ/replay/cursor coverage passes |
 | Queue worker process/webhook transport | Accepted composition boundary | Worker 6 tests and webhook 8 tests pass; production process/endpoint deployment is future operational work |
@@ -344,7 +344,7 @@ The combined acceptance is green:
 - protocol-runtime: **5**;
 - delivery-core: **18**;
 - delivery-consumer: **10**;
-- persistence-postgres: **10**;
+- persistence-postgres: **11**;
 - webhook-adapter: **8**;
 - delivery-worker: **6**;
 - delivery-api: **5**.
@@ -360,8 +360,9 @@ The following are accepted nonblocking scope caveats, not failed M2 evidence:
 - `apps/delivery-worker` has no production process/CLI entrypoint or hosted
   external webhook deployment;
 - observability exporter/deployment remains future operational work;
-- migration loading is explicitly `0001_agent_feed.sql` followed by
-  `0002_durable_delivery.sql`, rather than arbitrary directory discovery;
+- migration loading is explicitly `0001_agent_feed.sql`,
+  `0002_durable_delivery.sql`, then `0003_wire_run_id.sql`, rather than
+  arbitrary directory discovery;
 - the in-memory prototype retains historical protocol helpers as a reference;
 - production deployment remains a later operational milestone; release
   checksum and hosted CI handoff evidence are complete for draft PR #2.
@@ -387,7 +388,7 @@ claims:
   regression is retained as a clean-install/static-audit guard.
 - The metric sink and bounded labels satisfy the implementation gate; a
   production exporter and deployment remain future operational work.
-- The loader intentionally applies the explicit `0001`/`0002` pair; arbitrary
+- The loader intentionally applies the explicit `0001`/`0002`/`0003` sequence; arbitrary
   migration-directory discovery is not part of this M2 implementation gate.
 - The repository workflow covers all seven M2 packages/apps with live
   PostgreSQL; hosted CI run #5 passed on draft PR #2 for commit `ad4ea3a`.

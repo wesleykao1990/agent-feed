@@ -1,11 +1,21 @@
-# REST API
+# Durable producer REST API
 
-Status: **M1 producer reference plus M2 consumer API design; no executable API
-handlers are present in this app yet.**
+Status: **executable PostgreSQL-backed producer ingress.** The API composes
+`PostgresAgentFeedPersistence` through the `@agent-feed/producer-service`
+application boundary. It does not import the prototype store and does not
+contain SQL.
 
-The current runnable REST/reference path is the prototype under
-`prototype/src/server.ts`. This directory is not evidence that the following
-routes are live.
+Run it after configuring `AGENT_FEED_DATABASE_URL` and either a JSON
+`AGENT_FEED_PRODUCER_CREDENTIALS` array or the individual credential
+environment variables described in `src/main.ts`:
+
+```sh
+npm install
+npm start
+```
+
+`/health` is process health. `/ready` and `/readiness` check the injected
+PostgreSQL pool. Every producer route requires a scoped Bearer credential.
 
 M1 producer reference endpoints:
 
@@ -17,8 +27,10 @@ GET  /v1/runs/{run_id}
 GET  /v1/runs/{run_id}/findings
 ```
 
-Write endpoints require scoped producer credentials in the implemented
-prototype path. M2 consumer operations are specified in
+Write and read endpoints require scoped producer credentials. Authentication
+binds a tenant, producer, and allowed stream IDs; a run outside that scope is
+reported as `run_not_found` rather than revealing whether it exists. M2
+consumer operations are specified in
 `docs/operations/delivery-api.md` and are not implemented here yet:
 
 - subscription creation/update/listing;
@@ -26,7 +38,14 @@ prototype path. M2 consumer operations are specified in
 - acknowledgement;
 - dead-letter inspection and replay.
 
-When handlers are added, they must call the shared delivery consumer service,
-derive tenant/consumer identity from authenticated credentials, and never query
-another consumer's feed. Do not add direct SQL or delivery-worker behavior to
-this README-only boundary.
+The API requires `Content-Type: application/json` and accepts only canonical
+snake_case protocol `0.1` JSON. Body size,
+batch cardinality, excerpt/metadata sizes, secret/PII policy, rate limits,
+schema shape, and semantic checks run before persistence. Repeating an
+idempotency key is handled by PostgreSQL and returns the original durable
+result. The prototype remains available separately for local demonstrations;
+it is not the production ingress path.
+
+The built-in limiter is process-local. A multi-replica deployment must inject
+or place in front of the service a shared tenant/producer limiter while
+retaining the same fail-closed policy and `Retry-After` behavior.

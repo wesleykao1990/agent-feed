@@ -1,0 +1,39 @@
+{
+  "name": "@agent-feed/schema",
+  "version": "0.1.1",
+  "description": "Versioned JSON Schema and TypeScript contract artifact for Agent Feed protocol 0.1.",
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./contracts/*": "./contracts/*",
+    "./package.json": "./package.json"
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "contracts",
+    "compatibility",
+    "README.md",
+    "package.json"
+  ],
+  "scripts": {
+    "build": "node ./scripts/build.mjs",
+    "pretest": "npm run build",
+    "test": "node --test ./test/*.test.mjs",
+    "prepack": "npm run build",
+    "verify": "npm run build && npm test && npm pack --dry-run"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2"
+  }
+}

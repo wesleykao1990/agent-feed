@@ -58,7 +58,7 @@ window constants.
 
 The M2 implementation gate is green in this repository: architecture 4, pure
 conformance 6, live PostgreSQL 3, protocol-runtime 5, delivery-core 18,
-delivery-consumer 10, persistence 10, webhook adapter 8, worker 6, and API 5,
+delivery-consumer 10, persistence 11, webhook adapter 8, worker 6, and API 5,
 with clean installs and builds passing. The transport-neutral API still has no
 deployable HTTP server, the worker still has no production process/CLI
 entrypoint, and observability exporter/deployment remains future operational

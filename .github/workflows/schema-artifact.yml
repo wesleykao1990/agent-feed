@@ -1,0 +1,61 @@
+name: Schema artifact
+
+on:
+  push:
+    tags:
+      - "schema-v*"
+
+concurrency:
+  group: schema-artifact-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    # Keep this guard in addition to the tag filter so a future trigger change
+    # cannot accidentally produce an unversioned or unrelated release asset.
+    if: startsWith(github.ref, 'refs/tags/schema-v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build and verify immutable schema artifact
+        run: node scripts/build_schema_artifact.mjs --tag "$GITHUB_REF_NAME" --output-dir artifacts/schema
+
+      - name: Verify artifact as an external consumer
+        run: node scripts/verify_schema_artifact.mjs --artifact-dir artifacts/schema
+
+      - name: Upload immutable workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-feed-schema-${{ github.ref_name }}
+          path: artifacts/schema/*
+          if-no-files-found: error
+          overwrite: false
+
+      - name: Create or append release assets without replacement
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" artifacts/schema/* --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$GITHUB_REF_NAME" artifacts/schema/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --verify-tag \
+              --title "Agent Feed schema $GITHUB_REF_NAME" \
+              --notes "Immutable @agent-feed/schema artifact for $GITHUB_REF_NAME."
+          fi

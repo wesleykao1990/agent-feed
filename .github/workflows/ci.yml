@@ -72,6 +72,39 @@ jobs:
       - name: Test Milestone 0/1 conformance
         run: npm run conformance:test
 
+      - name: Install Milestone 1 corrective package dependencies
+        run: |
+          npm --prefix packages/schema ci
+          npm --prefix packages/producer-service ci
+          npm --prefix packages/adapters/local-file ci
+          npm --prefix apps/api ci
+
+      - name: Build Milestone 1 corrective packages and API
+        run: |
+          npm run m1:architecture
+          npm --prefix packages/schema run build
+          npm --prefix packages/producer-service run build
+          npm --prefix packages/adapters/local-file run build
+          npm --prefix apps/api run build
+
+      - name: Test Milestone 1 corrective packages and API
+        run: |
+          npm --prefix packages/schema test
+          npm --prefix packages/producer-service test
+          npm --prefix packages/adapters/local-file test
+          npm --prefix apps/api test
+
+      - name: Build immutable schema release candidate
+        run: npm run schema:artifact
+
+      - name: Verify schema release candidate as an external consumer
+        run: npm run schema:artifact:verify
+
+      - name: Run live PostgreSQL producer ingress gate
+        run: npm run m1:ingress
+        env:
+          AGENT_FEED_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_feed_test
+
       # Keep the integrity/checksum steps above the install steps: node_modules
       # is intentionally excluded from SHA256SUMS, while every package,
       # workflow, test, and M2 script must be covered by the manifest.

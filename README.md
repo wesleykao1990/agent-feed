@@ -6,15 +6,15 @@ runs, findings, and submitted evidence to multiple consumer applications.
 Milestone 2 status: **implementation gate complete in this repository**. The
 corrected full acceptance is green: architecture 4, pure conformance 6, live
 PostgreSQL 3, protocol-runtime 5, delivery-core 18, delivery-consumer 10,
-persistence 10, webhook adapter 8, delivery worker 6, and delivery API 5.
+persistence 11, webhook adapter 8, delivery worker 6, and delivery API 5.
 All seven M2 packages/applications pass clean installs, builds, and tests.
 M2-023 through M2-038 and M2-L027 through M2-L042 are resolved in the
 append-only bug/learning logs. The
 delivery API remains transport-neutral (there is no deployable HTTP server),
 the worker has no production process/CLI entrypoint, and observability
 exporter/deployment work remains future operational work. The migration loader
-is intentionally explicit for `0001_agent_feed.sql` followed by
-`0002_durable_delivery.sql`.
+is intentionally explicit for `0001_agent_feed.sql`,
+`0002_durable_delivery.sql`, then `0003_wire_run_id.sql`.
 
 The repository CI workflow installs, builds, and tests all seven M2
 packages/applications with live PostgreSQL. GitHub Actions CI run #5 passed on
@@ -77,6 +77,16 @@ database. `npm run m2:conformance` is the gate command and requires
 `AGENT_FEED_DATABASE_URL`; `--allow-live-skip` is local-only and never counts
 as acceptance. See `docs/12_milestone_2_delivery.md` for the evidence record
 and remaining operational caveats.
+
+## Durable producer ingress
+
+Milestone 1's production-shaped producer path is `apps/api`, backed by
+PostgreSQL through `@agent-feed/producer-service`. Run `npm run m1:architecture`
+and `AGENT_FEED_DATABASE_URL=... npm run m1:ingress`; the latter is fail-closed
+when no live database is configured. `packages/adapters/local-file` imports run
+bundles through the same service boundary. See
+`docs/m1-hardening/ACCEPTANCE.md` for the release-candidate evidence and the
+remaining schema publication/Rewards pin actions.
 
 ## Start implementation
 

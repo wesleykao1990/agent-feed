@@ -135,7 +135,7 @@ until the conformance agent reports the serialized live gate green.
 
 The corrected full live gate is green with the PostgreSQL database configured:
 architecture 4, pure conformance 6, live PostgreSQL 3, protocol-runtime 5,
-delivery-core 18, delivery-consumer 10, persistence 10, webhook adapter 8,
+delivery-core 18, delivery-consumer 10, persistence 11, webhook adapter 8,
 delivery-worker 6, and delivery-api 5. All seven packages/applications pass
 clean install, build, and test. These notes do not claim hosted GitHub CI.
 

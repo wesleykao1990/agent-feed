@@ -8,14 +8,18 @@
     "node": ">=22"
   },
   "scripts": {
-    "validate:foundation": "python scripts/validate_package.py",
-    "checksums:check": "python scripts/generate_checksums.py --check",
-    "checksums:write": "python scripts/generate_checksums.py --write",
+    "validate:foundation": "python3 scripts/validate_package.py",
+    "checksums:check": "python3 scripts/generate_checksums.py --check",
+    "checksums:write": "python3 scripts/generate_checksums.py --write",
     "types:write": "python3 scripts/generate_protocol_types.py --write",
     "types:check": "python3 scripts/generate_protocol_types.py --check",
     "protocol:compatibility": "python3 scripts/check_protocol_compatibility.py",
     "conformance:test": "node --experimental-strip-types --test tests/conformance/*.test.ts",
     "m2:conformance": "node scripts/run_m2_conformance.mjs",
+    "m1:architecture": "node scripts/check_producer_architecture.mjs",
+    "m1:ingress": "node scripts/run_m1_ingress_conformance.mjs",
+    "schema:artifact": "node scripts/build_schema_artifact.mjs",
+    "schema:artifact:verify": "node scripts/verify_schema_artifact.mjs",
     "prototype:test": "cd prototype && npm test",
     "prototype:demo": "cd prototype && npm run demo"
   }

@@ -49,12 +49,12 @@ delivery repository, pure retry worker, delivery-worker composition root,
 cursor, metrics sink, protocol runtime, consumer service, transport-neutral API
 handlers, and webhook network adapter are implemented. The latest local
 evidence is architecture 4, pure 6, live PostgreSQL 3, protocol 5, core 18,
-consumer 10, persistence 10, webhook 8, worker 6, and API 5. The corrected
+consumer 10, persistence 11, webhook 8, worker 6, and API 5. The corrected
 serialized live gate and all seven clean package installs/builds/tests pass.
 Hosted GitHub Actions CI run #5 passed on draft PR #2 for commit `ad4ea3a`. A
 deployable worker process, HTTP server, and production
 observability exporter remain future operational work. Migration loading is
-intentionally explicit `0001` then `0002`; arbitrary directory
+intentionally explicit `0001`, `0002`, then `0003`; arbitrary directory
 discovery/gap checking is outside this implementation gate.
 
 ## Realtime

@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   PersistenceError,
   PostgresAgentFeedPersistence,
+  WIRE_RUN_ID_MIGRATION_SQL_URL,
   createAgentFeedPool,
   migrateAgentFeed,
   canonicalJson,
@@ -38,6 +39,23 @@ test("migration contains the isolated schema, append-only guards, liveness, and 
     "complete_payload_hash",
   ]) assert.match(sql, new RegExp(marker.replaceAll(".", "\\."), "i"));
   assert.doesNotMatch(sql, /delivery_attempts|create\s+function[^]*deliver/i);
+});
+
+test("wire run-ID migration preserves arbitrary protocol IDs while retaining UUID storage", async () => {
+  const sql = await readFile(WIRE_RUN_ID_MIGRATION_SQL_URL, "utf8");
+  for (const marker of [
+    "add column if not exists wire_run_id text",
+    "runs_tenant_wire_run_id_key",
+    "outbox_events_tenant_wire_run_fk",
+    "set_run_wire_identity",
+    "protect_run_wire_identity",
+    "set_outbox_event_defaults",
+    "0001_agent_feed",
+    "0003_wire_run_id",
+  ]) assert.match(sql, new RegExp(marker.replaceAll(".", "\\."), "i"));
+  assert.match(sql, /references agent_feed\.runs \(tenant_id, wire_run_id\)/i);
+  assert.match(sql, /foreign key \(tenant_id, wire_run_id\)/i);
+  assert.match(sql, /wire_run_id = run\.wire_run_id/i);
 });
 
 function beginInput(streamId = `test.${randomUUID()}`): BeginRunRequest {
@@ -102,7 +120,62 @@ test("live PostgreSQL persistence regression suite", { skip: databaseUrl ? false
   const pool = createAgentFeedPool(databaseUrl);
   try {
     await migrateAgentFeed(pool);
+    const migrations = await pool.query<{ version: string }>(
+      "select version from agent_feed.schema_migrations order by version",
+    );
+    assert.deepEqual(migrations.rows.map((row) => row.version), [
+      "0001_agent_feed",
+      "0002_durable_delivery",
+      "0003_wire_run_id",
+    ]);
     const store = new PostgresAgentFeedPersistence(pool);
+
+    const wireBegin = beginInput();
+    wireBegin.run_id = `run_wire_${randomUUID().replaceAll("-", "")}`;
+    const wireStarted = await store.beginRun(wireBegin);
+    assert.equal(wireStarted.run_id, wireBegin.run_id, "the producer-visible run ID is preserved");
+    assert.equal((await store.beginRun({ ...wireBegin })).run_id, wireBegin.run_id, "wire-ID begin retries return the same receipt");
+    const wireRow = await pool.query<{ id: string; wire_run_id: string }>(
+      `select id::text as id, wire_run_id from agent_feed.runs where tenant_id = $1 and wire_run_id = $2`,
+      [wireBegin.tenant_id ?? "default", wireBegin.run_id],
+    );
+    assert.match(wireRow.rows[0]?.id ?? "", /^[0-9a-f-]{36}$/i, "internal relational run ID remains UUID-shaped");
+    assert.equal(wireRow.rows[0]?.wire_run_id, wireBegin.run_id);
+    assert.equal((await store.getRunForTenant(wireBegin.tenant_id ?? "default", wireBegin.run_id))?.run_id, wireBegin.run_id);
+    assert.equal(await store.getRunForTenant("other-tenant", wireBegin.run_id), null, "tenant-scoped reads do not cross tenants");
+    const wireOutbox = await pool.query<{ run_id: string; wire_run_id: string }>(
+      `select run_id::text as run_id, wire_run_id from agent_feed.outbox_events where tenant_id = $1 and event_id = $2`,
+      [wireBegin.tenant_id ?? "default", `evt_${wireBegin.run_id}_started`],
+    );
+    assert.equal(wireOutbox.rows[0]?.run_id, wireRow.rows[0]?.id, "outbox retains the internal UUID FK");
+    assert.equal(wireOutbox.rows[0]?.wire_run_id, wireBegin.run_id, "outbox exposes the wire run ID");
+    const wireComplete = completeInput(wireStarted.run_id, {
+      sources_attempted: 1,
+      sources_succeeded: 1,
+      findings_submitted: 0,
+      evidence_submitted: 0,
+      batches_submitted: 0,
+    });
+    await store.completeRun(wireComplete);
+    const wireRetryAfterTerminal = await store.beginRun({ ...wireBegin });
+    assert.deepEqual(wireRetryAfterTerminal, wireStarted, "begin retry after terminal state returns the original durable receipt");
+    assert.equal(wireRetryAfterTerminal.run_id, wireStarted.run_id);
+
+    const implicitWireBegin = beginInput();
+    delete implicitWireBegin.run_id;
+    const implicitWireStarted = await store.beginRun(implicitWireBegin);
+    const implicitWireRetry = await store.beginRun({ ...implicitWireBegin });
+    assert.equal(implicitWireRetry.run_id, implicitWireStarted.run_id, "exact retries without an explicit run_id reuse the stored wire ID");
+    assert.deepEqual(implicitWireRetry.envelope, implicitWireStarted.envelope, "exact retries reuse the stored envelope");
+    const implicitWireEvents = await pool.query<{ event_id: string; payload: Record<string, unknown>; wire_run_id: string }>(
+      `select event_id, payload, wire_run_id
+         from agent_feed.outbox_events
+        where tenant_id = $1 and event_type = 'run.started' and wire_run_id = $2`,
+      [implicitWireBegin.tenant_id ?? "default", implicitWireStarted.run_id],
+    );
+    assert.equal(implicitWireEvents.rows.length, 1, "the exact retry must not create a second started event");
+    assert.equal(implicitWireEvents.rows[0]?.event_id, `evt_${implicitWireStarted.run_id}_started`);
+    assert.deepEqual(implicitWireEvents.rows[0]?.payload, implicitWireStarted.envelope, "the started event keeps the original envelope");
 
     const begin = beginInput();
     const first = await store.beginRun(begin);
@@ -159,9 +232,9 @@ test("live PostgreSQL persistence regression suite", { skip: databaseUrl ? false
       (error: unknown) => error instanceof PersistenceError && error.code === "terminal_run_immutable",
     );
 
-    const directRunUpdate = pool.query(`update agent_feed.runs set status = 'failed' where id = $1`, [first.run_id]);
+    const directRunUpdate = pool.query(`update agent_feed.runs set status = 'failed' where wire_run_id = $1`, [first.run_id]);
     await assert.rejects(directRunUpdate, /immutable|terminal/i);
-    const directFindingUpdate = pool.query(`update agent_feed.findings set finding_type = 'tampered' where run_id = $1`, [first.run_id]);
+    const directFindingUpdate = pool.query(`update agent_feed.findings set finding_type = 'tampered' where run_id = (select id from agent_feed.runs where wire_run_id = $1)`, [first.run_id]);
     await assert.rejects(directFindingUpdate, /immutable/i);
 
     const concurrentRun = await store.beginRun(beginInput());
