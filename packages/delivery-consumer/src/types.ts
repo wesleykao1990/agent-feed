@@ -5,17 +5,27 @@
  * whether the durable implementation is PostgreSQL, a queue, or a test fake.
  */
 
-export const DELIVERY_EVENT_TYPES = [
-  "run.started",
-  "finding.submitted",
-  "run.completed",
-  "run.partial",
-  "run.failed",
-] as const;
+import {
+  DELIVERY_EVENT_TYPES,
+  type DeliveryEventType,
+  type NormalizedRoutingTagSelector,
+  type NormalizedSubscriptionSelector,
+  type SubscriptionStatus,
+  type CursorCodec as CoreCursorCodec,
+  type CursorPayload as CoreCursorPayload,
+} from "@agent-feed/delivery-core";
 
-export type DeliveryEventType = (typeof DELIVERY_EVENT_TYPES)[number];
+export { DELIVERY_EVENT_TYPES };
+export type {
+  DeliveryEventType,
+  NormalizedRoutingTagSelector,
+  NormalizedSubscriptionSelector,
+  SubscriptionStatus,
+};
+export type CursorCodec = CoreCursorCodec;
+export type DeliveryCursorClaims = CoreCursorPayload;
+
 export type DeliveryMode = "pull" | "webhook";
-export type SubscriptionStatus = "active" | "paused" | "revoked";
 
 export interface ConsumerAuthContext {
   /** Both values come from the authenticated credential, never a request body. */
@@ -41,21 +51,6 @@ export interface PayloadHasher {
   hash(value: unknown): string;
 }
 
-export interface DeliveryCursorClaims {
-  version: 1;
-  tenantId: string;
-  consumerId: string;
-  subscriptionId: string;
-  selectorVersion: number;
-  position: string;
-}
-
-export interface CursorCodec {
-  /** The token must be opaque to this package and safe to expose to clients. */
-  encode(claims: DeliveryCursorClaims): string;
-  decode(token: string): DeliveryCursorClaims;
-}
-
 export interface RoutingTagSelectorInput {
   mode: "any" | "all";
   values: readonly string[];
@@ -72,25 +67,24 @@ export interface SubscriptionSelectorInput {
   eventTypes?: readonly DeliveryEventType[];
 }
 
-export interface NormalizedRoutingTagSelector {
-  mode: "any" | "all";
-  values: string[];
+export interface PullDeliveryConfigurationInput {
+  mode: "pull";
+  /** Pull delivery has no endpoint or signing key. */
+  endpointRef?: never;
+  signingKeyId?: never;
 }
 
-export interface NormalizedSubscriptionSelector {
-  streamIds: string[];
-  findingTypes: string[] | null;
-  routingTags: NormalizedRoutingTagSelector | null;
-  eventTypes: DeliveryEventType[];
-}
-
-export interface DeliveryConfigurationInput {
-  mode: DeliveryMode;
+export interface WebhookDeliveryConfigurationInput {
+  mode: "webhook";
   /** Reference to a separately managed endpoint, not a secret or credential. */
-  endpointRef?: string;
-  /** Key reference used by a webhook adapter; the key material stays outside this package. */
-  signingKeyId?: string;
+  endpointRef: string;
+  /** Required key reference; key material stays outside this package. */
+  signingKeyId: string;
 }
+
+export type DeliveryConfigurationInput =
+  | PullDeliveryConfigurationInput
+  | WebhookDeliveryConfigurationInput;
 
 export interface DeliveryConfiguration {
   mode: DeliveryMode;
@@ -108,7 +102,7 @@ export interface SubscriptionRecord {
   selectorVersion: number;
   delivery: DeliveryConfiguration;
   status: SubscriptionStatus;
-  /** Position captured atomically at creation; default activation is future-only. */
+  /** Tenant-global position captured atomically at creation; activation is future-only. */
   activationPosition: string;
   createdAt: string;
   updatedAt: string;
@@ -154,6 +148,7 @@ export interface DeliveryEventRecord {
   /** Materialized routing metadata; terminal events use null/empty values. */
   findingType: string | null;
   routingTags: readonly string[];
+  /** Tenant-global monotonic decimal position, shared across streams. */
   position: string;
   traceId: string | null;
 }

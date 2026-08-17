@@ -8,6 +8,8 @@ export interface MetricsSnapshot {
 
 export interface InMemoryMetricsOptions {
   maxSeries?: number;
+  /** Maximum retained samples per observation series. New samples replace the oldest. */
+  maxObservationSamplesPerSeries?: number;
   allowedLabelKeys?: readonly string[];
   allowedLabelValues?: Readonly<Record<string, readonly string[]>>;
   allowedMetricNames?: readonly string[];
@@ -48,12 +50,19 @@ export class InMemoryMetricsSink implements MetricsSink {
   constructor(options: InMemoryMetricsOptions = {}) {
     this.#options = {
       maxSeries: options.maxSeries ?? 100,
+      maxObservationSamplesPerSeries: options.maxObservationSamplesPerSeries ?? 1_000,
       ...(options.allowedLabelKeys === undefined ? {} : { allowedLabelKeys: [...options.allowedLabelKeys] }),
       ...(options.allowedLabelValues === undefined ? {} : { allowedLabelValues: options.allowedLabelValues }),
       ...(options.allowedMetricNames === undefined ? {} : { allowedMetricNames: [...options.allowedMetricNames] }),
     };
     const maxSeries = this.#options.maxSeries;
     if (maxSeries === undefined || !Number.isSafeInteger(maxSeries) || maxSeries < 1) throw new Error("invalid_metric_series_limit");
+    const maxObservationSamplesPerSeries = this.#options.maxObservationSamplesPerSeries;
+    if (
+      maxObservationSamplesPerSeries === undefined
+      || !Number.isSafeInteger(maxObservationSamplesPerSeries)
+      || maxObservationSamplesPerSeries < 1
+    ) throw new Error("invalid_metric_observation_limit");
   }
 
   increment(name: string, value = 1, labels?: Readonly<Record<string, string>>): void {
@@ -66,6 +75,8 @@ export class InMemoryMetricsSink implements MetricsSink {
     if (!Number.isFinite(value)) throw new Error("invalid_metric_value");
     const key = this.#key(name, labels);
     const values = this.#observations.get(key) ?? [];
+    const maxSamples = this.#options.maxObservationSamplesPerSeries ?? 1_000;
+    if (values.length >= maxSamples) values.shift();
     values.push(value);
     this.#observations.set(key, values);
   }

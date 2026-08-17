@@ -41,6 +41,20 @@ Before the Rewards conserved kernel and monitoring rehearsal are working, implem
 
 ## Milestone 2 — Durable consumer delivery
 
+Status: **implementation gate complete in this repository**. The corrected
+full acceptance is green: architecture 4, pure conformance 6, live PostgreSQL
+3, protocol-runtime 5, delivery-core 18, delivery-consumer 10,
+persistence-postgres 10, webhook adapter 8, delivery-worker 6, and
+delivery-api 5. All seven M2 packages/applications pass clean installs,
+builds, and tests; M2-023 through M2-038 and M2-L027 through M2-L042 are
+resolved in the append-only bug/learning logs. The repository workflow is configured to install/build/test
+all seven and require live PostgreSQL, but no hosted GitHub CI run is claimed.
+The API remains transport-neutral without an HTTP server; worker process
+deployment and observability export remain future operational work. Migration
+loading is intentionally explicit `0001` followed by `0002`, not arbitrary
+directory discovery. See `docs/12_milestone_2_delivery.md` and
+`docs/adr/README.md`.
+
 Deliver:
 
 - transactional outbox;
@@ -57,6 +71,14 @@ Gate:
 - one consumer cannot read another consumer's feed;
 - external delivery is documented as at-least-once;
 - Realtime is not used as a queue.
+
+The signed `DeliveryEvent` body remains protocol `0.1`; its required `attempt`
+field changes on retry/replay while event ID, payload, occurred time, and
+payload hash remain stable. The live PostgreSQL gate covers the durable
+outbox, fan-out, leases, replay, and scope-bound cursor paths. Transport-neutral
+consumer handlers are accepted as the application boundary; an HTTP server is
+an explicitly deferred operational adapter. Do not add undocumented body
+fields or treat a future production deployment as already present.
 
 ## Milestone 3 — MCP, SDKs, and adapters
 

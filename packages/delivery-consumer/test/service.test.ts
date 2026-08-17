@@ -125,6 +125,7 @@ class MemoryRepository implements DeliveryConsumerRepository {
       record.selectors = clone(input.selectors);
       record.selectorHash = input.selectorHash;
       record.selectorVersion += 1;
+      record.activationPosition = String(this.#position);
     }
     return clone(record);
   }
@@ -228,10 +229,15 @@ class MemoryRepository implements DeliveryConsumerRepository {
   }
 
   #highestAcknowledgedPosition(subscriptionId: string): string | null {
-    const positions = [...this.deliveries.values()]
-      .filter((delivery) => delivery.subscriptionId === subscriptionId && delivery.status === "acknowledged")
-      .map((delivery) => BigInt(delivery.event.position));
-    return positions.length === 0 ? null : String(positions.reduce((max, value) => value > max ? value : max, 0n));
+    const deliveries = [...this.deliveries.values()]
+      .filter((delivery) => delivery.subscriptionId === subscriptionId)
+      .sort((left, right) => Number(BigInt(left.event.position) - BigInt(right.event.position)));
+    let result: string | null = null;
+    for (const delivery of deliveries) {
+      if (delivery.status !== "acknowledged") break;
+      result = delivery.event.position;
+    }
+    return result;
   }
 }
 
@@ -281,6 +287,48 @@ test("exact stream authorization rejects an unauthorized subscription", async ()
   await assert.rejects(
     app.createSubscription(createInput({ selectors: { streamIds: ["stream-b"] } })),
     (error: unknown) => error instanceof DeliveryConsumerError && error.code === "unauthorized_stream",
+  );
+});
+
+test("webhook delivery requires endpoint and signing-key references", async () => {
+  const repo = new MemoryRepository();
+  const app = service(repo, auth("tenant-a", "consumer-a"));
+  await assert.rejects(
+    app.createSubscription(createInput({
+      delivery: { mode: "webhook", endpointRef: "endpoint-a" } as never,
+    })),
+    (error: unknown) => error instanceof DeliveryConsumerError
+      && error.code === "invalid_input"
+      && error.message === "signing_key_id_must_be_non_empty",
+  );
+  await assert.rejects(
+    app.createSubscription(createInput({
+      delivery: { mode: "webhook", signingKeyId: "key-a" } as never,
+    })),
+    (error: unknown) => error instanceof DeliveryConsumerError
+      && error.code === "invalid_input"
+      && error.message === "endpoint_ref_must_be_non_empty",
+  );
+  await assert.rejects(
+    app.createSubscription(createInput({
+      delivery: { mode: "pull", endpointRef: "endpoint-a", signingKeyId: "key-a" } as never,
+    })),
+    (error: unknown) => error instanceof DeliveryConsumerError
+      && error.code === "invalid_input"
+      && error.message === "pull_delivery_cannot_have_webhook_configuration",
+  );
+});
+
+test("existing subscriptions are hidden when a credential loses stream access", async () => {
+  const repo = new MemoryRepository();
+  const owner = service(repo, auth("tenant-a", "consumer-a"));
+  const subscription = await owner.createSubscription(createInput());
+  const narrowed = service(repo, auth("tenant-a", "consumer-a", ["stream-b"]));
+
+  assert.equal((await narrowed.listSubscriptions()).length, 0);
+  await assert.rejects(
+    narrowed.pullPage({ subscriptionId: subscription.id }),
+    (error: unknown) => error instanceof DeliveryConsumerError && error.code === "not_found",
   );
 });
 
@@ -365,6 +413,20 @@ test("replay is scoped to the owning subscription", async () => {
   assert.equal(ownerSubscription.id !== otherSubscription.id, true);
 });
 
+test("unexpected repository errors are mapped without exposing raw diagnostics", async () => {
+  const repo = new MemoryRepository();
+  repo.listSubscriptions = async () => {
+    throw new Error("secret=https://private.example/token");
+  };
+  const app = service(repo, auth("tenant-a", "consumer-a"));
+  await assert.rejects(
+    app.listSubscriptions(),
+    (error: unknown) => error instanceof DeliveryConsumerError
+      && error.code === "invalid_state"
+      && error.message === "repository_operation_failed",
+  );
+});
+
 test("finding selectors use OR types and explicit any/all tags while lifecycle events use stream/type", () => {
   const selector = normalizeSelector({
     streamIds: ["stream-a"],
@@ -393,4 +455,10 @@ test("new subscriptions activate in the future and selector updates increment ve
     selectors: { streamIds: ["stream-a"], findingTypes: ["type-b"] },
   });
   assert.equal(updated.selectorVersion, subscription.selectorVersion + 1);
+  const afterUpdate = await app.pullPage({ subscriptionId: subscription.id });
+  assert.deepEqual(afterUpdate.items.map((item) => item.event.eventId), ["after-subscription"]);
+  await assert.rejects(
+    app.pullPage({ subscriptionId: subscription.id, cursor: page.nextCursor }),
+    (error: unknown) => error instanceof DeliveryConsumerError && error.code === "cursor_scope_mismatch",
+  );
 });

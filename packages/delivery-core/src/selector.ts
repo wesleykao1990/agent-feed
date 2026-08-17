@@ -1,57 +1,78 @@
-import type { ConsumerSubscription, DeliveryEvent } from "./types.ts";
+import type {
+  ConsumerSubscription,
+  DeliveryEvent,
+  NormalizedSubscriptionSelector,
+} from "./types.ts";
 
-function stringList(value: unknown): readonly string[] {
-  return Array.isArray(value)
-    ? value.filter((item): item is string => typeof item === "string")
-    : [];
+function decimalPosition(value: string): string | null {
+  if (!/^(0|[1-9][0-9]*)$/u.test(value)) return null;
+  return value;
+}
+/** Compare unbounded decimal positions without converting them to JS numbers. */
+export function comparePositions(left: string, right: string): number {
+  const leftValue = decimalPosition(left);
+  const rightValue = decimalPosition(right);
+  if (leftValue === null || rightValue === null) throw new Error("invalid_delivery_position");
+  if (leftValue.length !== rightValue.length) return leftValue.length < rightValue.length ? -1 : 1;
+  if (leftValue === rightValue) return 0;
+  return leftValue < rightValue ? -1 : 1;
 }
 
-function nestedFinding(event: DeliveryEvent): Record<string, unknown> | null {
-  const candidate = event.payload.finding;
-  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return null;
-  return candidate as Record<string, unknown>;
-}
-
-function eventFindingType(event: DeliveryEvent): string | null {
-  if (event.findingType !== undefined) return event.findingType;
-  const finding = nestedFinding(event);
-  const wire = finding?.finding_type ?? finding?.findingType;
-  return typeof wire === "string" ? wire : null;
-}
-
-function eventRoutingTags(event: DeliveryEvent): readonly string[] {
-  if (event.routingTags !== undefined) return event.routingTags;
-  const finding = nestedFinding(event);
-  return stringList(finding?.routing_tags ?? finding?.routingTags);
-}
-
-function matchesList(value: string | null, allowed: readonly string[]): boolean {
-  return allowed.length === 0 || (value !== null && allowed.includes(value));
+function assertNormalizedSelector(selector: NormalizedSubscriptionSelector): void {
+  if (!selector || !Array.isArray(selector.streamIds) || selector.streamIds.length === 0) {
+    throw new Error("invalid_selector_stream_ids");
+  }
+  if (!Array.isArray(selector.eventTypes) || selector.eventTypes.length === 0) {
+    throw new Error("invalid_selector_event_types");
+  }
+  if (selector.findingTypes !== null && !Array.isArray(selector.findingTypes)) {
+    throw new Error("invalid_selector_finding_types");
+  }
+  if (selector.routingTags !== null) {
+    if (!Array.isArray(selector.routingTags.values) || selector.routingTags.values.length === 0) {
+      throw new Error("invalid_selector_routing_tags");
+    }
+    if (selector.routingTags.mode !== "any" && selector.routingTags.mode !== "all") {
+      throw new Error("invalid_selector_routing_tag_mode");
+    }
+  }
 }
 
 /**
- * Match a durable event against a subscription snapshot. Empty filters are
- * wildcards. Routing tags use any-match semantics. Terminal run events only
- * require stream scope and `includeRunEvents`.
+ * Match a normalized subscription selector against a materialized event.
+ * Stream, event type, finding type, and routing-tag constraints are ANDed.
+ * Finding types are ORed; routing tags explicitly use any/all semantics.
+ */
+export function matchesSelector(
+  selector: NormalizedSubscriptionSelector,
+  event: DeliveryEvent,
+): boolean {
+  assertNormalizedSelector(selector);
+  if (!selector.streamIds.includes(event.streamId)) return false;
+  if (!selector.eventTypes.includes(event.eventType)) return false;
+  if (event.eventType !== "finding.submitted") return true;
+  if (selector.findingTypes !== null && !selector.findingTypes.includes(event.findingType ?? "")) return false;
+  if (selector.routingTags === null) return true;
+  const eventTags = new Set(event.routingTags);
+  if (selector.routingTags.mode === "any") {
+    return selector.routingTags.values.some((tag) => eventTags.has(tag));
+  }
+  return selector.routingTags.values.every((tag) => eventTags.has(tag));
+}
+
+/**
+ * Apply subscription status, tenant isolation, quarantine exclusion, and the
+ * future-only activation boundary around the normalized selector.
  */
 export function matchesSubscription(
   event: DeliveryEvent,
   subscription: ConsumerSubscription,
 ): boolean {
-  if (!subscription.active) return false;
+  if (subscription.status !== "active") return false;
   if (!event.deliveryEligible) return false;
   if (event.tenantId !== subscription.tenantId) return false;
-  if (subscription.streamIds.length > 0 && !subscription.streamIds.includes(event.streamId)) return false;
-
-  const isRunEvent = event.findingId === null;
-  if (isRunEvent) return subscription.includeRunEvents;
-
-  if (!matchesList(eventFindingType(event), subscription.findingTypes)) return false;
-  if (subscription.routingTags.length > 0) {
-    const actualTags = new Set(eventRoutingTags(event));
-    if (!subscription.routingTags.some((tag) => actualTags.has(tag))) return false;
-  }
-  return true;
+  if (comparePositions(event.sequence, subscription.activationPosition) <= 0) return false;
+  return matchesSelector(subscription.selectors, event);
 }
 
 export function matchingSubscriptions(
@@ -61,13 +82,12 @@ export function matchingSubscriptions(
   return subscriptions.filter((subscription) => matchesSubscription(event, subscription));
 }
 
-/** Extract selector fields without exposing mutable payload objects. */
 export function selectorFields(event: DeliveryEvent): {
   findingType: string | null;
   routingTags: readonly string[];
 } {
   return {
-    findingType: eventFindingType(event),
-    routingTags: [...eventRoutingTags(event)],
+    findingType: event.findingType,
+    routingTags: [...event.routingTags],
   };
 }

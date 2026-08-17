@@ -1,5 +1,7 @@
 # Consumer delivery application service
 
+Status: **implemented; combined durable-delivery acceptance is green.**
+
 `@agent-feed/delivery-consumer` is the pure application layer for Agent Feed
 Milestone 2 consumer operations. It has no SQL, PostgreSQL, HTTP, queue, or
 Supabase dependency. A durable adapter implements the injected repository;
@@ -29,12 +31,20 @@ Cross-scope records are intentionally reported as `not_found`.
 - Finding-type and tag filters apply only to `finding.submitted`.
 - Run lifecycle events match only by stream and event type, allowing a filtered
   consumer to receive terminal lifecycle signals deliberately.
+- Pull delivery has no endpoint or signing key. Webhook delivery requires both
+  a non-empty endpoint reference and a non-empty signing-key reference; key
+  material remains outside this package.
 
-Selectors are normalized (including deterministic ordering) before hashing.
-Selector changes create a new selector version and are marked `future`; the
-repository must apply them only after its transaction boundary. A new
-subscription is future-only by default: the repository captures the current
-outbox position atomically as `activationPosition`.
+The normalized selector shape and matching implementation are owned by
+`packages/delivery-core` and imported here; this package only validates and
+normalizes request input into that shared shape. Selectors are normalized
+(including deterministic ordering) before hashing. Selector changes create a
+new selector version and are marked `future`; the repository must apply them
+only after its transaction boundary. A new subscription is future-only by
+default: the repository captures the current tenant-global outbox position
+atomically as `activationPosition`. Pull cursors use that same tenant-global
+decimal position across all streams selected by a subscription; it is not a
+per-stream offset.
 
 ## Pull and acknowledgement
 
@@ -70,13 +80,13 @@ worker implementation:
 | `selectors.findingTypes` (`null` means any) | `ConsumerSubscription.findingTypes` |
 | `selectors.routingTags` with `mode: any/all` | adapter-owned selector snapshot |
 | `SubscriptionDeliveryRecord.deliveryId` | `DeliveryJob.deliveryId` |
-| `DeliveryEventRecord.position` | `DeliveryEvent.sequence` |
+| `DeliveryEventRecord.position` (tenant-global) | `DeliveryEvent.sequence` |
 | `ReplayDeadLetterRecord` | `ReplayInput` plus adapter idempotency receipt |
 
-The core worker currently models empty finding/tag arrays as wildcards and
-`includeRunEvents` as a boolean. The adapter must preserve this package's
-explicit selector semantics when translating to that representation; an empty
-stream selector must never become an unrestricted subscription.
+The delivery-core normalized contract uses `null` for an unrestricted finding
+type/tag dimension and requires non-empty exact stream/event-type arrays. The
+adapter must preserve that contract; an empty stream selector must never
+become an unrestricted subscription.
 
 `PayloadHasher` is injected intentionally. Canonical JSON and hash ownership
 belongs to the protocol-runtime package; this package does not duplicate it.
@@ -94,13 +104,18 @@ can be shared without importing crypto or encoding policy here.
   delivery.
 - Decision: all scope checks fail closed and cross-scope reads return
   `not_found`, preventing resource-existence leaks.
+- Decision: webhook configuration is all-or-nothing at this boundary; both
+  endpoint and signing-key references are required, while pull subscriptions
+  reject either field.
 - Learning: cursor scan position and acknowledgement position must remain
   separate; advancing a client cursor before acknowledgement can lose events.
 - Learning: the cursor/hash implementations belong to injected runtime seams,
   not a second copy in the consumer application layer.
-- No implementation bugs were found during the initial pass; the deterministic
-  tests cover the identified isolation, selector, cursor, acknowledgement, and
-  replay hazards.
+The current evidence is 10/10 deterministic unit tests, a clean install, and a
+clean TypeScript build. The combined M2 gate adds 3/3 live PostgreSQL tests for
+transactional fan-out, lease/retry/replay, and signed cursor isolation. This
+package remains transport-neutral; a deployable HTTP server is outside its
+scope.
 
 ## Test
 

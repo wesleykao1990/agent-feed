@@ -17,7 +17,16 @@ Agent Feed may retain a URL, excerpt, locator, hash, or uploaded artifact. Each 
 
 ## Immutable core and auditable lifecycle
 
-Accepted batches, findings, and evidence are append-only. Run closure and delivery state are recorded separately. Corrections create new findings or consumer-side corrections rather than overwriting history.
+Accepted batches, findings, evidence, and source delivery events are
+append-only. Run closure and per-consumer delivery state are recorded
+separately. A retry changes only delivery-attempt state and the required
+attempt value in the signed delivery body; it does not change event ID,
+payload, occurred time, or payload hash. Corrections create new findings or
+consumer-side corrections rather than overwriting history.
+
+Delivery does not promote a finding or submitted evidence into verified truth.
+Dead-letter replay preserves the original untrusted event and audit history;
+it is not a verification or canonical-evidence operation.
 
 ## Prompt injection
 

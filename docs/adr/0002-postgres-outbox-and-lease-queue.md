@@ -1,6 +1,6 @@
 # ADR-0002: PostgreSQL outbox and lease queue
 
-- Status: Accepted for implementation; code not yet complete
+- Status: Accepted and implemented in the M2 repository; explicit migration pair retained
 - Date: 2026-08-18
 - Scope: First durable delivery adapter
 
@@ -56,3 +56,14 @@ the event and acknowledgement semantics remain unchanged.
 - concurrent workers cannot claim one attempt twice;
 - expired leases are reclaimable;
 - outbox payloads are immutable and per-consumer state is independent.
+
+## Implementation review — 2026-08-18
+
+The additive migration shape, transaction-aware ingress outbox calls, and
+PostgreSQL delivery repository pass the live PostgreSQL suite (3/3), while the
+package suite is 10/10 with the database configured. The loader intentionally
+applies the known `0001`/`0002` pair and does not discover arbitrary future
+migrations. A frozen detail for multi-stream pull is that the delivery
+position is tenant-global and monotonic; the historical `stream_position` name
+may remain for compatibility, but per-stream counters cannot back one union
+cursor. See M2-013.

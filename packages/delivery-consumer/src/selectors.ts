@@ -1,13 +1,14 @@
 import {
   DELIVERY_EVENT_TYPES,
-  type DeliveryEventRecord,
   type DeliveryEventType,
-  type NormalizedRoutingTagSelector,
   type NormalizedSubscriptionSelector,
   type RoutingTagSelectorInput,
   type SubscriptionSelectorInput,
 } from "./types.ts";
 import { DeliveryConsumerError } from "./types.ts";
+import { matchesSelector as matchesCoreSelector } from "@agent-feed/delivery-core";
+import type { DeliveryEvent as CoreDeliveryEvent } from "@agent-feed/delivery-core";
+import type { DeliveryEventRecord } from "./types.ts";
 
 const EVENT_TYPE_SET = new Set<string>(DELIVERY_EVENT_TYPES);
 
@@ -24,7 +25,7 @@ function assertUnique(values: readonly string[], field: string): void {
 }
 
 function sortedStrings(values: readonly string[], field: string): string[] {
-  if (values.length === 0) {
+  if (!Array.isArray(values) || values.length === 0) {
     throw new DeliveryConsumerError("invalid_input", `${field}_must_not_be_empty`);
   }
   for (const value of values) assertString(value, field);
@@ -32,8 +33,11 @@ function sortedStrings(values: readonly string[], field: string): string[] {
   return [...values].sort((left, right) => left.localeCompare(right));
 }
 
-function normalizeTags(input: RoutingTagSelectorInput | undefined): NormalizedRoutingTagSelector | null {
+function normalizeTags(input: RoutingTagSelectorInput | undefined): NormalizedSubscriptionSelector["routingTags"] {
   if (input === undefined) return null;
+  if (!input || typeof input !== "object") {
+    throw new DeliveryConsumerError("invalid_input", "routing_tags_invalid");
+  }
   if (input.mode !== "any" && input.mode !== "all") {
     throw new DeliveryConsumerError("invalid_input", "routing_tag_mode_invalid");
   }
@@ -48,6 +52,9 @@ export function normalizeSelector(input: SubscriptionSelectorInput): NormalizedS
   const findingTypes = input.findingTypes === undefined
     ? null
     : sortedStrings(input.findingTypes, "finding_types");
+  if (input.eventTypes !== undefined && !Array.isArray(input.eventTypes)) {
+    throw new DeliveryConsumerError("invalid_input", "event_types_must_be_array");
+  }
   const eventTypes = input.eventTypes === undefined
     ? [...DELIVERY_EVENT_TYPES]
     : [...input.eventTypes];
@@ -69,29 +76,30 @@ export function normalizeSelector(input: SubscriptionSelectorInput): NormalizedS
   };
 }
 
-function isFindingEvent(event: DeliveryEventRecord): boolean {
-  return event.eventType === "finding.submitted";
+function toCoreEvent(event: DeliveryEventRecord): CoreDeliveryEvent {
+  return {
+    protocolVersion: "0.1",
+    eventId: event.eventId,
+    eventType: event.eventType,
+    tenantId: "consumer-adapter",
+    streamId: event.streamId,
+    runId: event.runId,
+    findingId: event.findingId,
+    occurredAt: event.occurredAt,
+    sequence: event.position,
+    traceId: event.traceId,
+    payload: event.payload as CoreDeliveryEvent["payload"],
+    payloadHash: "adapter-payload-hash",
+    findingType: event.findingType,
+    routingTags: [...event.routingTags],
+    deliveryEligible: true,
+  };
 }
 
-/**
- * Event routing is intentionally exact. Finding-type and routing-tag filters
- * apply only to finding events; run lifecycle events match stream and event
- * type, so a filtered consumer can still receive terminal lifecycle signals.
- */
+/** Delegate matching to delivery-core's canonical normalized-selector logic. */
 export function matchesSelector(
   selector: NormalizedSubscriptionSelector,
   event: DeliveryEventRecord,
 ): boolean {
-  if (!selector.streamIds.includes(event.streamId)) return false;
-  if (!selector.eventTypes.includes(event.eventType)) return false;
-  if (!isFindingEvent(event)) return true;
-  if (selector.findingTypes !== null && !selector.findingTypes.includes(event.findingType ?? "")) {
-    return false;
-  }
-  if (selector.routingTags === null) return true;
-  const eventTags = new Set(event.routingTags);
-  if (selector.routingTags.mode === "any") {
-    return selector.routingTags.values.some((tag) => eventTags.has(tag));
-  }
-  return selector.routingTags.values.every((tag) => eventTags.has(tag));
+  return matchesCoreSelector(selector, toCoreEvent(event));
 }

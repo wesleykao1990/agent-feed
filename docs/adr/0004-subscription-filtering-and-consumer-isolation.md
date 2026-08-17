@@ -1,6 +1,6 @@
 # ADR-0004: Subscription filtering and consumer isolation
 
-- Status: Accepted for implementation; code not yet complete
+- Status: Accepted and implemented in the M2 repository
 - Date: 2026-08-18
 - Scope: Consumer subscriptions and routing
 
@@ -57,3 +57,12 @@ adapter can populate the same principal fields without changing routing code.
 - terminal-event routing test;
 - authorization test with mismatched path, token, and subscription IDs;
 - historical-vs-future subscription behavior test.
+
+## Implementation review — 2026-08-18
+
+The pure consumer service and transport-neutral API handler enforce
+credential-derived tenant/consumer scope, exact stream authorization, cursor
+binding, and acknowledgement idempotency. The consumer matcher delegates to
+delivery-core, and the live PostgreSQL suite (3/3) covers tenant fan-out,
+lease/retry/replay, and scope-bound cursor behavior. This ADR is implemented
+for the M2 gate; an HTTP transport remains outside the current API boundary.

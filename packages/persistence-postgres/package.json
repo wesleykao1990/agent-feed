@@ -3,14 +3,29 @@
   "version": "0.1.1",
   "private": true,
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "migrations",
+    "README.md",
+    "package.json"
+  ],
   "engines": {
     "node": ">=22"
   },
   "scripts": {
     "build": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test test/*.test.ts"
+    "test": "node --experimental-strip-types --test-concurrency=1 --test test/*.test.ts"
   },
   "dependencies": {
+    "@agent-feed/delivery-consumer": "file:../delivery-consumer",
+    "@agent-feed/delivery-core": "file:../delivery-core",
+    "@agent-feed/protocol-runtime": "file:../protocol-runtime",
     "pg": "8.16.3"
   },
   "devDependencies": {

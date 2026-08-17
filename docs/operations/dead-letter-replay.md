@@ -1,9 +1,14 @@
 # Dead-letter inspection and replay
 
-Status: **in progress — operator contract only**
+Status: **M2 replay acceptance green; deployable replay endpoint remains future work**
 
 Dead-letter state is durable delivery history, not a deletion queue. The
-underlying Agent Feed event remains immutable and untrusted.
+underlying Agent Feed event remains immutable and untrusted. Delivery-core
+contains the state-machine and replay port shape, and the consumer service
+contains scope/idempotency validation. A PostgreSQL repository and webhook
+transport foundation now exist, and the combined live PostgreSQL suite passes
+the persistence/replay paths. The worker process/CLI and deployable replay
+endpoint/server remain future operational adapters.
 
 ## State model
 
@@ -40,10 +45,12 @@ consumer-domain review requirement.
 
 ## Replay semantics
 
-Replay is scoped to one authorized subscription. It keeps the original event ID
-and immutable body, increments the delivery attempt/replay metadata, and
-creates a new attempt record. It does not reset the event's creation time,
-rewrite the finding, delete failures, or create a new domain finding.
+Replay is scoped to one authorized subscription. It keeps the original event ID,
+payload, occurred time, and payload hash, increments the delivery attempt, and
+re-encodes/re-signs the protocol body with that required attempt field. It
+creates a new attempt record without mutating the immutable source event. It
+does not reset the event's creation time, rewrite the finding, delete failures,
+or create a new domain finding.
 
 Replay must be idempotent for the same operator command/idempotency key. A
 second exact command returns the original replay receipt; changed replay
@@ -59,6 +66,8 @@ parameters under that key are conflicts.
 - stop replay if the consumer returns authentication/policy failures;
 - monitor replay count and resulting backlog.
 
-The replay endpoint and persistence implementation are not yet present. Tests
-required before operational use are listed in `docs/12_milestone_2_delivery.md`
-and ADR-0003.
+The transport-neutral API handler, PostgreSQL persistence implementation, and
+pure replay contract are accepted by the M2 implementation gate. A deployable
+replay endpoint and production worker transport wiring remain operational
+follow-ups. Tests and scope rules are recorded in
+`docs/12_milestone_2_delivery.md` and ADR-0003.

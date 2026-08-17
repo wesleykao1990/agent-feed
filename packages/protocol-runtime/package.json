@@ -6,6 +6,18 @@
   "engines": {
     "node": ">=22"
   },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "files": [
+    "src",
+    "README.md",
+    "package.json"
+  ],
   "scripts": {
     "build": "tsc --noEmit",
     "test": "node --experimental-strip-types --test test/*.test.ts"
@@ -15,4 +27,3 @@
     "typescript": "7.0.2"
   }
 }
-

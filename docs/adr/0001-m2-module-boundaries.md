@@ -1,6 +1,6 @@
 # ADR-0001: Milestone 2 module boundaries
 
-- Status: Accepted for implementation; code not yet complete
+- Status: Accepted and implemented in the M2 repository; deployment follow-up remains
 - Date: 2026-08-18
 - Scope: Agent Feed durable consumer delivery
 
@@ -59,3 +59,13 @@ ports without changing routing semantics.
 - canonical JSON/HMAC behavior has one implementation and cross-package tests;
 - fake-clock/fake-transport tests cover delivery-core without PostgreSQL;
 - PostgreSQL and end-to-end tests exercise the adapters separately.
+
+## Implementation review — 2026-08-18
+
+The combined acceptance passes the architecture suite (4), pure conformance
+(6), live PostgreSQL suite (3), all seven M2 package/application clean
+installs/builds/tests, and the package-specific evidence. The worker remains a
+composition boundary without a production process/CLI entrypoint, and the API
+remains transport-neutral without an HTTP server. The in-memory prototype may
+retain historical protocol helpers; production cross-package edges use
+declared package names/public exports. This ADR is implemented for the M2 gate.

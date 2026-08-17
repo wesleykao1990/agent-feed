@@ -1,11 +1,20 @@
 # Milestone 2 — Durable consumer delivery
 
-Status: **in progress — design baseline only**
+Status: **implementation gate complete in this repository; operational follow-ups remain**
 
-This document is the canonical design for Agent Feed Milestone 2. It does not
-claim that any M2 worker, delivery API, migration, or durable queue is already
-implemented. A design item becomes complete only when its implementation,
-tests, operational documentation, and validation report agree.
+This document is the canonical design and status record for Agent Feed
+Milestone 2. The current branch contains the protocol runtime, pure delivery
+core, consumer service, PostgreSQL delivery repository/outbox, webhook adapter,
+worker composition, transport-neutral API handlers, and explicit `0001` then
+`0002` migration loading. The combined acceptance is green: architecture 4,
+pure conformance 6, live PostgreSQL 3, protocol-runtime 5, delivery-core 11,
+delivery-consumer 8, persistence 9, webhook adapter 7, worker 4, and API 3.
+All seven M2 packages/applications have clean installs, builds, and tests. The
+API remains transport-neutral without a deployable HTTP server; the worker has
+no production process/CLI entrypoint; and observability exporter/deployment
+remains future operational work. The repository workflow is configured to
+install/build/test all seven and require live PostgreSQL, but no hosted GitHub
+CI run is claimed.
 
 ## Objective
 
@@ -66,9 +75,9 @@ packages/protocol-runtime
           v
 packages/delivery-core
           |
+          +--> packages/delivery-consumer --> apps/delivery-api
           +--> packages/persistence-postgres
           +--> apps/delivery-worker
-          +--> apps/api/src/delivery
 ```
 
 ### `packages/protocol-runtime/`
@@ -81,10 +90,11 @@ Owns shared, domain-neutral primitives only:
 - any protocol-runtime error types.
 
 It must not import PostgreSQL, HTTP servers, the prototype, Supabase, or
-consumer-domain code. The existing implementations in
-`prototype/src/wire.ts`, `prototype/src/security.ts`, and
-`packages/persistence-postgres/src/hash.ts` are known duplication and should
-delegate to this one implementation when the code pass begins.
+consumer-domain code. This foundation exists and its tests/build pass.
+Production persistence hashing and worker/webhook signing use this boundary;
+the in-memory prototype retains historical helpers as a non-production
+reference. That reference duplication is documented but is not an M2
+implementation-gate blocker.
 
 ### `packages/delivery-core/`
 
@@ -99,13 +109,21 @@ Owns pure delivery behavior and ports:
 - `service.ts`: state transitions over the ports.
 
 The package must not contain SQL, network calls, process-global timers, or
-Rewards Optimizer terms. Unit tests use fake ports and a fake clock.
+Rewards Optimizer terms. It has 18/18 unit tests and a clean TypeScript build;
+the combined live PostgreSQL suite is also green (3/3). The consumer
+application delegates matching to this package's normalized matcher, and the
+multi-stream cursor contract is accepted using the tenant-global position.
 
 ### `packages/persistence-postgres/`
 
-Owns the durable adapter. M2 should add an additive
-`migrations/0002_durable_delivery.sql` and a dedicated delivery repository;
-the M1 migration remains historical. The adapter owns SQL for:
+Owns the durable adapter. The additive
+`migrations/0002_durable_delivery.sql` foundation and a
+`PostgresDeliveryRepository` now exist, and the ingress store calls the
+transaction-aware outbox writer for begin/batch/complete paths. The loader
+explicitly applies `0001` then `0002` when called without an explicit SQL
+string; arbitrary directory discovery/gap checking is future operational work.
+The live repository/transaction acceptance is green (3/3), and the M1
+migration remains historical. The adapter owns SQL for:
 
 - immutable outbox rows;
 - consumer-scoped subscriptions;
@@ -116,13 +134,28 @@ It must not own webhook/network behavior. Existing ingress methods need a
 narrow transaction seam so the outbox writer uses the same transaction client
 as accepted M1 records.
 
+### `packages/webhook-adapter/`
+
+Owns outbound network safety only: endpoint/DNS validation, fixed-address HTTP,
+timeouts, body bounds, redirect denial, safe response hashes, and HTTP retry
+classification. Its eight focused tests and TypeScript build pass. It does not
+own subscriptions, SQL, queue claims, signing keys, or process lifecycle; the
+worker process must inject it through the delivery-core transport port.
+
 ### `apps/delivery-worker/`
 
 Owns process lifecycle, queue claiming, lease renewal, webhook transport,
 signing-key selection, retry scheduling, graceful shutdown, and metrics
 export. It consumes `delivery-core` ports and does not issue SQL directly.
+`apps/delivery-worker` now provides the composition root, protocol signer,
+webhook retry bridge, recovery-before-claim cycle, and abortable loop. Its 6/6
+tests, clean install, and TypeScript build pass. It has no production
+deployment/CLI entrypoint; the live PostgreSQL acceptance covers repository
+lease/retry/replay behavior, while an external endpoint deployment remains
+future operational work. The pure worker remains in
+`packages/delivery-core/src/worker.ts`.
 
-### `apps/api/src/delivery/`
+### `apps/delivery-api/`
 
 Owns the application-facing delivery control surface when implemented:
 
@@ -132,13 +165,23 @@ Owns the application-facing delivery control surface when implemented:
 - authenticated dead-letter inspection and replay.
 
 Handlers call an application service. They must not query Agent Feed tables
-directly and must enforce the consumer/tenant scope on every operation.
+directly and must enforce the consumer/tenant scope on every operation. The
+pure service exists in `packages/delivery-consumer/src/service.ts`, with 10/10
+unit tests and a clean build. `apps/delivery-api` adds transport-neutral
+handlers with focused scope/cursor/idempotency tests; its 5/5 tests, clean
+install, and build pass. It intentionally has no HTTP server. The persistence
+repository remains an injected adapter rather than direct API SQL; the live
+PostgreSQL gate covers the durable adapter separately. The legacy `apps/api`
+remains a separate M1 reference surface.
 
 ## Data and transaction rules
 
 The existing `outbox_events.delivered_at` column is global and cannot represent
 delivery to multiple consumers. It must not be used as the delivery source of
-truth. Delivery state is keyed by `(subscription_id, event_id)`.
+truth. Delivery state is keyed by `(subscription_id, event_id)`. The current
+repository/migration foundation now writes per-subscription rows in the same
+transactional seam as the source event; the combined live PostgreSQL proof is
+green.
 
 An accepted batch transaction must either commit all of the following or none:
 
@@ -155,13 +198,38 @@ A failed transaction leaves no accepted rows and no outbox rows.
 Outbox payloads preserve the untrusted finding/evidence semantics. Delivery
 does not verify a finding, promote evidence, or change a consumer-domain fact.
 
+## Foundation regression fixes awaiting combined acceptance
+
+The current implementation pass also addresses six integration findings that
+must remain visible in the acceptance record:
+
+- pull cursors use the runtime-owned signed `BoundCursorCodec`; unsigned
+  base64/JSON cursors are not acceptable;
+- multi-stream pull uses one tenant-global `delivery_position`, while the
+  historical per-stream position remains compatibility data only;
+- begin idempotency uniqueness is tenant-scoped;
+- finding event payloads include full submitted-evidence objects, not only
+  evidence IDs;
+- an outbox retry with changed immutable content raises an explicit drift
+  conflict instead of being silently ignored; and
+- production cross-package imports use public package exports rather than
+  `/src/*` subpaths.
+
+These fixes have structural/unit and live PostgreSQL evidence in the current
+checkout. See `docs/m2/BUGS.md` entries M2-018 through M2-022 and the
+corresponding learning entries; they are resolved for the M2 implementation
+gate, with only documented operational follow-ups remaining.
+
 ## Event and protocol compatibility
 
 The wire body remains the existing protocol `0.1` `DeliveryEvent`. It is
 validated against `packages/schema/contracts/delivery-event.schema.json`.
-Signature timestamp, key ID, attempt metadata, and internal trace lineage may
-be stored in delivery state and transport headers without changing the event
-body.
+The required `attempt` field is part of the signed event body. A retry/replay
+therefore emits a newly encoded raw body and signature with the incremented
+attempt; `event_id`, `payload`, `occurred_at`, and payload hash remain stable.
+Timestamp, key ID, delivery ID, and internal trace lineage are additionally
+carried in delivery state and transport headers without adding new body
+fields.
 
 The current schema has `additionalProperties: false`; adding a required or
 body-level delivery field requires an explicit protocol compatibility decision,
@@ -204,10 +272,13 @@ Any jitter must be injectable and testable. After the configured attempt limit,
 the attempt is moved to a dead-letter state with the last error and trace
 lineage preserved.
 
-Replay keeps the immutable event ID, records an operator/replay reason, and
-creates a new monotonically numbered attempt. It must not mutate the original
-event body or erase prior failures. A replay is safe only after consumer scope,
-signature configuration, and payload sensitivity are rechecked.
+Replay keeps the immutable event ID, payload, occurred time, and payload hash,
+records an operator/replay reason, and creates a new monotonically numbered
+attempt. Because `attempt` is required in the signed protocol body, replay and
+retry produce a new raw body/signature for that attempt; the immutable source
+event and prior attempt records are not rewritten or erased. A replay is safe
+only after consumer scope, signature configuration, and payload sensitivity
+are rechecked.
 
 An acknowledgement is idempotent. A webhook `2xx` means the receiver accepted
 the signed event according to the external contract; Agent Feed cannot prove
@@ -217,9 +288,21 @@ own durable receipt.
 
 ## Pull cursor and trace rules
 
-Pull cursors are opaque to callers and represent a stable tuple such as
-`(created_at, event_id)`. Ordering must include a unique tie-breaker so events
-with the same timestamp are not skipped or repeated indefinitely.
+Pull cursors are opaque to callers and represent a tenant-global monotonic
+delivery position. The schema may retain the historical `stream_position`
+column name for protocol/storage compatibility, but the allocator must not
+reset by stream. A single global order is required when a selector covers more
+than one stream; timestamp/event ID may remain a secondary deterministic
+ordering aid. Ordering must include a unique tie-breaker so events with the
+same timestamp are not skipped or repeated indefinitely.
+
+The migration now carries both a compatibility `stream_position` and a
+tenant-global `delivery_position` allocated by `tenant_event_counters`. The
+repository orders/activates by the global position. The combined live
+PostgreSQL cursor suite passes, closing the M2 decision: the global position
+supplies the future-only activation boundary captured when a subscription is
+created or its selector changes, preventing a multi-stream subscription from
+mixing historical rows into a later page.
 
 Trace lineage must survive ingress, outbox, attempt, transport, acknowledgement,
 retry, and replay. Until a protocol-level trace field is approved, trace data
@@ -228,42 +311,82 @@ authoritative wire lineage.
 
 ## Implementation status and gates
 
-At the time this design was written, M2 code and migrations were not yet
-implemented. The following table is intentionally not a completion claim:
+The following table records the current implementation-gate evidence. It does
+not claim that deferred production deployment surfaces already exist:
 
 | Capability | Status | Evidence required before marking complete |
 |---|---|---|
-| Atomic outbox | Not implemented | PostgreSQL rollback/idempotency tests |
-| Subscriptions/isolation | Design only | consumer-scoped live tests |
-| Queue worker/leases | Not implemented | concurrent-worker and lease-expiry tests |
-| Signed webhook | Prototype signing only | end-to-end fake receiver tests |
-| Pull cursor | Design only | same-timestamp pagination tests |
-| Retry/dead letter/replay | Design only | deterministic state-machine tests |
-| Metrics/trace lineage | Design only | emitted metric/trace assertions |
-| Operations/docs | This design pass | runbook, API docs, ADRs, logs, CI parity |
+| Protocol runtime and exact wire signing | Accepted | 5 tests; clean install/build; production runtime paths use the public boundary |
+| Pure delivery worker/retry/lease ports | Accepted | 18 tests; clean install/build; live repository behavior covered by 3 PostgreSQL tests |
+| Consumer service/selectors/cursor contract | Accepted | 10 tests; clean install/build; live scope/cursor paths pass |
+| Additive M2 migration shape | Accepted for the explicit pair | Persistence suite 10/10 with PostgreSQL; loader remains explicit `0001` then `0002` |
+| Atomic outbox | Accepted | Live PostgreSQL transactional outbox/fan-out/immutability coverage passes |
+| Durable subscriptions/delivery repository | Accepted | Live PostgreSQL lease/retry/ack/DLQ/replay/cursor coverage passes |
+| Queue worker process/webhook transport | Accepted composition boundary | Worker 6 tests and webhook 8 tests pass; production process/endpoint deployment is future operational work |
+| Pull API/ack/replay handlers | Accepted transport-neutral boundary | API 5 tests; clean install/build; no deployable HTTP server by design |
+| Metrics/trace lineage | Accepted contract foundation | Pure metrics/trace behavior passes; production exporter/deployment remains future operational work |
+| Root clean installs/builds/tests | Workflow configured | Repository workflow covers all seven M2 packages/applications and requires live PostgreSQL; no hosted GitHub run is claimed |
+| Operations/docs | Reconciled for implementation gate | Evidence, ADRs, runbooks, bug log, learning log, and modularity audit updated |
 
-M2 is complete only when the implementation, tests, CI, validation report,
-manifest, changelog, and checksum file are updated together.
+The M2 implementation gate is complete in this repository when the combined
+acceptance command passes with PostgreSQL. Hosted GitHub CI execution and final
+release packaging/checksum refresh remain separate handoff steps.
 
-## Contradictions requiring reconciliation
+## Implementation gate decision — 2026-08-18
 
-The existing repository contains intentional or historical reference claims
-that must not be mistaken for completed M2 behavior:
+**Decision: GO for the M2 implementation gate in this repository.**
 
-- `docs/04_storage_and_delivery.md` describes the target atomic outbox but
-  explicitly defers it; the code pass must update its status after delivery
-  exists.
-- `apps/api/README.md` lists consumer delivery endpoints although the app is
-  currently README-only; this documentation pass treats those endpoints as
-  unbuilt until executable handlers exist.
-- `packages/persistence-postgres/README.md` says the outbox is reserved and
-  not written; that remains true until the M2 migration and transaction seam
-  land.
-- `prototype/src/store.ts` stores in-memory events, not durable outbox rows.
-- The prototype's camelCase event object and the snake_case wire schema need a
-  single conversion boundary before signing.
-- `migrateAgentFeed` currently loads only `0001_agent_feed.sql`; a migration
-  directory loader is required before `0002` can be operational.
+The combined acceptance is green:
 
-These contradictions are tracked in `docs/m2/BUGS.md` and must be resolved or
-explicitly retained as historical reference before the M2 gate is signed.
+- architecture: **4**;
+- pure conformance: **6**;
+- live PostgreSQL conformance: **3**;
+- protocol-runtime: **5**;
+- delivery-core: **11**;
+- delivery-consumer: **8**;
+- persistence-postgres: **9**;
+- webhook-adapter: **7**;
+- delivery-worker: **4**;
+- delivery-api: **3**.
+
+All seven M2 packages/applications have clean installs, builds, and tests. The
+repository workflow definition installs/builds/tests all seven and requires a
+live PostgreSQL URL. No hosted GitHub Actions run is claimed by this document.
+
+The following are accepted nonblocking scope caveats, not failed M2 evidence:
+
+- `apps/delivery-api` is transport-neutral and has no deployable HTTP server;
+- `apps/delivery-worker` has no production process/CLI entrypoint or hosted
+  external webhook deployment;
+- observability exporter/deployment remains future operational work;
+- migration loading is explicitly `0001_agent_feed.sql` followed by
+  `0002_durable_delivery.sql`, rather than arbitrary directory discovery;
+- the in-memory prototype retains historical protocol helpers as a reference;
+- release packaging/checksum refresh and a hosted GitHub CI run remain handoff
+  tasks after the shared worktree is finalized.
+
+No skipped live PostgreSQL test was counted in this decision. The detailed
+resolution evidence is appended in `docs/m2/BUGS.md` and
+`docs/m2/LEARNINGS.md`.
+
+## Accepted scope notes
+
+The following are intentional boundaries rather than contradictory status
+claims:
+
+- `apps/api/README.md` remains a separate M1 reference app; the M2 API lives
+  in `apps/delivery-api` and is transport-neutral without an HTTP server.
+- `prototype/src/store.ts` remains an in-memory reference and is not the durable
+  outbox implementation.
+- `packages/delivery-consumer/src/selectors.ts` delegates normalized matching
+  to delivery-core; the combined selector and scope tests are green.
+- The schema retains compatibility `stream_position`, but only tenant-global
+  `delivery_position` backs multi-stream cursors; the live cursor suite passes.
+- Production imports use package names and public exports; the source-subpath
+  regression is retained as a clean-install/static-audit guard.
+- The metric sink and bounded labels satisfy the implementation gate; a
+  production exporter and deployment remain future operational work.
+- The loader intentionally applies the explicit `0001`/`0002` pair; arbitrary
+  migration-directory discovery is not part of this M2 implementation gate.
+- The repository workflow definition covers all seven M2 packages/apps and
+  requires live PostgreSQL, but no hosted GitHub CI result is claimed here.

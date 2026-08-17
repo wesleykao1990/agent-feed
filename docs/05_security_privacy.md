@@ -14,6 +14,14 @@
 - duplicate idempotency key with a different payload hash: HTTP 409 / protocol conflict;
 - terminal runs and accepted batches/findings/evidence are immutable;
 - secrets or hostile embedded instructions cause quarantine before consumer delivery.
+- consumer credentials are tenant/consumer scoped; a URL or request body must
+  never select another consumer's subscription;
+- delivery cursors are authenticated, opaque, expiring, and bound to tenant,
+  consumer, subscription, and selector version;
+- retries/replays preserve event ID and payload hash, and signatures are
+  recomputed for the body-level attempt number;
+- metric labels are allowlisted and bounded; source content, evidence, secrets,
+  arbitrary routing tags, and raw errors are not labels.
 
 These are versioned defaults, not universal limits. A deployment may tighten them, but weakening them requires a recorded security decision and tests.
 
@@ -32,3 +40,9 @@ ceiling for compatibility. The service default is deliberately stricter at
 - treat URLs, excerpts, HTML, PDFs, and model output as untrusted;
 - do not expose internal queues or service credentials to browser clients;
 - log protocol metadata, not unnecessary source content or secrets.
+
+The protocol-runtime foundation tests canonical bytes, HMAC replay checks,
+strict snake_case event bodies, key rotation, and trace-header binding. The
+consumer service, transport-neutral API, PostgreSQL repository, and webhook
+adapter have focused foundation tests, but durable PostgreSQL and HTTP server
+security integration are not live-verified. See the M2 go/no-go checklist.

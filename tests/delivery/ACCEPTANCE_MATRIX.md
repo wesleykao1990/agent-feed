@@ -5,10 +5,10 @@ separate from the Milestone 0/1 protocol conformance matrix: these tests prove
 durability and consumer isolation at the delivery boundary, not merely that a
 wire payload validates.
 
-The matrix is written before the delivery implementation so every branch can
-use the same fixtures and failure semantics. The static architecture check is
-safe to run now; it reports deferred M2 paths as `SKIP` and becomes strict when
-those paths or the `0002` migration are added.
+The matrix was written before the delivery implementation so every branch
+could use the same fixtures and failure semantics. The current combined gate
+is green for the implemented M2 surface; deferred production deployment
+surfaces remain explicitly identified rather than counted as missing tests.
 
 ## Test layers and fixtures
 
@@ -70,16 +70,19 @@ SQL directly.
 
 ## Commands
 
-The repository currently has no root M2 command, so run the static test
-directly while implementation is in progress:
+The repository now has a root M2 runner. It fails by default when the live
+PostgreSQL URL is absent, and `--allow-live-skip` is reserved for local
+package/architecture work where the skipped durability result is called out:
 
 ```sh
-node scripts/check_delivery_architecture.mjs
-node --test tests/delivery/*.test.mjs
+node scripts/run_m2_conformance.mjs
+node scripts/run_m2_conformance.mjs --allow-live-skip  # local-only, not a gate
 ```
 
-The combined M2 CI job should expose equivalent commands once package scripts
-are added:
+The repository workflow definition exposes the equivalent validation steps and
+installs/builds/tests all seven M2 packages/applications. It requires a live
+PostgreSQL service. This matrix does not claim that the hosted GitHub workflow
+has run successfully yet:
 
 ```sh
 npm run validate:foundation
@@ -97,6 +100,39 @@ AGENT_FEED_DATABASE_URL=... npm run m2:postgres
 The PostgreSQL job must fail rather than skip when its database URL is absent.
 Use a clean PostgreSQL 16 service and namespace all fixture IDs. Persist SQL,
 worker, and harness logs on failure.
+
+## Current executable status (2026-08-18)
+
+The following results are from the current shared checkout. Pure/application
+tests are separate from live acceptance; a skipped live test is never counted
+as a pass.
+
+| Command/suite | Result | Scope and remaining caveat |
+| --- | --- | --- |
+| `node scripts/check_delivery_architecture.mjs` | PASS | Current protocol-runtime, delivery-core, worker, API, and persistence paths pass. No Realtime/Supabase imports, direct SQL in application boundaries, or `outbox_events.delivered_at` acknowledgement logic. |
+| `node --test tests/delivery/architecture.test.mjs` | 4 pass | Static guard and synthetic invalid/valid package fixtures. |
+| `node --experimental-strip-types --test tests/delivery/conformance.test.ts` | 6 pass | Real protocol-runtime, delivery-core, delivery-consumer, worker, selector, retry, cursor, trace, metrics, and replay seams. |
+| `node --experimental-strip-types --test tests/delivery/postgres-conformance.test.ts` without `AGENT_FEED_DATABASE_URL` | 3 explicit skips | Local no-database mode only; not used for the implementation gate. |
+| Same PostgreSQL suite with `AGENT_FEED_DATABASE_URL=...` | **3 pass** | Transactional outbox/tenant fan-out/ack immutability, lease/recovery/replay, and signed scope-bound pull cursors pass with the injected `BoundCursorCodec`. |
+| `packages/protocol-runtime` | 5 pass | Canonical JSON, snake_case wire body, HMAC replay window, rotation. |
+| `packages/delivery-core` | 18 pass | Selectors, retry, cursor, worker state transitions, stale leases, identity/header validation, redacted errors, and bounded metrics. |
+| `packages/delivery-consumer` | 10 pass | Auth scope, subscription/version, selector, cursor, webhook configuration, ack, replay, and unexpected-error redaction behavior. |
+| `packages/persistence-postgres` with acceptance database | **10 pass** | Migration, ingress, consumer repository/service, outbox, lease, cursor, replay, and M1 persistence coverage pass serially. |
+| `packages/webhook-adapter` | 8 pass | Raw-body transport, SSRF/redirect/request-body/body-size/time-out controls, classification. |
+| `apps/delivery-worker` | **6 pass** | Signer diagnostics, duplicate-package classification, composition, recovery-cycle, and abort lifecycle seams; no production process/CLI entrypoint by design. |
+| `apps/delivery-api` | **5 pass** | Composition/configuration validation, credential-derived scope, cross-tenant paths, cursor/ack API mapping; transport-neutral handlers, no HTTP server. |
+| All seven M2 package/application clean installs and builds | **PASS** | Protocol 5, core 18, consumer 10, persistence 10, webhook 8, worker 6, API 5; each `npm ci`, test, and build completes. |
+
+The root runner executes these suites and prints the live skip explicitly when
+requested. A CI invocation must omit `--allow-live-skip`; the missing-database
+condition or any live test failure makes the command fail. The current live M2
+conformance suite is green against the disposable PostgreSQL service.
+
+The runner discovers every `test/*.test.ts` file, including the live
+`delivery-consumer.test.ts`, and invokes package tests with
+`--test-concurrency=1`. A concurrent root-runner experiment allowed PostgreSQL
+consumer/persistence fixtures to deadlock; serial package execution is now a
+deliberate gate invariant, matching the persistence package's own test script.
 
 ## Race/flakiness controls
 
@@ -117,4 +153,6 @@ environment with no skipped durability, outage, isolation, signature, lease,
 replay, cursor, or Realtime tests. At-least-once duplicate sends are allowed;
 lost committed events, cross-tenant reads, stale/replayed signatures, stale
 lease acknowledgements, non-deterministic replay payloads, and any dependency
-on Realtime as queue state are hard failures.
+on Realtime as queue state are hard failures. Current executable status is
+**green for the implemented M2 surface**; the remaining release gate is a
+clean CI run with the regenerated checksum manifest and no skipped live tests.

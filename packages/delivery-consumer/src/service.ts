@@ -24,9 +24,8 @@ import {
   type ReplayDeadLetterRecord,
   type ReplayDeadLetterResult,
   type SubscriptionRecord,
-  type SubscriptionView,
-  type SubscriptionSelectorInput,
   type SubscriptionStatus,
+  type SubscriptionView,
   type UpdateSubscriptionInput,
   type UpdateSubscriptionRecord,
 } from "./types.ts";
@@ -67,7 +66,26 @@ function scopeFrom(context: ConsumerAuthContext): ConsumerScope {
     throw new DeliveryConsumerError("invalid_auth_context", "wildcard_stream_authorization_not_supported");
   }
   for (const streamId of context.allowedStreamIds) nonEmpty(streamId, "allowed_stream_id");
+  if (new Set(context.allowedStreamIds).size !== context.allowedStreamIds.length) {
+    throw new DeliveryConsumerError("invalid_auth_context", "allowed_stream_ids_must_be_unique");
+  }
+  if (context.allowedSubscriptionIds !== undefined) {
+    if (!Array.isArray(context.allowedSubscriptionIds)) {
+      throw new DeliveryConsumerError("invalid_auth_context", "allowed_subscription_ids_invalid");
+    }
+    for (const subscriptionId of context.allowedSubscriptionIds) nonEmpty(subscriptionId, "allowed_subscription_id");
+    if (new Set(context.allowedSubscriptionIds).size !== context.allowedSubscriptionIds.length) {
+      throw new DeliveryConsumerError("invalid_auth_context", "allowed_subscription_ids_must_be_unique");
+    }
+  }
   return { tenantId: context.tenantId, consumerId: context.consumerId };
+}
+
+function validateStatus(status: unknown): SubscriptionStatus {
+  if (status !== "active" && status !== "paused" && status !== "revoked") {
+    throw new DeliveryConsumerError("invalid_input", "subscription_status_invalid");
+  }
+  return status;
 }
 
 function validateName(name: unknown): string {
@@ -86,7 +104,7 @@ function normalizeDelivery(input: DeliveryConfigurationInput): DeliveryConfigura
   const signingKeyId = input.signingKeyId ?? null;
   if (input.mode === "webhook") {
     nonEmpty(endpointRef, "endpoint_ref");
-    if (signingKeyId !== null) nonEmpty(signingKeyId, "signing_key_id");
+    nonEmpty(signingKeyId, "signing_key_id");
   } else if (endpointRef !== null || signingKeyId !== null) {
     throw new DeliveryConsumerError("invalid_input", "pull_delivery_cannot_have_webhook_configuration");
   }
@@ -134,12 +152,13 @@ function rethrowRepositoryError(value: unknown): never {
     }
     throw new DeliveryConsumerError("invalid_state", value.message);
   }
-  throw value;
+  throw new DeliveryConsumerError("invalid_state", "repository_operation_failed");
 }
 
 function validateCursorClaims(
   claims: DeliveryCursorClaims,
-  expected: Omit<DeliveryCursorClaims, "position">,
+  expected: Pick<DeliveryCursorClaims, "version" | "tenantId" | "consumerId" | "subscriptionId" | "selectorVersion">,
+  nowSeconds: number,
 ): string {
   if (
     !claims
@@ -151,6 +170,9 @@ function validateCursorClaims(
   ) {
     throw new DeliveryConsumerError("cursor_scope_mismatch");
   }
+  if (!Number.isSafeInteger(claims.expiresAt) || claims.expiresAt <= nowSeconds) {
+    throw new DeliveryConsumerError("cursor_invalid");
+  }
   return position(claims.position, "cursor_position");
 }
 
@@ -158,6 +180,7 @@ function cursorClaims(
   scope: ConsumerScope,
   subscription: SubscriptionRecord,
   cursorPosition: string,
+  expiresAt: number,
 ): DeliveryCursorClaims {
   return {
     version: 1,
@@ -166,6 +189,7 @@ function cursorClaims(
     subscriptionId: subscription.id,
     selectorVersion: subscription.selectorVersion,
     position: position(cursorPosition),
+    expiresAt,
   };
 }
 
@@ -186,17 +210,26 @@ export class DeliveryConsumerService {
   readonly #auth: ConsumerAuthPort;
   readonly #cursorCodec: CursorCodec;
   readonly #hasher: PayloadHasher;
+  readonly #nowSeconds: () => number;
+  readonly #cursorTtlSeconds: number;
 
   constructor(options: {
     repository: DeliveryConsumerRepository;
     auth: ConsumerAuthPort;
     cursorCodec: CursorCodec;
     payloadHasher: PayloadHasher;
+    nowSeconds?: () => number;
+    cursorTtlSeconds?: number;
   }) {
     this.#repository = options.repository;
     this.#auth = options.auth;
     this.#cursorCodec = options.cursorCodec;
     this.#hasher = options.payloadHasher;
+    this.#nowSeconds = options.nowSeconds ?? (() => Math.floor(Date.now() / 1000));
+    this.#cursorTtlSeconds = options.cursorTtlSeconds ?? 900;
+    if (!Number.isSafeInteger(this.#cursorTtlSeconds) || this.#cursorTtlSeconds < 1) {
+      throw new DeliveryConsumerError("invalid_input", "cursor_ttl_invalid");
+    }
   }
 
   async createSubscription(input: CreateSubscriptionInput): Promise<SubscriptionView> {
@@ -243,7 +276,7 @@ export class DeliveryConsumerService {
         }
         : {}),
       ...(input.delivery === undefined ? {} : { delivery: normalizeDelivery(input.delivery) }),
-      ...(input.status === undefined ? {} : { status: input.status }),
+      ...(input.status === undefined ? {} : { status: validateStatus(input.status) }),
       activation: selectorChanged ? "future" : "unchanged",
     };
     try {
@@ -262,10 +295,16 @@ export class DeliveryConsumerService {
     const allowedIds = context.allowedSubscriptionIds === undefined
       ? null
       : new Set(context.allowedSubscriptionIds);
-    const records = await this.#repository.listSubscriptions(scope);
+    let records: SubscriptionRecord[];
+    try {
+      records = await this.#repository.listSubscriptions(scope);
+    } catch (error) {
+      rethrowRepositoryError(error);
+    }
     return records
       .filter((record) => this.#recordInScope(record, scope))
       .filter((record) => allowedIds === null || allowedIds.has(record.id))
+      .filter((record) => this.#selectorAllowed(record.selectors, context))
       .map(toView);
   }
 
@@ -276,7 +315,11 @@ export class DeliveryConsumerService {
     if (subscription.status === "revoked") throw new DeliveryConsumerError("not_found");
     const limit = input.limit === undefined ? DEFAULT_PAGE_LIMIT : positiveInteger(input.limit, "limit");
     if (limit > MAX_PAGE_LIMIT) throw new DeliveryConsumerError("invalid_input", "limit_too_large");
-    let afterPosition = position(subscription.activationPosition, "activation_position");
+    // Materialized deliveries already enforce the subscription/version's
+    // future-only activation boundary. Start an un-cursored read at zero so a
+    // selector update cannot strand an unacknowledged row from an older
+    // version; acknowledged rows are excluded by the repository.
+    let afterPosition = "0";
     if (input.cursor !== undefined) {
       const claims = this.#decodeCursor(input.cursor);
       afterPosition = validateCursorClaims(claims, {
@@ -285,7 +328,7 @@ export class DeliveryConsumerService {
         consumerId: scope.consumerId,
         subscriptionId: subscription.id,
         selectorVersion: subscription.selectorVersion,
-      });
+      }, this.#nowSeconds());
     }
     let page;
     try {
@@ -328,7 +371,7 @@ export class DeliveryConsumerService {
         consumerId: scope.consumerId,
         subscriptionId: subscription.id,
         selectorVersion: subscription.selectorVersion,
-      });
+      }, this.#nowSeconds());
     }
     const payloadHash = this.#hasher.hash({
       subscriptionId: subscription.id,
@@ -406,7 +449,12 @@ export class DeliveryConsumerService {
 
   #encodeCursor(scope: ConsumerScope, subscription: SubscriptionRecord, cursorPosition: string): string {
     try {
-      return this.#cursorCodec.encode(cursorClaims(scope, subscription, cursorPosition));
+      return this.#cursorCodec.encode(cursorClaims(
+        scope,
+        subscription,
+        cursorPosition,
+        this.#nowSeconds() + this.#cursorTtlSeconds,
+      ));
     } catch {
       throw new DeliveryConsumerError("cursor_invalid");
     }
@@ -421,13 +469,25 @@ export class DeliveryConsumerService {
     if (context.allowedSubscriptionIds !== undefined && !context.allowedSubscriptionIds.includes(subscriptionId)) {
       throw new DeliveryConsumerError("not_found");
     }
-    const record = await this.#repository.getSubscription(scope, subscriptionId);
-    if (!record || !this.#recordInScope(record, scope)) throw new DeliveryConsumerError("not_found");
+    let record: SubscriptionRecord | null;
+    try {
+      record = await this.#repository.getSubscription(scope, subscriptionId);
+    } catch (error) {
+      rethrowRepositoryError(error);
+    }
+    if (!record || !this.#recordInScope(record, scope) || !this.#selectorAllowed(record.selectors, context)) {
+      throw new DeliveryConsumerError("not_found");
+    }
     return record;
   }
 
   #recordInScope(record: SubscriptionRecord, scope: ConsumerScope): boolean {
     return record.tenantId === scope.tenantId && record.consumerId === scope.consumerId;
+  }
+
+  #selectorAllowed(selector: NormalizedSubscriptionSelector, context: ConsumerAuthContext): boolean {
+    const allowed = new Set(context.allowedStreamIds);
+    return selector.streamIds.every((streamId) => allowed.has(streamId));
   }
 
   #assertRecordScope(record: SubscriptionRecord, scope: ConsumerScope): void {

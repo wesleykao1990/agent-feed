@@ -23,7 +23,25 @@ A completed zero-finding run is materially different from a run that failed befo
 
 ## Delivery semantics
 
-Ingress operations are idempotent. External delivery is at-least-once: consumers must deduplicate by `event_id` and by their own semantic fingerprint. The service never claims end-to-end exactly-once delivery across HTTP boundaries.
+Ingress operations are idempotent. External delivery is at-least-once:
+consumers must durably deduplicate by `event_id` and by their own semantic
+fingerprint. The service never claims end-to-end exactly-once delivery across
+HTTP boundaries.
+
+The `DeliveryEvent` `attempt` field is required in the signed protocol `0.1`
+body. Retries and replays re-encode and re-sign the body with a new attempt;
+`event_id`, payload, `occurred_at`, and payload hash remain the immutable source
+identity. Signature metadata and trace headers remain outside the strict event
+body.
+
+Milestone 2 implementation acceptance is complete for the accepted repository
+surface. The latest local evidence is protocol 5, pure conformance 6,
+architecture 4, live PostgreSQL 3, delivery-core 18, delivery-consumer 10,
+persistence 10, webhook 8, worker 6, and API 5. The corrected serialized live
+PostgreSQL gate and all seven clean package installs/builds/tests pass; no
+hosted GitHub CI result is claimed. The API remains transport-neutral with no deployable HTTP server; the
+worker has no production process/CLI entrypoint, and observability
+exporter/deployment work remains future operational scope.
 
 ## Namespacing
 

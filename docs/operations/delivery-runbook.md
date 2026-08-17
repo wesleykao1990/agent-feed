@@ -1,7 +1,6 @@
 # Durable delivery runbook
 
-Status: **in progress — preparatory runbook; M2 worker/API are not yet
-implemented**
+Status: **M2 implementation acceptance green; production runner deployment remains future work**
 
 This runbook is the target operating procedure. Commands and endpoints are
 marked as implemented only after they exist in the repository and pass CI.
@@ -29,13 +28,20 @@ Before changing the delivery deployment:
 5. Confirm the configured signing key ID, replay window, retry limit, lease
    duration, and dead-letter policy match the current ADRs.
 
-The M2 worker, migration runner, and delivery API are not present at the time
-of this document. Do not execute an unbuilt command from this runbook in a
-production environment.
+The additive `0002_durable_delivery.sql` shape, transaction-aware outbox,
+PostgreSQL delivery repository, webhook adapter, and transport-neutral delivery
+API handler are present in the current checkout. The combined acceptance is
+green: architecture 4, pure conformance 6, live PostgreSQL 3, and package/app
+tests protocol 5, core 11, consumer 8, persistence 9, webhook 7, worker 4,
+and API 3, with clean installs/builds. The loader explicitly applies `0001`
+and `0002`; it is not an arbitrary directory-discovery runner. The delivery
+worker has a tested composition/loop foundation but no production deployment/
+CLI entrypoint, and the HTTP server is not operational. Do not execute an
+unbuilt command from this runbook in production.
 
 ## Migration procedure
 
-When `0002_durable_delivery.sql` and the migration runner land:
+For the current explicit migration pair and repository:
 
 1. Take a schema backup or verify the recovery point.
 2. Run the ordered migration runner in a maintenance window appropriate for
@@ -46,8 +52,12 @@ When `0002_durable_delivery.sql` and the migration runner land:
 5. Run a transaction rollback fixture and an exact idempotency retry fixture.
 6. Only then start workers.
 
-The current M1 loader only reads `0001_agent_feed.sql`; this procedure is
-blocked until M2 migration discovery is implemented. See M2-006 in the bug log.
+The loader applies the known `0001_agent_feed.sql` and
+`0002_durable_delivery.sql` files when called with no explicit SQL. It does
+not discover arbitrary ordered migrations or reject gaps; that is a future
+operational extension, not an M2 gate failure. The live PostgreSQL cases pass
+when `AGENT_FEED_DATABASE_URL` points to the disposable acceptance database.
+See the resolved M2-006 note in the bug log.
 
 ## Worker startup and shutdown
 

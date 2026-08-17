@@ -1,19 +1,18 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
 import type {
   CursorCanonicalizer,
   CursorCodec,
-  CursorContext,
   CursorPayload,
+  CursorScope,
+  CursorSigner,
 } from "./types.ts";
 import { CursorError } from "./types.ts";
 
-function encodeBase64Url(value: string | Uint8Array): string {
-  return Buffer.from(value).toString("base64url");
+function encodeBase64Url(value: string): string {
+  return Buffer.from(value, "utf8").toString("base64url");
 }
-
-function decodeBase64Url(value: string): Buffer {
+function decodeBase64Url(value: string): string {
   try {
-    return Buffer.from(value, "base64url");
+    return Buffer.from(value, "base64url").toString("utf8");
   } catch {
     throw new CursorError("invalid_cursor");
   }
@@ -39,12 +38,14 @@ function assertPayload(payload: unknown): asserts payload is CursorPayload {
   ]);
   if (
     Object.keys(candidate).some((key) => !allowedKeys.has(key))
-    || candidate.version !== "0.1"
+    || candidate.version !== 1
     || !nonEmpty(candidate.tenantId)
     || !nonEmpty(candidate.consumerId)
     || !nonEmpty(candidate.subscriptionId)
-    || !nonEmpty(candidate.selectorVersion)
+    || !Number.isSafeInteger(candidate.selectorVersion)
+    || (candidate.selectorVersion as number) < 1
     || !nonEmpty(candidate.position)
+    || !/^(0|[1-9][0-9]*)$/u.test(candidate.position)
     || !Number.isSafeInteger(candidate.expiresAt)
     || (candidate.expiresAt as number) < 1
   ) {
@@ -52,59 +53,65 @@ function assertPayload(payload: unknown): asserts payload is CursorPayload {
   }
 }
 
-function signature(secret: string, encodedPayload: string): Buffer {
-  return createHmac("sha256", secret).update(encodedPayload, "utf8").digest();
-}
-
-/** HMAC cursor codec; canonical JSON ownership is injected by the caller. */
-export class HmacCursorCodec implements CursorCodec {
-  readonly #secret: string;
+/**
+ * Signed opaque cursor codec. Canonical JSON and HMAC/verification are injected
+ * so protocol-runtime remains the repository's single crypto implementation.
+ * Base64url is only token framing; the payload remains tamper-evident, not
+ * confidential.
+ */
+export class BoundCursorCodec implements CursorCodec {
   readonly #canonicalize: CursorCanonicalizer;
+  readonly #signer: CursorSigner;
+  readonly #nowSeconds: () => number;
 
-  constructor(secret: string, canonicalize: CursorCanonicalizer) {
-    if (!secret) throw new Error("cursor_secret_required");
-    this.#secret = secret;
-    this.#canonicalize = canonicalize;
+  constructor(options: {
+    canonicalize: CursorCanonicalizer;
+    signer: CursorSigner;
+    nowSeconds: () => number;
+  }) {
+    this.#canonicalize = options.canonicalize;
+    this.#signer = options.signer;
+    this.#nowSeconds = options.nowSeconds;
   }
 
-  encode(input: Omit<CursorPayload, "version">): string {
-    const payload: CursorPayload = { version: "0.1", ...input };
-    assertPayload(payload);
-    const encodedPayload = encodeBase64Url(this.#canonicalize(payload));
-    return `${encodedPayload}.${encodeBase64Url(signature(this.#secret, encodedPayload))}`;
+  encode(claims: CursorPayload): string {
+    assertPayload(claims);
+    const canonicalPayload = this.#canonicalize(claims);
+    const encodedPayload = encodeBase64Url(canonicalPayload);
+    return `${encodedPayload}.${this.#signer.sign(canonicalPayload)}`;
   }
 
-  decode(token: string, context: CursorContext): CursorPayload {
-    if (!Number.isSafeInteger(context.nowSeconds) || context.nowSeconds < 0) throw new CursorError("invalid_cursor");
+  decode(token: string): CursorPayload {
+    if (!nonEmpty(token)) throw new CursorError("invalid_cursor");
     const parts = token.split(".");
     if (parts.length !== 2 || parts.some((part) => part.length === 0)) throw new CursorError("invalid_cursor");
     const encodedPayload = parts[0];
-    const encodedSignature = parts[1];
-    if (encodedPayload === undefined || encodedSignature === undefined) throw new CursorError("invalid_cursor");
-    const provided = decodeBase64Url(encodedSignature);
-    const expected = signature(this.#secret, encodedPayload);
-    if (provided.length !== expected.length || !timingSafeEqual(provided, expected)) {
-      throw new CursorError("cursor_signature_mismatch");
-    }
+    const providedSignature = parts[1];
+    if (encodedPayload === undefined || providedSignature === undefined) throw new CursorError("invalid_cursor");
+    const canonicalPayload = decodeBase64Url(encodedPayload);
     let parsed: unknown;
     try {
-      parsed = JSON.parse(decodeBase64Url(encodedPayload).toString("utf8")) as unknown;
+      parsed = JSON.parse(canonicalPayload) as unknown;
     } catch {
       throw new CursorError("invalid_cursor_payload");
     }
     assertPayload(parsed);
-    if (this.#canonicalize(parsed) !== decodeBase64Url(encodedPayload).toString("utf8")) {
-      throw new CursorError("invalid_cursor_payload");
-    }
-    if (
-      parsed.tenantId !== context.tenantId
-      || parsed.consumerId !== context.consumerId
-      || parsed.subscriptionId !== context.subscriptionId
-      || parsed.selectorVersion !== context.selectorVersion
-    ) {
-      throw new CursorError("cursor_binding_mismatch");
-    }
-    if (context.nowSeconds >= parsed.expiresAt) throw new CursorError("cursor_expired");
+    if (this.#canonicalize(parsed) !== canonicalPayload) throw new CursorError("invalid_cursor_payload");
+    if (!this.#signer.verify(canonicalPayload, providedSignature)) throw new CursorError("cursor_signature_mismatch");
+    const nowSeconds = this.#nowSeconds();
+    if (!Number.isSafeInteger(nowSeconds) || nowSeconds < 0) throw new CursorError("invalid_cursor");
+    if (nowSeconds >= parsed.expiresAt) throw new CursorError("cursor_expired");
     return parsed;
+  }
+}
+
+export function assertCursorScope(claims: CursorPayload, expected: CursorScope): void {
+  if (
+    claims.tenantId !== expected.tenantId
+    || claims.consumerId !== expected.consumerId
+    || claims.subscriptionId !== expected.subscriptionId
+    || claims.selectorVersion !== expected.selectorVersion
+  ) {
+    throw new CursorError("cursor_scope_mismatch");
   }
 }

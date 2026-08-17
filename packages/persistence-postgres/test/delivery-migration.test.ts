@@ -30,10 +30,13 @@ test("M2 migration upgrades the reserved outbox without global delivery state", 
     "occurred_at",
     "payload_hash",
     "stream_position",
+    "delivery_position",
+    "tenant_event_counters",
     "delivery_eligibility",
     "quarantine_reason",
     "outbox_events_tenant_event_id_key",
     "outbox_events_stream_position_key",
+    "runs_tenant_begin_idempotency_key",
     "outbox_events_append_only",
     "outbox_events_scope_guard",
     "next_stream_event_position",
@@ -50,9 +53,12 @@ test("M2 migration upgrades the reserved outbox without global delivery state", 
 test("M2 migration defines tenant-scoped selectors and fan-out delivery state", () => {
   for (const table of [
     "consumer_subscriptions",
+    "consumer_subscription_versions",
+    "consumer_subscription_selectors",
     "consumer_deliveries",
     "delivery_attempts",
     "acknowledgements",
+    "acknowledgement_commands",
     "delivery_replays",
   ]) has(new RegExp(`create\\s+table\\s+if\\s+not\\s+exists\\s+agent_feed\\.${table}`, "i"));
 
@@ -60,6 +66,7 @@ test("M2 migration defines tenant-scoped selectors and fan-out delivery state", 
     "tenant_id",
     "consumer_id",
     "selector_version",
+    "activation_position",
     "delivery_mode",
     "signing_secret_ref",
     "finding_type",
@@ -93,6 +100,7 @@ test("M2 migration records attempts, acknowledgements, replay idempotency, and a
     "delivery_attempts_append_only",
     "acknowledgements_append_only",
     "delivery_replays_append_only",
+    "acknowledgement_commands_append_only",
     "protect_consumer_delivery_transition",
   ]) has(new RegExp(marker.replaceAll(".", "\\."), "i"));
 
@@ -100,6 +108,8 @@ test("M2 migration records attempts, acknowledgements, replay idempotency, and a
   has(/unique\s*\(tenant_id,\s*consumer_id,\s*delivery_id,\s*replay_idempotency_key\)/i);
   has(/dead[-_]letter\s+delivery\s+can\s+only\s+be\s+replayed\s+to\s+pending/i);
   has(/acknowledged\s+delivery\s+is\s+terminal/i);
+  has(/queued\s+acknowledgement\s+requires\s+a\s+pull\s+subscription/i);
+  has(/acknowledgement_commands[\s\S]*unique\s*\(tenant_id,\s*consumer_id,\s*subscription_id,\s*idempotency_key\)/i);
 });
 
 test("M2 migration adds same-run and same-tenant guards without rewriting M1 history", () => {

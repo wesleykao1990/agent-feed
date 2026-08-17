@@ -1,5 +1,8 @@
 # Agent Feed protocol runtime
 
+Status: **implemented foundation; the M2 delivery worker and webhook adapter
+now consume this package through its public package export.**
+
 This package contains dependency-light, protocol-only runtime helpers for
 Agent Feed delivery. It has no dependency on the prototype, PostgreSQL, an
 HTTP server, Supabase, or any consumer domain.
@@ -18,6 +21,9 @@ The strict event body contains only the fields in
 `packages/schema/contracts/delivery-event.schema.json`. Signature metadata is
 returned separately as headers. `rawBody` is the exact canonical string that
 must be sent; reserializing the parsed event can invalidate the signature.
+The required `attempt` field stays inside the signed event body. A retry or
+replay re-encodes and re-signs the body with a new attempt while preserving
+event ID, payload, occurred time, and payload hash.
 The `x-agent-feed-signature` header is the lowercase hexadecimal HMAC digest
 over `timestamp.rawBody`; the verifier accepts hexadecimal case-insensitively.
 
@@ -34,3 +40,9 @@ the key secret is never included in metadata or transport headers.
 npm test
 npm run build
 ```
+
+The current package evidence is 5/5 tests, a clean install, and a clean
+TypeScript build. Production persistence hashing and worker/webhook signing
+use this public runtime boundary. The in-memory prototype retains historical
+reference helpers by design; that non-production duplication is not an M2 gate
+blocker.
