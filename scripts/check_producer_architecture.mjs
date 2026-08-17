@@ -70,6 +70,34 @@ export function checkProducerArchitecture(root = ROOT) {
     violations.push("apps/api/src/index.ts: request handlers import persistence directly; use ProducerService");
   }
 
+  const producerManifest = resolve(root, "packages/producer-service/package.json");
+  if (existsSync(producerManifest)) {
+    const manifest = JSON.parse(readFileSync(producerManifest, "utf8"));
+    const declared = { ...manifest.dependencies, ...manifest.devDependencies, ...manifest.peerDependencies };
+    if ("@agent-feed/persistence-postgres" in declared) {
+      violations.push("packages/producer-service/package.json: application service depends on the concrete PostgreSQL adapter; depend on the ProducerPersistence port");
+    }
+  }
+
+  for (const pathname of filesUnder(resolve(root, "packages/producer-service"))) {
+    const source = readFileSync(pathname, "utf8");
+    if (sourceImports(source).some((specifier) => specifier === "@agent-feed/persistence-postgres" || specifier.startsWith("@agent-feed/persistence-postgres/"))) {
+      violations.push(`${relative(root, pathname)}: producer service imports the concrete PostgreSQL adapter`);
+    }
+  }
+
+  for (const relativeLock of ["packages/producer-service/package-lock.json", "apps/api/package-lock.json"]) {
+    const lockPath = resolve(root, relativeLock);
+    if (!existsSync(lockPath)) continue;
+    const lock = JSON.parse(readFileSync(lockPath, "utf8"));
+    for (const [entryPath, entry] of Object.entries(lock.packages ?? {})) {
+      if (entry?.name !== "@agent-feed/producer-service") continue;
+      if (entry.dependencies?.["@agent-feed/persistence-postgres"] !== undefined) {
+        violations.push(`${relativeLock}: ${entryPath || "root"} records a concrete PostgreSQL dependency for producer-service`);
+      }
+    }
+  }
+
   return { ok: violations.length === 0, violations };
 }
 

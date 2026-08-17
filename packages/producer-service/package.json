@@ -23,7 +23,6 @@
     "test": "node --experimental-strip-types --test --test-concurrency=1 test/*.test.ts"
   },
   "dependencies": {
-    "@agent-feed/persistence-postgres": "file:../persistence-postgres",
     "@agent-feed/schema": "file:../schema",
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1"

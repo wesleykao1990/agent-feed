@@ -4,10 +4,13 @@ import {
   ProducerService,
   ProducerServiceError,
   StaticProducerAuthenticator,
+  type BeginRunRequest,
+  type CompleteRunRequest,
   type ProducerPersistence,
   type ProducerPrincipal,
+  type RunRecord,
+  type SubmitBatchRequest,
 } from "../src/index.ts";
-import type { BeginRunRequest, CompleteRunRequest, RunRecord, SubmitBatchRequest } from "@agent-feed/persistence-postgres";
 
 const PRINCIPAL: ProducerPrincipal = {
   tenant_id: "tenant_a",
@@ -143,6 +146,36 @@ test("producer application validates the published schema, injects tenant scope,
   assert.throws(
     () => new StaticProducerAuthenticator([{ tenant_id: "tenant_a", producer_id: "producer_a", secret: "secret-a", allowed_stream_ids: ["*"] }]),
     /wildcard_producer_credentials_are_not_allowed/u,
+  );
+});
+
+test("adapter errors cross the persistence port without a concrete adapter dependency", async () => {
+  const known = new FakePersistence();
+  known.beginRun = async () => {
+    throw Object.assign(new Error("run already exists with a different payload"), {
+      code: "idempotency_payload_conflict",
+      details: { run_id: "run_aaaaaaaa" },
+    });
+  };
+  await assert.rejects(
+    service(known).beginRun(BEGIN, PRINCIPAL),
+    (error: unknown) => error instanceof ProducerServiceError
+      && error.code === "idempotency_payload_conflict"
+      && error.status === 409
+      && error.message === "idempotency_payload_conflict"
+      && Object.keys(error.details).length === 0,
+  );
+
+  const unknown = new FakePersistence();
+  unknown.beginRun = async () => {
+    throw Object.assign(new Error("internal adapter detail"), { code: "unexpected_adapter_error" });
+  };
+  await assert.rejects(
+    service(unknown).beginRun(BEGIN, PRINCIPAL),
+    (error: unknown) => error instanceof ProducerServiceError
+      && error.code === "storage_error"
+      && error.status === 503
+      && error.message === "database operation failed",
   );
 });
 

@@ -21,7 +21,7 @@ Current green evidence:
 - Milestone 0/1 conformance: **23/23**;
 - in-memory prototype regression: **29/29** (supporting evidence only);
 - publishable schema package: **4/4**;
-- producer application service: **8/8**;
+- producer application service: **9/9**;
 - producer API: **2/2**;
 - durable local-file adapter: **6/6**;
 - live PostgreSQL producer ingress: **5/5**, including API restart;
@@ -39,10 +39,13 @@ completed-zero queryability, size/cardinality/Unicode/metadata boundaries,
 secret and hostile evidence handling, quarantine eligibility, and rate-limit
 responses.
 
-An independent adversarial re-audit found no remaining PR blocker after the
-checksum, real process-restart, exact producer scope, migration-ledger, media-
-type/draining, and static-boundary fixes. The only remaining dependency is the
-intentional post-merge schema publication and downstream Rewards pin.
+An independent adversarial re-audit cleared the checksum, real process-restart,
+exact producer scope, migration-ledger, media-type/draining, and static-boundary
+issues. The first hosted PR run then found a source-linked concrete adapter
+dependency that a populated local checkout had masked. The producer service now
+owns an adapter-neutral persistence port and its architecture gate rejects that
+dependency class. The only remaining release dependency is the intentional
+post-merge schema publication and downstream Rewards pin.
 
 ## Schema release candidate
 

@@ -1,14 +1,10 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import {
-  PersistenceError,
-  type BeginRunRequest,
-  type CompleteRunRequest,
-  type RunRecord,
-  type SubmitBatchRequest,
-} from "@agent-feed/persistence-postgres";
 import { defaultProtocolValidator } from "./validation.ts";
 import {
   ProducerServiceError,
+  type BeginRunRequest,
+  type CompleteRunRequest,
+  type PersistenceErrorCode,
   type ProducerAuthenticationRequest,
   type ProducerAuthenticator,
   type ProducerCredential,
@@ -20,6 +16,8 @@ import {
   type RateLimitDecision,
   type RateLimitOptions,
   type SecurityPolicy,
+  type RunRecord,
+  type SubmitBatchRequest,
   statusForProducerError,
 } from "./types.ts";
 
@@ -45,6 +43,24 @@ export const DEFAULT_SECURITY_POLICY: SecurityPolicy = Object.freeze({
   quarantine_personal_data: true,
   quarantine_hostile_findings: true,
 });
+
+const PERSISTENCE_ERROR_CODES = new Set<PersistenceErrorCode>([
+  "idempotency_payload_conflict",
+  "run_not_found",
+  "run_id_conflict",
+  "terminal_run_immutable",
+  "batch_not_found",
+  "batch_id_conflict",
+  "batch_sequence_not_increasing",
+  "duplicate_finding",
+  "duplicate_evidence",
+  "unresolved_evidence_ref",
+  "completion_before_start",
+  "invalid_scope_stats",
+  "completion_counts_do_not_reconcile",
+  "invalid_input",
+  "storage_error",
+]);
 
 function digest(value: string): Buffer {
   return createHash("sha256").update(value, "utf8").digest();
@@ -299,8 +315,9 @@ function bodyRunId(value: unknown): string | null {
 
 function mapPersistenceError(error: unknown): ProducerServiceError {
   if (error instanceof ProducerServiceError) return error;
-  if (error instanceof PersistenceError) {
-    return new ProducerServiceError(error.code, error.message, { status: statusForProducerError(error.code), details: error.details });
+  if (isRecord(error) && typeof error.code === "string" && PERSISTENCE_ERROR_CODES.has(error.code as PersistenceErrorCode)) {
+    const code = error.code as PersistenceErrorCode;
+    return new ProducerServiceError(code, code, { status: statusForProducerError(code) });
   }
   return new ProducerServiceError("storage_error", "database operation failed", { status: 503 });
 }

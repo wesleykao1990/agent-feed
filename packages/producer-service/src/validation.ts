@@ -6,7 +6,7 @@ import type {
   JsonObject,
   Scope,
   SubmitBatchRequest,
-} from "@agent-feed/persistence-postgres";
+} from "./types.ts";
 import { schemas } from "@agent-feed/schema";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import addFormatsModule from "ajv-formats";

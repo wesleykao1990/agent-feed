@@ -46,8 +46,9 @@ The table above preserves the baseline observations. Resolutions recorded on
 | M1H-017 | Producer and stream `*` values created an undocumented cross-producer authorization mode. | `StaticProducerAuthenticator` rejects wildcard producer/stream credentials at startup; exact-scope assertions remain in unit and live REST tests. |
 | M1H-018 | Migration `0003` ran but was absent from `agent_feed.schema_migrations`, contradicting the operations runbook. | `0003` records the foundation and wire-ID versions; the live persistence suite asserts the exact `0001`/`0002`/`0003` ledger. |
 | M1H-019 | POST routes accepted JSON bytes without requiring the JSON media type and could reject a declared oversize body without draining it. | The HTTP adapter requires `application/json`, returns 415 before mutation, and drains rejected/oversize request streams. |
+| M1H-020 | Hosted CI's clean producer build followed a source-linked `@agent-feed/persistence-postgres` dependency and failed on the adapter's undeclared build context, although a populated local checkout passed. | The producer service now owns an adapter-neutral `ProducerPersistence` port and lifecycle record types. Its source, manifest, and downstream lock entry have no PostgreSQL dependency; the architecture gate enforces exact/subpath imports plus manifest/lock boundaries. Recognized adapter failures cross only as an allowlisted code/status with messages and details sanitized; unknown failures collapse to `storage_error`. The API remains the explicit composition root and installs the durable adapter dependency graph before its build. |
 
-The independent 2026-08-18 re-audit verified M1H-015 through M1H-019 and found
-no remaining PR blocker. Immutable release publication and the Rewards
-dependency pin remain sequenced post-merge actions, not hidden implementation
-exceptions.
+The independent 2026-08-18 re-audit verified M1H-015 through M1H-019. M1H-020
+was found by the first hosted PR run and corrected without weakening the
+boundary. Immutable release publication and the Rewards dependency pin remain
+sequenced post-merge actions, not hidden implementation exceptions.

@@ -118,3 +118,14 @@ builds from tagged source, verifies the package, records SHA-256/SHA-512, and
 creates a release asset without overwrite. This avoids pretending an npm
 registry release exists while still giving Rewards an immutable, integrity-
 pinned artifact. The source commit is the tagged commit.
+
+## D-010 — Producer policy depends inward on a persistence port
+
+`@agent-feed/producer-service` owns the minimum lifecycle request/result types
+and `ProducerPersistence` interface needed by producer policy. PostgreSQL
+implements that interface structurally and is wired only by the executable API
+composition root. Recognized adapter error codes cross the port as sanitized
+code/status data without adapter messages or details; unknown errors collapse
+to a non-disclosing `storage_error`. Static architecture checks reject concrete
+PostgreSQL imports, subpath imports, manifests, and stale lockfile entries in
+the producer boundary.

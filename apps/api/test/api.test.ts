@@ -4,11 +4,14 @@ import type { AddressInfo } from "node:net";
 import {
   ProducerService,
   StaticProducerAuthenticator,
+  type BeginRunRequest,
+  type CompleteRunRequest,
   type ProducerPersistence,
   type ProducerPrincipal,
+  type RunRecord,
+  type SubmitBatchRequest,
 } from "@agent-feed/producer-service";
 import { createAgentFeedApiServer } from "../src/index.ts";
-import type { BeginRunRequest, CompleteRunRequest, RunRecord, SubmitBatchRequest } from "@agent-feed/persistence-postgres";
 
 const PRINCIPAL: ProducerPrincipal = { tenant_id: "tenant_a", producer_id: "producer_a", allowed_stream_ids: ["stream.a"] };
 

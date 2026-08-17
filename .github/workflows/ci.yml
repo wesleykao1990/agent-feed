@@ -77,6 +77,12 @@ jobs:
           npm --prefix packages/schema ci
           npm --prefix packages/producer-service ci
           npm --prefix packages/adapters/local-file ci
+          # The executable API is the composition root for the durable adapter.
+          # Install that adapter's source dependencies before the API clean build.
+          npm --prefix packages/protocol-runtime ci
+          npm --prefix packages/delivery-core ci
+          npm --prefix packages/delivery-consumer ci
+          npm --prefix packages/persistence-postgres ci
           npm --prefix apps/api ci
 
       - name: Build Milestone 1 corrective packages and API
@@ -110,10 +116,6 @@ jobs:
       # workflow, test, and M2 script must be covered by the manifest.
       - name: Install Milestone 2 package dependencies
         run: |
-          npm --prefix packages/protocol-runtime ci
-          npm --prefix packages/delivery-core ci
-          npm --prefix packages/delivery-consumer ci
-          npm --prefix packages/persistence-postgres ci
           npm --prefix packages/webhook-adapter ci
           npm --prefix apps/delivery-worker ci
           npm --prefix apps/delivery-api ci

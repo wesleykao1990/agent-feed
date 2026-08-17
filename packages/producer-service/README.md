@@ -4,7 +4,9 @@ This package is the generic Agent Feed producer policy boundary. It accepts
 canonical protocol `0.1` requests, validates them through the published
 `@agent-feed/schema` JSON contracts plus semantic checks, applies producer
 authentication/scope and ingress security policy, then delegates lifecycle
-writes to the injected `@agent-feed/persistence-postgres` public interface.
+writes to its injected adapter-neutral `ProducerPersistence` port. The
+executable API composition root supplies `PostgresAgentFeedPersistence`; this
+package does not depend on that concrete adapter.
 
 It deliberately contains no SQL and no HTTP server. `apps/api` is the HTTP
 adapter. A deployment can inject a generated schema validator through the

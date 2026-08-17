@@ -118,3 +118,12 @@ audited administrative capability if cross-producer access is ever required.
 Source-integrity checks must produce the same file set before and after local
 builds. Exclude ignored `dist`, staging, and release-artifact directories; test
 the generated artifact with its own manifest and byte digests.
+
+## M1-L018 — A populated monorepo can hide a concrete dependency
+
+TypeScript can follow a source-linked local package into dependencies already
+installed elsewhere in a developer checkout. A local green build therefore
+does not prove that an application package owns only its declared boundary.
+Keep the producer service dependent on an adapter-neutral port, reject concrete
+PostgreSQL imports and manifest entries statically, and run its clean install
+before installing the durable adapter graph used by the API composition root.
