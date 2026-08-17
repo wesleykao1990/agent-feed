@@ -3,11 +3,13 @@
   "version": "0.1.1",
   "protocol_version": "0.1",
   "research_cutoff": "2026-08-17",
-  "status": "build_ready_protocol_with_liveness_and_prototype",
+  "status": "milestone_0_1_integrated_candidate",
   "counts": {
     "json_schemas": 9,
     "example_run_bundles": 3,
-    "prototype_tests": 19
+    "prototype_tests": 29,
+    "conformance_tests": 23,
+    "postgres_persistence_tests": 3
   },
   "canonical_files": {
     "protocol": "docs/01_protocol.md",
@@ -25,6 +27,8 @@
     "protocol_compatibility_check": "scripts/check_protocol_compatibility.py",
     "typescript_protocol_types": "packages/sdk/typescript/generated/protocol.ts",
     "python_protocol_types": "packages/sdk/python/agent_feed/generated/protocol.py",
+    "postgres_persistence": "packages/persistence-postgres/README.md",
+    "milestone_0_1_gap_audit": "docs/11_milestone_0_1_gap_audit.md",
     "liveness_schema": "packages/schema/contracts/stream-expectation.schema.json",
     "prototype": "prototype/README.md",
     "hostile_fixture": "examples/security/hostile-run-bundle.json",

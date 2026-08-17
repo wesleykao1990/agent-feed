@@ -2,6 +2,10 @@
 
 Audit baseline: `bbe58bd` (`Add validated run-bundle ingress`), 2026-08-17. This is a read-only audit of the implementation plan, initiating prompt, trust/security/semantic contracts, schemas, examples, reference SQL, prototype, and tests. It does not treat README files or reference SQL as an implemented service.
 
+> Historical baseline: this report intentionally records the pre-integration
+> gaps used to plan the six branches. For the merged candidate's current test
+> evidence, see `VALIDATION_REPORT.md`.
+
 ## Executive verdict
 
 The protocol artifact and zero-dependency prototype are useful and internally testable. Milestone 0 is **partially complete**, not closed: the nine schema files, trust boundary, examples, and prototype exercises exist, but generated Python/types coverage, general semantic enforcement, the redaction-pending invariant, and contract consistency are incomplete. Milestone 1 is **not gate-ready**. There is no PostgreSQL-backed application service or durable REST path; the current HTTP server and importer are explicitly in-memory prototype code.

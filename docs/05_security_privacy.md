@@ -17,6 +17,10 @@
 
 These are versioned defaults, not universal limits. A deployment may tighten them, but weakening them requires a recorded security decision and tests.
 
+The protocol `0.1` evidence schema retains its original 5,000-character wire
+ceiling for compatibility. The service default is deliberately stricter at
+4,000 characters and is enforced before persistence.
+
 ## Data handling
 
 - authenticate every producer and bind credentials to allowed streams;

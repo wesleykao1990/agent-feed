@@ -14,6 +14,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: agent_feed_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d agent_feed_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - uses: actions/checkout@v4
 
@@ -56,3 +71,17 @@ jobs:
 
       - name: Test Milestone 0/1 conformance
         run: npm run conformance:test
+
+      - name: Install PostgreSQL persistence dependencies
+        working-directory: packages/persistence-postgres
+        run: npm ci
+
+      - name: Build PostgreSQL persistence boundary
+        working-directory: packages/persistence-postgres
+        run: npm run build
+
+      - name: Test PostgreSQL persistence boundary
+        working-directory: packages/persistence-postgres
+        run: npm test
+        env:
+          AGENT_FEED_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_feed_test
