@@ -120,7 +120,7 @@
         "string",
         "null"
       ],
-      "maxLength": 5000
+      "maxLength": 4000
     },
     "content_hash": {
       "type": [

@@ -4,7 +4,15 @@ import { createRequire } from "node:module";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import type { ErrorObject, ValidateFunction } from "ajv";
 import type { FormatsPlugin } from "ajv-formats";
-import { SECURITY_DEFAULTS } from "./security.ts";
+import {
+  enforceBatchLimits,
+  enforceEvidenceSecurity,
+  enforceFindingSecurity,
+  findSecretField,
+  resolveSecurityPolicy,
+  SecurityError,
+  type SecurityPolicy,
+} from "./security.ts";
 import { AgentFeedStore } from "./store.ts";
 import type { Finding, RunRecord, Scope, SubmittedEvidence } from "./types.ts";
 
@@ -48,6 +56,7 @@ interface WireBatch {
   sequence_number: number;
   findings: WireFinding[];
   evidence: WireEvidence[];
+  metadata?: Record<string, unknown>;
 }
 
 interface WireRunBundle {
@@ -172,8 +181,28 @@ function evidence(value: WireEvidence): SubmittedEvidence {
   };
 }
 
-function assertBundleSemantics(bundle: WireRunBundle): void {
+function assertBundleSemantics(bundle: WireRunBundle, security: SecurityPolicy): void {
   if (bundle.complete.run_id !== bundle.run_id) throw new Error("bundle_run_id_mismatch:complete");
+
+  // Check metadata outside findings/evidence here. The latter are checked with
+  // identity-aware hooks below so quarantine callbacks do not fire twice.
+  for (const [label, value] of [
+    ["begin", bundle.begin],
+    ["complete", bundle.complete],
+    ...bundle.batches.map((batch, index) => [`batch[${index}].metadata`, batch.metadata]),
+  ] as const) {
+    const secretField = findSecretField(value);
+    if (secretField) {
+      if (security.onQuarantine) {
+        try {
+          security.onQuarantine({ kind: "payload", reason: "secret_field", runId: bundle.run_id, fieldPath: `${label}${secretField.slice(1)}` });
+        } catch {
+          throw new SecurityError("quarantine_hook_failed");
+        }
+      }
+      if (security.rejectSecrets) throw new SecurityError("secret_field_rejected");
+    }
+  }
 
   const findingIds = new Set<string>();
   const evidenceIds = new Set<string>();
@@ -190,25 +219,39 @@ function assertBundleSemantics(bundle: WireRunBundle): void {
     if (batchIdempotencyKeys.has(batch.idempotency_key)) {
       throw new Error(`duplicate_batch_idempotency_key:${batch.idempotency_key}`);
     }
-    if (
-      batch.findings.length > SECURITY_DEFAULTS.maxFindingsPerBatch ||
-      batch.evidence.length > SECURITY_DEFAULTS.maxEvidencePerBatch
-    ) {
-      throw new Error("batch_limit_exceeded");
-    }
+    enforceBatchLimits(batch.findings, batch.evidence, security);
     batchIds.add(batch.batch_id);
     batchIdempotencyKeys.add(batch.idempotency_key);
     lastSequence = batch.sequence_number;
     for (const item of batch.evidence) {
-      if (item.handling.contains_secrets) throw new Error(`secret_bearing_evidence_rejected:${item.evidence_id}`);
-      if ((item.excerpt?.length ?? 0) > SECURITY_DEFAULTS.maxEvidenceExcerptCharacters) {
-        throw new Error(`evidence_excerpt_too_large:${item.evidence_id}`);
-      }
+      enforceEvidenceSecurity(
+        {
+          evidenceId: item.evidence_id,
+          excerpt: item.excerpt,
+          handling: {
+            containsSecrets: item.handling.contains_secrets,
+            containsPersonalData: item.handling.contains_personal_data,
+          },
+          metadata: item.metadata,
+          wirePayload: item,
+        },
+        security,
+        { runId: bundle.run_id },
+      );
       if (evidenceIds.has(item.evidence_id)) throw new Error(`duplicate_evidence:${item.evidence_id}`);
       evidenceIds.add(item.evidence_id);
       evidenceCount += 1;
     }
     for (const item of batch.findings) {
+      enforceFindingSecurity(
+        {
+          findingId: item.finding_id,
+          securityFlags: item.security_flags,
+          wirePayload: item,
+        },
+        security,
+        { runId: bundle.run_id },
+      );
       if (findingIds.has(item.finding_id)) throw new Error(`duplicate_finding:${item.finding_id}`);
       findingIds.add(item.finding_id);
       findingCount += 1;
@@ -241,14 +284,16 @@ export interface ImportResult {
 export class RunBundleImporter {
   readonly #receipts = new Map<string, string>();
   readonly store: AgentFeedStore;
+  readonly #security: SecurityPolicy;
 
-  constructor(store: AgentFeedStore) {
+  constructor(store: AgentFeedStore, options: { security?: Partial<SecurityPolicy> } = {}) {
     this.store = store;
+    this.#security = resolveSecurityPolicy(options.security);
   }
 
   import(bundleValue: unknown): ImportResult {
     assertRunBundle(bundleValue);
-    assertBundleSemantics(bundleValue);
+    assertBundleSemantics(bundleValue, this.#security);
     const hash = payloadHash(bundleValue);
     const previous = this.#receipts.get(bundleValue.run_id);
     if (previous) {
@@ -267,6 +312,8 @@ export class RunBundleImporter {
       startedAt: bundleValue.begin.started_at,
       expectedScope: scope(bundleValue.begin.expected_scope),
     });
+    const storageSecurity: SecurityPolicy = { ...this.#security };
+    delete storageSecurity.onQuarantine;
     for (const batch of bundleValue.batches) {
       this.store.submitBatch({
         runId: batch.run_id,
@@ -274,7 +321,7 @@ export class RunBundleImporter {
         idempotencyKey: batch.idempotency_key,
         findings: batch.findings.map(finding),
         evidence: batch.evidence.map(evidence),
-      });
+      }, { security: storageSecurity });
     }
     const run = this.store.completeRun({
       runId: bundleValue.complete.run_id,
@@ -294,7 +341,7 @@ export class RunBundleImporter {
   }
 
   importJson(rawBody: string): ImportResult {
-    if (Buffer.byteLength(rawBody) > SECURITY_DEFAULTS.maxBodyBytes) throw new Error("body_too_large");
+    if (Buffer.byteLength(rawBody) > this.#security.maxBodyBytes) throw new SecurityError("body_too_large");
     let value: unknown;
     try {
       value = JSON.parse(rawBody);

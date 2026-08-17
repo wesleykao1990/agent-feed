@@ -1,6 +1,12 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { DeliveryEvent, Finding, LivenessResult, RunRecord, Scope, StreamExpectation, SubmittedEvidence } from "./types.ts";
-import { SECURITY_DEFAULTS } from "./security.ts";
+import {
+  enforceBatchLimits,
+  enforceEvidenceSecurity,
+  enforceFindingSecurity,
+  resolveSecurityPolicy,
+  type SecurityPolicy,
+} from "./security.ts";
 
 function iso(date: Date): string { return date.toISOString(); }
 function clone<T>(value: T): T { return structuredClone(value); }
@@ -20,6 +26,11 @@ export class AgentFeedStore {
   #beginKeys = new Map<string, { runId: string; payloadHash: string }>();
   #batchKeys = new Map<string, BatchReceipt>();
   #expectations = new Map<string, StreamExpectation>();
+  readonly #security: SecurityPolicy;
+
+  constructor(options: { security?: Partial<SecurityPolicy> } = {}) {
+    this.#security = resolveSecurityPolicy(options.security);
+  }
 
   beginRun(input: {
     runId?: string; streamId: string; producerId: string; idempotencyKey: string;
@@ -52,12 +63,33 @@ export class AgentFeedStore {
   submitBatch(input: {
     runId: string; batchId: string; idempotencyKey: string;
     findings: Finding[]; evidence: SubmittedEvidence[];
-  }): RunRecord {
+  }, options: { security?: SecurityPolicy } = {}): RunRecord {
     const run = this.#runs.get(input.runId);
     if (!run) throw new Error(`run_not_found:${input.runId}`);
     if (run.status !== "running") throw new Error(`terminal_run_immutable:${input.runId}`);
-    if (input.findings.length > SECURITY_DEFAULTS.maxFindingsPerBatch || input.evidence.length > SECURITY_DEFAULTS.maxEvidencePerBatch) throw new Error("batch_limit_exceeded");
-    for (const evidence of input.evidence) if ((evidence.excerpt?.length ?? 0) > SECURITY_DEFAULTS.maxEvidenceExcerptCharacters) throw new Error("evidence_excerpt_too_large");
+    const security = options.security ?? this.#security;
+    enforceBatchLimits(input.findings, input.evidence, security);
+    for (const evidence of input.evidence) {
+      enforceEvidenceSecurity(
+        {
+          ...evidence,
+          ...(evidence.wirePayload === undefined ? {} : { wirePayload: evidence.wirePayload }),
+          metadata: evidence.wirePayload?.metadata,
+        },
+        security,
+        { runId: input.runId },
+      );
+    }
+    for (const finding of input.findings) {
+      enforceFindingSecurity(
+        {
+          ...finding,
+          ...(finding.wirePayload === undefined ? {} : { wirePayload: finding.wirePayload }),
+        },
+        security,
+        { runId: input.runId },
+      );
+    }
 
     const compound = `${input.runId}|${input.idempotencyKey}`;
     const payloadHash = hash({ findings: input.findings, evidence: input.evidence });
