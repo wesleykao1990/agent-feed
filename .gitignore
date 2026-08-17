@@ -4,4 +4,5 @@ node_modules/
 !.env.example
 dist/
 coverage/
+artifacts/schema/
 __pycache__/

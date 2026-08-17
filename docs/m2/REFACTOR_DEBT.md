@@ -16,7 +16,7 @@ operational and release-handoff follow-ups.
 | `packages/protocol-runtime` | Canonical JSON, protocol wire encoding, HMAC/replay verification, key-ring primitives | 5/5 tests; clean install/build; production persistence/worker/webhook paths use the public runtime boundary | Modular; prototype reference helpers remain nonblocking historical code. |
 | `packages/delivery-core` | Pure delivery types, selector matching, cursors, retry policy, lease/ack state machine, worker ports, bounded test metrics sink | 18/18 tests; clean install/build; no SQL/network/Realtime imports; live repository acceptance green | Modular; keep persistence and process lifecycle out. |
 | `packages/delivery-consumer` | Consumer-facing application service, scope checks, subscription lifecycle, pull/ack/DLQ/replay ports | 10/10 tests; clean install/build; live scope/cursor acceptance green | Modular and accepted; HTTP transport remains outside the package. |
-| `packages/persistence-postgres` | SQL migrations and PostgreSQL ingress/delivery repository adapters | 10/10 tests with PostgreSQL; transactional outbox, leases, replay, cursors, and tenant scope pass | Modular and accepted; explicit `0001`/`0002` loading is intentional. |
+| `packages/persistence-postgres` | SQL migrations and PostgreSQL ingress/delivery repository adapters | 11/11 tests with PostgreSQL; wire-ID lifecycle, transactional outbox, leases, replay, cursors, and tenant scope pass | Modular and accepted; explicit `0001`/`0002`/`0003` loading is intentional. |
 | `packages/webhook-adapter` | DNS/endpoint validation, fixed-address HTTP, timeout/body/redirect safety, and HTTP retry classification | 8/8 tests; clean install/build | Modular and accepted; production process/exporter deployment is future work. |
 | `apps/delivery-worker` | Process lifecycle, claim loop, leases, transport, signing-key wiring, shutdown, exporter | 6/6 tests; clean install/build; live repository behavior green through combined suite | Composition boundary accepted; no production process/CLI entrypoint yet. |
 | `apps/delivery-api` | Transport-neutral consumer handlers and error/status mapping | 5/5 tests; clean install/build; no HTTP server or database code by design | Application boundary accepted; add an HTTP transport only as future operational work. |
@@ -45,7 +45,7 @@ The following checks were run or are represented by repository tests on
 - `packages/protocol-runtime`: **5/5 tests pass**, `npm run build` passes;
 - `packages/delivery-core`: **18/18 tests pass**, `npm run build` passes;
 - `packages/delivery-consumer`: **10/10 tests pass**, `npm run build` passes;
-- `packages/persistence-postgres`: **10/10 tests pass** with the disposable
+- `packages/persistence-postgres`: **11/11 tests pass** with the disposable
   PostgreSQL database configured;
 - `packages/webhook-adapter`: **8/8 tests pass**, `npm run build` passes;
 - `apps/delivery-worker`: **6/6 tests pass** with clean install/build;
@@ -71,7 +71,7 @@ worker process is deployed or that a production observability exporter is wired.
 | Historical canonical JSON/HMAC helpers in the in-memory prototype | Reference-only duplicate code could drift if reused as production runtime | Production persistence/worker/webhook paths use protocol-runtime; keep prototype isolated and add parity checks if it becomes a production adapter. Nonblocking. |
 | Selector normalization/parity | Core and consumer historically diverged; direct source import could hide package drift | Shared normalized contract, multi-stream/tag/event matrix, package-boundary checks, and combined acceptance are green. Retain regression tests. |
 | Cursor position has both legacy per-stream and new tenant-global paths in the schema foundation | Compatibility readers may misinterpret the old coordinate | Keep `delivery_position`/tenant counter authoritative; live multi-stream cursor acceptance is green. Retain schema compatibility tests. |
-| Explicit migration pair rather than arbitrary directory discovery | Future migrations need an explicit ordering/gap policy | Keep the tested `0001` → `0002` loader; add discovery only when a future migration set requires it. Nonblocking. |
+| Explicit migration sequence rather than arbitrary directory discovery | Future migrations need an explicit ordering/gap policy | Keep the tested `0001` → `0002` → `0003` loader; add discovery only when a future migration set requires it. Nonblocking. |
 | No deployable worker/live external transport process | Composition code is accepted, but deployment wiring and endpoint operations are not part of this repository gate | Add a production CLI/process and endpoint rollout when operational deployment begins. Nonblocking. |
 | Production metrics exporter/deployment | Bounded test sink and labels pass, but no production exporter is wired | Define exporter allowlists and deployment integration during operations work. Nonblocking. |
 | Hosted CI retention | A later workflow edit could silently reduce remote coverage | Keep all seven clean builds/tests and the live PostgreSQL gate required; run #5 on draft PR #2 is the current hosted baseline. Nonblocking ongoing maintenance. |

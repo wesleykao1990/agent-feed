@@ -128,7 +128,7 @@ test("Postgres delivery repository claims, scopes, acknowledges, and replays dur
     };
     await persistence.submitBatch(batch);
     const findingOutbox = await pool.query<{ payload: { submitted_evidence?: unknown[] } }>(
-      `select payload from agent_feed.outbox_events where tenant_id = $1 and event_type = 'finding.submitted' and run_id = $2`,
+      `select payload from agent_feed.outbox_events where tenant_id = $1 and event_type = 'finding.submitted' and wire_run_id = $2`,
       [tenantId, started.run_id],
     );
     assert.deepEqual(findingOutbox.rows[0]?.payload.submitted_evidence?.[0], batch.evidence[0], "finding events preserve full evidence payloads");
@@ -145,6 +145,30 @@ test("Postgres delivery repository claims, scopes, acknowledges, and replays dur
       now: "2026-08-18T00:00:03.000Z", status: 204,
     });
     assert.equal(acknowledged.applied, true);
+
+    const unsafeRun = await persistence.beginRun({ ...begin(tenantId, streamId), idempotency_key: `begin-unsafe-${randomUUID()}` });
+    const unsafeEvidence = { ...evidence(`unsafe-evidence-${randomUUID()}`), handling: { contains_personal_data: true, contains_secrets: false, redistribution_restricted: false } };
+    const unsafeFinding = finding(`unsafe-finding-${randomUUID()}`, unsafeEvidence.evidence_id);
+    await persistence.submitBatch({
+      protocol_version: "0.1", tenant_id: tenantId, run_id: unsafeRun.run_id,
+      batch_id: `batch-unsafe-${randomUUID()}`, idempotency_key: `batch-unsafe-${randomUUID()}`,
+      sequence_number: 1, submitted_at: "2026-08-18T00:00:03.500Z",
+      findings: [unsafeFinding], evidence: [unsafeEvidence], metadata: {},
+    });
+    const unsafeOutbox = await pool.query<{ event_id: string; delivery_eligibility: string }>(
+      `select event_id, delivery_eligibility
+         from agent_feed.outbox_events
+        where tenant_id = $1 and event_type = 'finding.submitted' and wire_run_id = $2`,
+      [tenantId, unsafeRun.run_id],
+    );
+    assert.equal(unsafeOutbox.rows[0]?.delivery_eligibility, "quarantined", "unsafe evidence must quarantine its finding event");
+    const unsafeDeliveries = await pool.query<{ count: string }>(
+      `select count(*)::text as count
+         from agent_feed.consumer_deliveries
+        where tenant_id = $1 and event_id = $2`,
+      [tenantId, unsafeOutbox.rows[0]?.event_id],
+    );
+    assert.equal(Number(unsafeDeliveries.rows[0]?.count), 0, "quarantined evidence must not be fanned out");
 
     const secondRun = await persistence.beginRun({ ...begin(tenantId, streamId), idempotency_key: `begin-${randomUUID()}` });
     const secondClaim = (await delivery.claimDue({ now: "2026-08-18T00:00:04.000Z", limit: 10, leaseDurationSeconds: 30, workerId: "worker-a", tenantId, consumerId: "consumer-a" }))[0];

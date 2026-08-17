@@ -6,7 +6,7 @@ from pathlib import Path
 BASE=Path(__file__).resolve().parents[1]
 OUT=BASE/'SHA256SUMS.txt'
 EXCLUDED={OUT.name}
-IGNORED={'__pycache__','.git','.pytest_cache','.mypy_cache','.ruff_cache','node_modules'}
+IGNORED={'__pycache__','.git','.pytest_cache','.mypy_cache','.ruff_cache','node_modules','dist','artifacts','.build-src'}
 def files():
  return sorted(p for p in BASE.rglob('*') if p.is_file() and p.name not in EXCLUDED and not any(x in IGNORED for x in p.parts))
 def digest(p): return sha256(p.read_bytes()).hexdigest()

@@ -13,11 +13,18 @@ Before changing the delivery deployment:
 2. Run the M1 gates from the repository root:
 
    ```sh
-   python scripts/generate_checksums.py --check
-   python scripts/generate_protocol_types.py --check
-   python scripts/check_protocol_compatibility.py
-   python scripts/validate_package.py
+   python3 scripts/generate_checksums.py --check
+   python3 scripts/generate_protocol_types.py --check
+   python3 scripts/check_protocol_compatibility.py
+   python3 scripts/validate_package.py
    npm run conformance:test
+   npm run m1:architecture
+   npm --prefix packages/schema test
+   npm --prefix packages/producer-service test
+   npm --prefix packages/adapters/local-file test
+   npm --prefix apps/api test
+   npm run schema:artifact
+   AGENT_FEED_DATABASE_URL=postgresql://... npm run m1:ingress
    cd prototype && npm test
    ```
 
@@ -32,28 +39,29 @@ The additive `0002_durable_delivery.sql` shape, transaction-aware outbox,
 PostgreSQL delivery repository, webhook adapter, and transport-neutral delivery
 API handler are present in the current checkout. The combined acceptance is
 green: architecture 4, pure conformance 6, live PostgreSQL 3, and package/app
-tests protocol 5, core 18, consumer 10, persistence 10, webhook 8, worker 6,
+tests protocol 5, core 18, consumer 10, persistence 11, webhook 8, worker 6,
 and API 5, with clean installs/builds. The loader explicitly applies `0001`
-and `0002`; it is not an arbitrary directory-discovery runner. The delivery
+`0002`, and `0003`; it is not an arbitrary directory-discovery runner. The delivery
 worker has a tested composition/loop foundation but no production deployment/
 CLI entrypoint, and the HTTP server is not operational. Do not execute an
 unbuilt command from this runbook in production.
 
 ## Migration procedure
 
-For the current explicit migration pair and repository:
+For the current explicit migration sequence and repository:
 
 1. Take a schema backup or verify the recovery point.
 2. Run the ordered migration runner in a maintenance window appropriate for
    the deployment.
-3. Verify the migration ledger contains `0001` and `0002` exactly once.
+3. Verify the migration ledger contains `0001`, `0002`, and `0003` exactly once.
 4. Verify the outbox, subscriptions, attempts, acknowledgements, dead-letter,
    and cursor indexes exist.
 5. Run a transaction rollback fixture and an exact idempotency retry fixture.
 6. Only then start workers.
 
-The loader applies the known `0001_agent_feed.sql` and
-`0002_durable_delivery.sql` files when called with no explicit SQL. It does
+The loader applies the known `0001_agent_feed.sql`,
+`0002_durable_delivery.sql`, and `0003_wire_run_id.sql` files when called with
+no explicit SQL. It does
 not discover arbitrary ordered migrations or reject gaps; that is a future
 operational extension, not an M2 gate failure. The live PostgreSQL cases pass
 when `AGENT_FEED_DATABASE_URL` points to the disposable acceptance database.

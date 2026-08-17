@@ -7,6 +7,8 @@ separate from consumer/domain tables, HTTP handlers, and worker transport code.
 The `PostgresAgentFeedPersistence` service provides:
 
 - idempotent `beginRun`, with a canonical payload hash and conflict detection;
+- producer-visible wire run IDs that remain arbitrary protocol strings while
+  internal UUID primary/foreign keys stay unchanged;
 - transaction-locked, atomic `submitBatch`, including increasing sequences,
   evidence-reference resolution, and immutable accepted rows;
 - terminal/idempotent `completeRun`, with completion-time, scope, and accepted
@@ -16,7 +18,7 @@ The `PostgresAgentFeedPersistence` service provides:
 - immutable terminal runs enforced by database triggers.
 
 Milestone 2 adds an ordered migration loader (`0001_agent_feed.sql` followed by
-`0002_durable_delivery.sql`), an immutable outbox, normalized versioned
+`0002_durable_delivery.sql` and `0003_wire_run_id.sql`), an immutable outbox, normalized versioned
 selectors, tenant-global delivery positions, and a per-subscription queue. The
 ingress methods append `run.started`, `finding.submitted`, and terminal run
 events through the same transaction client as accepted rows. A quarantined
@@ -52,6 +54,11 @@ the codec enforces tamper, expiry, scope, and version checks.
 The position is tenant-global even though the historical `stream_position`
 column remains populated for M1 readers.
 
+`getRunForTenant` and `listRunsForTenant` are the authenticated read boundary;
+the legacy unscoped `getRun`/`listRuns` methods remain for internal compatibility
+and must not be exposed by producer HTTP handlers. Delivery event reads return
+the wire run ID while `outbox_events.run_id` remains the internal UUID FK.
+
 Hashing delegates to the `@agent-feed/protocol-runtime` file dependency so
 canonical JSON and SHA-256 behavior is shared with signing/runtime consumers.
 
@@ -73,7 +80,7 @@ leases, acknowledgements, DLQ, and replay. Use a disposable test database when
 running it repeatedly. The package does not start or stop a database server.
 
 The combined M2 acceptance runs this package with a disposable PostgreSQL
-database: **10/10 tests pass**, including the consumer-service composition and
+database: **11/11 tests pass**, including the producer wire-ID/lifecycle and consumer-service composition and
 the two repository/live persistence
 cases that are skipped when no database URL is provided. All seven M2 package
 and application installs/builds/tests are exercised by the repository workflow;

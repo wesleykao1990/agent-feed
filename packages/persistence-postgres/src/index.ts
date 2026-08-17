@@ -1,6 +1,7 @@
 export {
   DELIVERY_MIGRATION_SQL_URL,
   MIGRATION_SQL_URL,
+  WIRE_RUN_ID_MIGRATION_SQL_URL,
   PostgresAgentFeedPersistence,
   PostgresAgentFeedService,
   createAgentFeedPool,

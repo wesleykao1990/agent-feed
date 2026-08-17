@@ -16,6 +16,13 @@ Gate:
 
 ## Milestone 1 — Persistence and REST ingress
 
+Status: **corrective implementation gate green; release publication and the
+Rewards consumer pin are pending**. `apps/api` is now an executable producer
+HTTP adapter composed through `@agent-feed/producer-service` and backed by
+PostgreSQL. The prototype remains supporting in-memory evidence only. The
+corrective acceptance matrix and exact evidence are in
+`docs/m1-hardening/ACCEPTANCE.md`.
+
 Deliver:
 
 - separate agent-feed database/schema;
@@ -25,6 +32,13 @@ Deliver:
 - size/rate limits, payload hashing, and PII/secret rejection hooks;
 - REST endpoints and local-file run-bundle importer.
 
+The corrective implementation must also deliver a publishable
+`@agent-feed/schema` artifact. Its package version is independent of wire
+protocol version `0.1`; the Rewards Optimizer must consume an immutable exact
+version and record the artifact's integrity digest and source commit. A
+workspace link, branch reference, floating range, or source-only schema
+directory is not release evidence.
+
 Gate:
 
 - repeating an idempotency key returns the original result without duplicate rows;
@@ -33,7 +47,16 @@ Gate:
 - zero-finding completed runs are queryable;
 - expected streams that miss a terminal run become overdue;
 - terminal runs and accepted batches/findings/evidence are immutable;
-- hostile findings retain security flags and are eligible for quarantine.
+- hostile findings retain security flags and are eligible for quarantine;
+- every lifecycle operation is exercised through the executable REST adapter
+  against PostgreSQL, including restart durability and exact-retry behavior;
+- the schema package can be packed, published or attached as an immutable
+  artifact, and its exact integrity pin is verified by a clean consumer install;
+- the complete M0/M1/M2 gate is rerun with no live-PostgreSQL skips.
+
+All implementation checks pass. Milestone 1 becomes release-ready only after
+the reviewed PR is merged, `schema-v0.1.1` publishes the recorded immutable
+artifact, and Rewards Optimizer commits the exact artifact/integrity pin.
 
 ## Initial build constraint
 
@@ -44,7 +67,7 @@ Before the Rewards conserved kernel and monitoring rehearsal are working, implem
 Status: **implementation gate complete in this repository**. The corrected
 full acceptance is green: architecture 4, pure conformance 6, live PostgreSQL
 3, protocol-runtime 5, delivery-core 18, delivery-consumer 10,
-persistence-postgres 10, webhook adapter 8, delivery-worker 6, and
+persistence-postgres 11, webhook adapter 8, delivery-worker 6, and
 delivery-api 5. All seven M2 packages/applications pass clean installs,
 builds, and tests; M2-023 through M2-038 and M2-L027 through M2-L042 are
 resolved in the append-only bug/learning logs. The repository workflow is configured to install/build/test
@@ -52,7 +75,7 @@ all seven and require live PostgreSQL. Hosted GitHub Actions CI run #5 passed
 on draft PR #2 for commit `ad4ea3a`.
 The API remains transport-neutral without an HTTP server; worker process
 deployment and observability export remain future operational work. Migration
-loading is intentionally explicit `0001` followed by `0002`, not arbitrary
+loading is intentionally explicit `0001`, `0002`, then `0003`, not arbitrary
 directory discovery. See `docs/12_milestone_2_delivery.md` and
 `docs/adr/README.md`.
 
@@ -80,6 +103,12 @@ outbox, fan-out, leases, replay, and scope-bound cursor paths. Transport-neutral
 consumer handlers are accepted as the application boundary; an HTTP server is
 an explicitly deferred operational adapter. Do not add undocumented body
 fields or treat a future production deployment as already present.
+
+This M2 status is scoped to the durable delivery implementation and its recorded
+acceptance evidence. It does not waive the Milestone 1 corrective gate above:
+the Agent Feed release and Rewards Optimizer Milestone 2.5 remain blocked until
+the producer REST ingress and immutable schema artifact are accepted through
+`docs/m1-hardening/ACCEPTANCE.md`.
 
 ## Milestone 3 — MCP, SDKs, and adapters
 

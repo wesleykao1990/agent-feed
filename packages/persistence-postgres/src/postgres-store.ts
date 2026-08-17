@@ -37,6 +37,7 @@ const TERMINAL_STATUSES: readonly TerminalRunStatus[] = ["completed", "partial",
 
 interface DbRunRow extends QueryResultRow {
   id: string;
+  wire_run_id: string;
   tenant_id: string;
   trace_id: string;
   stream_id: string;
@@ -122,6 +123,19 @@ function asJsonObject(value: unknown): JsonObject {
   throw new Error("database returned a non-object JSON payload");
 }
 
+/**
+ * Evidence handling is a delivery gate, not just producer metadata.  Treat
+ * missing or malformed handling flags as unsafe so persistence fails closed
+ * even when an upstream producer forgot to quarantine the finding.
+ */
+function evidenceHandlingAllowsDelivery(evidence: EvidencePayload): boolean {
+  const handling = evidence?.handling;
+  return Boolean(handling)
+    && handling.contains_personal_data === false
+    && handling.contains_secrets === false
+    && handling.redistribution_restricted === false;
+}
+
 function asInt(value: number | string): number {
   const result = typeof value === "number" ? value : Number(value);
   if (!Number.isSafeInteger(result)) throw new Error(`database returned an invalid integer: ${String(value)}`);
@@ -159,7 +173,9 @@ function mapDatabaseError(error: unknown): PersistenceError {
     ? String((error as { constraint: unknown }).constraint)
     : undefined;
   if (code === "23505") {
-    if (constraint === "runs_pkey") return new PersistenceError("run_id_conflict", "run_id is already used by another run", { constraint });
+    if (constraint === "runs_pkey" || constraint === "runs_tenant_wire_run_id_key") {
+      return new PersistenceError("run_id_conflict", "run_id is already used by another run", { constraint });
+    }
     return new PersistenceError("storage_error", "database uniqueness constraint rejected the request", { constraint: constraint ?? "unique" });
   }
   if (code === "23514" || code === "23503" || code === "22P02") {
@@ -172,6 +188,9 @@ function validateBegin(input: BeginRunRequest): void {
   if (input.protocol_version !== "0.1") throw new PersistenceError("invalid_input", "protocol_version must be 0.1");
   if (input.idempotency_key.length < 8) throw new PersistenceError("invalid_input", "idempotency_key is too short");
   if (input.stream_id.length === 0 || input.producer.producer_id.length === 0) throw new PersistenceError("invalid_input", "stream and producer IDs are required");
+  if (input.run_id !== undefined && (input.run_id.length < 8 || input.run_id.length > 512)) {
+    throw new PersistenceError("invalid_input", "run_id must be between 8 and 512 characters");
+  }
   timestamp(input.started_at, "started_at");
 }
 
@@ -225,13 +244,47 @@ function makeRunningEnvelope(input: BeginRunRequest, runId: string): RunEnvelope
   };
 }
 
+function makeBeginReceipt(row: DbRunRow, value: unknown): RunRecord {
+  const envelope = asJsonObject(value) as unknown as RunEnvelope;
+  return {
+    run_id: row.wire_run_id,
+    tenant_id: row.tenant_id,
+    trace_id: row.trace_id,
+    stream_id: row.stream_id,
+    producer_id: row.producer_id,
+    begin_idempotency_key: row.begin_idempotency_key,
+    begin_payload_hash: row.begin_payload_hash,
+    complete_idempotency_key: null,
+    complete_payload_hash: null,
+    status: "running",
+    started_at: requiredIso(row.started_at),
+    completed_at: null,
+    envelope,
+    batches: [],
+    findings: [],
+    evidence: [],
+    stats: {
+      sources_attempted: 0,
+      sources_succeeded: 0,
+      findings_submitted: 0,
+      evidence_submitted: 0,
+      batches_submitted: 0,
+    },
+  };
+}
+
 export const MIGRATION_SQL_URL = new URL("../migrations/0001_agent_feed.sql", import.meta.url);
 export const DELIVERY_MIGRATION_SQL_URL = new URL("../migrations/0002_durable_delivery.sql", import.meta.url);
+export const WIRE_RUN_ID_MIGRATION_SQL_URL = new URL("../migrations/0003_wire_run_id.sql", import.meta.url);
 
-/** Apply M1 followed by the additive, idempotent M2 durable-delivery schema. */
+/** Apply M1, M2, and the additive wire-run-ID compatibility schema. */
 export async function migrateAgentFeed(pool: PgPool, sql?: string): Promise<void> {
   const migrations = sql === undefined
-    ? [await readFile(MIGRATION_SQL_URL, "utf8"), await readFile(DELIVERY_MIGRATION_SQL_URL, "utf8")]
+    ? [
+      await readFile(MIGRATION_SQL_URL, "utf8"),
+      await readFile(DELIVERY_MIGRATION_SQL_URL, "utf8"),
+      await readFile(WIRE_RUN_ID_MIGRATION_SQL_URL, "utf8"),
+    ]
     : [sql];
   // Two application processes may start against an empty database at the same
   // time.  PostgreSQL DDL/function replacement can deadlock without a single
@@ -268,28 +321,35 @@ export class PostgresAgentFeedPersistence {
     this.pool = pool;
   }
 
+  /** Adapter-owned readiness probe used by transport composition roots. */
+  async checkReady(): Promise<void> {
+    await this.pool.query("select 1");
+  }
+
   async beginRun(input: BeginRunRequest): Promise<RunRecord> {
     validateBegin(input);
     const tenantId = input.tenant_id ?? "default";
     const hash = payloadHash({ ...input, tenant_id: tenantId } as unknown as Record<string, unknown>);
-    const runId = input.run_id ?? randomUUID();
-    const envelope = makeRunningEnvelope(input, runId);
+    const runId = randomUUID();
+    const wireRunId = input.run_id ?? runId;
+    const envelope = makeRunningEnvelope(input, wireRunId);
     return this.withTransaction(async (client) => {
       const inserted = await client.query<DbRunRow>(
         `insert into agent_feed.runs (
-           id, tenant_id, stream_id, producer_id, begin_idempotency_key, begin_payload_hash,
+           id, wire_run_id, tenant_id, stream_id, producer_id, begin_idempotency_key, begin_payload_hash,
            status, envelope, started_at
-         ) values ($1, $2, $3, $4, $5, $6, 'running', $7::jsonb, $8)
+         ) values ($1, $2, $3, $4, $5, $6, $7, 'running', $8::jsonb, $9)
          on conflict (tenant_id, producer_id, stream_id, begin_idempotency_key) do nothing
-         returning id, tenant_id, trace_id, stream_id, producer_id, begin_idempotency_key, begin_payload_hash,
+         returning id, wire_run_id, tenant_id, trace_id, stream_id, producer_id, begin_idempotency_key, begin_payload_hash,
                    status, envelope, started_at, completed_at, actual_scope,
                    error_summary, complete_idempotency_key, complete_payload_hash`,
-        [runId, tenantId, input.stream_id, input.producer.producer_id, input.idempotency_key, hash, json(envelope), timestamp(input.started_at, "started_at")],
+        [runId, wireRunId, tenantId, input.stream_id, input.producer.producer_id, input.idempotency_key, hash, json(envelope), timestamp(input.started_at, "started_at")],
       );
       let row = inserted.rows[0];
+      const created = row !== undefined;
       if (!row) {
         const existing = await client.query<DbRunRow>(
-          `select id, tenant_id, trace_id, stream_id, producer_id, begin_idempotency_key, begin_payload_hash,
+          `select id, wire_run_id, tenant_id, trace_id, stream_id, producer_id, begin_idempotency_key, begin_payload_hash,
                   status, envelope, started_at, completed_at, actual_scope,
                   error_summary, complete_idempotency_key, complete_payload_hash
              from agent_feed.runs
@@ -303,19 +363,35 @@ export class PostgresAgentFeedPersistence {
       if (row.begin_payload_hash !== hash) {
         throw new PersistenceError("idempotency_payload_conflict", "begin_run idempotency key was reused with a different payload", { run_id: row.id });
       }
+      if (!created) {
+        const startedEvents = await client.query<{ event_id: string; payload: unknown }>(
+          `select event_id, payload
+             from agent_feed.outbox_events
+            where tenant_id = $1 and event_key = $2`,
+          [row.tenant_id, `evt_${row.wire_run_id}_started`],
+        );
+        if (startedEvents.rows.length !== 1) {
+          throw new PersistenceError("storage_error", "idempotent begin is missing its durable run.started event", { run_id: row.wire_run_id });
+        }
+        return makeBeginReceipt(row, startedEvents.rows[0]!.payload);
+      }
+      // The run and its started event share this transaction. Exact retries
+      // return above after checking that the original event exists; they must
+      // not rebuild a started payload from a terminal run envelope.
+      const storedEnvelope = asJsonObject(row.envelope);
       await appendOutboxEventInTransaction(client, {
         protocolVersion: "0.1",
-        eventId: `evt_${row.id}_started`,
+        eventId: `evt_${row.wire_run_id}_started`,
         eventType: "run.started",
         tenantId: row.tenant_id,
         streamId: row.stream_id,
-        runId: row.id,
+        runId: row.wire_run_id,
         findingId: null,
         occurredAt: requiredIso(row.started_at),
         sequence: "0",
         traceId: row.trace_id,
-        payload: envelope as unknown as DeliveryEvent["payload"],
-        payloadHash: payloadHash(envelope as unknown as Record<string, unknown>),
+        payload: storedEnvelope as unknown as DeliveryEvent["payload"],
+        payloadHash: payloadHash(storedEnvelope),
         findingType: null,
         routingTags: [],
         deliveryEligible: true,
@@ -335,10 +411,10 @@ export class PostgresAgentFeedPersistence {
     const hash = payloadHash({ ...input, tenant_id: tenantId } as unknown as Record<string, unknown>);
     return this.withTransaction(async (client) => {
       const locked = await this.query<DbRunRow>(client,
-        `select id, tenant_id, trace_id, stream_id, producer_id, begin_idempotency_key, begin_payload_hash,
+        `select id, wire_run_id, tenant_id, trace_id, stream_id, producer_id, begin_idempotency_key, begin_payload_hash,
                 status, envelope, started_at, completed_at, actual_scope,
                 error_summary, complete_idempotency_key, complete_payload_hash
-           from agent_feed.runs where id = $1 for update`, [input.run_id]);
+           from agent_feed.runs where tenant_id = $1 and wire_run_id = $2 for update`, [tenantId, input.run_id]);
       const run = locked[0];
       if (!run) throw new PersistenceError("run_not_found", `run ${input.run_id} was not found`, { run_id: input.run_id });
       if (run.tenant_id !== tenantId) throw new PersistenceError("run_not_found", `run ${input.run_id} is outside the requested tenant`, { run_id: input.run_id });
@@ -347,23 +423,23 @@ export class PostgresAgentFeedPersistence {
       const byKey = await this.query<DbBatchRow>(client,
         `select id, run_id, batch_id, idempotency_key, sequence_number, payload_hash,
                 submitted_at, metadata, accepted_at
-           from agent_feed.batches where run_id = $1 and idempotency_key = $2`, [input.run_id, input.idempotency_key]);
+           from agent_feed.batches where run_id = $1 and idempotency_key = $2`, [run.id, input.idempotency_key]);
       const existingByKey = byKey[0];
       if (existingByKey) {
         if (existingByKey.payload_hash !== hash) {
           throw new PersistenceError("idempotency_payload_conflict", "submit_batch idempotency key was reused with a different payload", { run_id: input.run_id, batch_id: existingByKey.batch_id });
         }
-        return this.loadRun(client, input.run_id);
+        return this.loadRun(client, run.id);
       }
 
       const byBatchId = await this.query<DbBatchRow>(client,
         `select id, run_id, batch_id, idempotency_key, sequence_number, payload_hash,
                 submitted_at, metadata, accepted_at
-           from agent_feed.batches where run_id = $1 and batch_id = $2`, [input.run_id, input.batch_id]);
+           from agent_feed.batches where run_id = $1 and batch_id = $2`, [run.id, input.batch_id]);
       if (byBatchId[0]) throw new PersistenceError("batch_id_conflict", `batch ${input.batch_id} already exists`, { run_id: input.run_id, batch_id: input.batch_id });
 
       const sequenceRows = await this.query<{ max_sequence: number | string | null }>(client,
-        `select max(sequence_number) as max_sequence from agent_feed.batches where run_id = $1`, [input.run_id]);
+        `select max(sequence_number) as max_sequence from agent_feed.batches where run_id = $1`, [run.id]);
       const maxSequence = sequenceRows[0]?.max_sequence === null || sequenceRows[0]?.max_sequence === undefined
         ? 0
         : asInt(sequenceRows[0].max_sequence);
@@ -372,7 +448,7 @@ export class PostgresAgentFeedPersistence {
       }
 
       const existingEvidenceRows = await this.query<{ id: string; evidence_key: string; payload: EvidencePayload }>(client,
-        `select id, evidence_key, payload from agent_feed.submitted_evidence where run_id = $1`, [input.run_id]);
+        `select id, evidence_key, payload from agent_feed.submitted_evidence where run_id = $1`, [run.id]);
       const evidenceIds = new Set<string>();
       const evidenceIdByKey = new Map<string, string>();
       const evidencePayloadByKey = new Map<string, EvidencePayload>();
@@ -388,7 +464,7 @@ export class PostgresAgentFeedPersistence {
       }
       const findingIds = new Set<string>();
       const existingFindingRows = await this.query<{ finding_key: string }>(client,
-        `select finding_key from agent_feed.findings where run_id = $1`, [input.run_id]);
+        `select finding_key from agent_feed.findings where run_id = $1`, [run.id]);
       for (const row of existingFindingRows) findingIds.add(row.finding_key);
       for (const finding of input.findings) {
         if (findingIds.has(finding.finding_id)) throw new PersistenceError("duplicate_finding", `finding ${finding.finding_id} already exists`, { finding_id: finding.finding_id });
@@ -407,7 +483,7 @@ export class PostgresAgentFeedPersistence {
          ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)
          returning id, run_id, batch_id, idempotency_key, sequence_number, payload_hash,
                    submitted_at, metadata, accepted_at`,
-        [randomUUID(), tenantId, input.run_id, input.batch_id, input.idempotency_key, input.sequence_number, hash, timestamp(input.submitted_at, "submitted_at"), json(input.metadata)]);
+        [randomUUID(), tenantId, run.id, input.batch_id, input.idempotency_key, input.sequence_number, hash, timestamp(input.submitted_at, "submitted_at"), json(input.metadata)]);
       const batch = batchRows[0];
       if (!batch) throw new PersistenceError("storage_error", "batch insert returned no row");
 
@@ -415,7 +491,7 @@ export class PostgresAgentFeedPersistence {
         const rows = await this.query<{ id: string }>(client,
           `insert into agent_feed.submitted_evidence (id, tenant_id, run_id, batch_id, evidence_key, payload)
            values ($1, $2, $3, $4, $5, $6::jsonb) returning id`,
-          [randomUUID(), tenantId, input.run_id, batch.id, evidence.evidence_id, json(evidence)]);
+          [randomUUID(), tenantId, run.id, batch.id, evidence.evidence_id, json(evidence)]);
         const row = rows[0];
         if (!row) throw new PersistenceError("storage_error", "evidence insert returned no row");
         evidenceIdByKey.set(evidence.evidence_id, row.id);
@@ -426,7 +502,7 @@ export class PostgresAgentFeedPersistence {
         const rows = await this.query<{ id: string }>(client,
           `insert into agent_feed.findings (id, tenant_id, run_id, batch_id, finding_key, finding_type, payload)
            values ($1, $2, $3, $4, $5, $6, $7::jsonb) returning id`,
-          [randomUUID(), tenantId, input.run_id, batch.id, finding.finding_id, finding.finding_type, json(finding)]);
+          [randomUUID(), tenantId, run.id, batch.id, finding.finding_id, finding.finding_type, json(finding)]);
         const row = rows[0];
         if (!row) throw new PersistenceError("storage_error", "finding insert returned no row");
         for (const evidenceKey of finding.evidence_refs) {
@@ -437,13 +513,14 @@ export class PostgresAgentFeedPersistence {
             [tenantId, row.id, evidenceId],
           );
         }
+        const referencedEvidence = finding.evidence_refs.map((evidenceId) => {
+          const referenced = evidencePayloadByKey.get(evidenceId);
+          if (!referenced) throw new PersistenceError("unresolved_evidence_ref", `finding ${finding.finding_id} references missing evidence ${evidenceId}`);
+          return referenced;
+        });
         const findingPayload = {
           finding,
-          submitted_evidence: finding.evidence_refs.map((evidenceId) => {
-            const referenced = evidencePayloadByKey.get(evidenceId);
-            if (!referenced) throw new PersistenceError("unresolved_evidence_ref", `finding ${finding.finding_id} references missing evidence ${evidenceId}`);
-            return referenced;
-          }),
+          submitted_evidence: referencedEvidence,
         } as unknown as DeliveryEvent["payload"];
         const findingRecord = finding as unknown as Record<string, unknown>;
         const routingTags = Array.isArray(findingRecord.routing_tags)
@@ -451,11 +528,11 @@ export class PostgresAgentFeedPersistence {
           : [];
         await appendOutboxEventInTransaction(client, {
           protocolVersion: "0.1",
-          eventId: `evt_${run.id}_${finding.finding_id}`,
+          eventId: `evt_${run.wire_run_id}_${finding.finding_id}`,
           eventType: "finding.submitted",
           tenantId: run.tenant_id,
           streamId: run.stream_id,
-          runId: run.id,
+          runId: run.wire_run_id,
           findingId: finding.finding_id,
           databaseFindingId: row.id,
           occurredAt: input.submitted_at,
@@ -465,10 +542,11 @@ export class PostgresAgentFeedPersistence {
           payloadHash: payloadHash(findingPayload as unknown as Record<string, unknown>),
           findingType: finding.finding_type,
           routingTags,
-          deliveryEligible: finding.security_flags.length === 0,
+          deliveryEligible: finding.security_flags.length === 0
+            && referencedEvidence.every(evidenceHandlingAllowsDelivery),
         });
       }
-      return this.loadRun(client, input.run_id);
+      return this.loadRun(client, run.id);
     });
   }
 
@@ -482,17 +560,17 @@ export class PostgresAgentFeedPersistence {
     const hash = payloadHash({ ...input, tenant_id: tenantId } as unknown as Record<string, unknown>);
     return this.withTransaction(async (client) => {
       const rows = await this.query<DbRunRow>(client,
-        `select id, tenant_id, trace_id, stream_id, producer_id, begin_idempotency_key, begin_payload_hash,
+        `select id, wire_run_id, tenant_id, trace_id, stream_id, producer_id, begin_idempotency_key, begin_payload_hash,
                 status, envelope, started_at, completed_at, actual_scope,
                 error_summary, complete_idempotency_key, complete_payload_hash
-           from agent_feed.runs where id = $1 for update`, [input.run_id]);
+           from agent_feed.runs where tenant_id = $1 and wire_run_id = $2 for update`, [tenantId, input.run_id]);
       const run = rows[0];
       if (!run) throw new PersistenceError("run_not_found", `run ${input.run_id} was not found`, { run_id: input.run_id });
       if (run.tenant_id !== tenantId) throw new PersistenceError("run_not_found", `run ${input.run_id} is outside the requested tenant`, { run_id: input.run_id });
       if (run.status !== "running") {
         if (run.complete_idempotency_key === input.idempotency_key) {
           if (run.complete_payload_hash !== hash) throw new PersistenceError("idempotency_payload_conflict", "complete_run idempotency key was reused with a different payload", { run_id: input.run_id });
-          return this.loadRun(client, input.run_id);
+          return this.loadRun(client, run.id);
         }
         throw new PersistenceError("terminal_run_immutable", `run ${input.run_id} is already terminal`, { run_id: input.run_id });
       }
@@ -504,7 +582,7 @@ export class PostgresAgentFeedPersistence {
         `select
            (select count(*) from agent_feed.batches where run_id = $1) as batches,
            (select count(*) from agent_feed.findings where run_id = $1) as findings,
-           (select count(*) from agent_feed.submitted_evidence where run_id = $1) as evidence`, [input.run_id]);
+           (select count(*) from agent_feed.submitted_evidence where run_id = $1) as evidence`, [run.id]);
       const counts = countRows[0];
       if (!counts) throw new PersistenceError("storage_error", "count query returned no row");
       const accepted = { batches: asInt(counts.batches), findings: asInt(counts.findings), evidence: asInt(counts.evidence) };
@@ -540,7 +618,7 @@ export class PostgresAgentFeedPersistence {
                 complete_idempotency_key = $7,
                 complete_payload_hash = $8
           where id = $1`,
-        [input.run_id, input.status, json(envelope), completedAt, json(input.actual_scope), errorSummary(input.errors), input.idempotency_key, hash],
+        [run.id, input.status, json(envelope), completedAt, json(input.actual_scope), errorSummary(input.errors), input.idempotency_key, hash],
       );
       const terminalEventType = input.status === "completed"
         ? "run.completed"
@@ -555,11 +633,11 @@ export class PostgresAgentFeedPersistence {
       } as unknown as DeliveryEvent["payload"];
       await appendOutboxEventInTransaction(client, {
         protocolVersion: "0.1",
-        eventId: `evt_${run.id}_terminal`,
+        eventId: `evt_${run.wire_run_id}_terminal`,
         eventType: terminalEventType,
         tenantId: run.tenant_id,
         streamId: run.stream_id,
-        runId: run.id,
+        runId: run.wire_run_id,
         findingId: null,
         occurredAt: input.completed_at,
         sequence: "0",
@@ -570,7 +648,7 @@ export class PostgresAgentFeedPersistence {
         routingTags: [],
         deliveryEligible: true,
       });
-      return this.loadRun(client, input.run_id);
+      return this.loadRun(client, run.id);
     });
   }
 
@@ -580,10 +658,21 @@ export class PostgresAgentFeedPersistence {
 
   async getRun(runId: string): Promise<RunRecord | null> {
     const rows = await this.query<DbRunRow>(this.pool,
-      `select id, tenant_id, trace_id, stream_id, producer_id, begin_idempotency_key, begin_payload_hash,
+      `select id, wire_run_id, tenant_id, trace_id, stream_id, producer_id, begin_idempotency_key, begin_payload_hash,
               status, envelope, started_at, completed_at, actual_scope,
               error_summary, complete_idempotency_key, complete_payload_hash
-         from agent_feed.runs where id = $1`, [runId]);
+         from agent_feed.runs where wire_run_id = $1`, [runId]);
+    const row = rows[0];
+    return row ? this.loadRun(this.pool, row.id) : null;
+  }
+
+  /** Tenant-scoped wire-ID lookup for authenticated producer/API callers. */
+  async getRunForTenant(tenantId: string, runId: string): Promise<RunRecord | null> {
+    const rows = await this.query<DbRunRow>(this.pool,
+      `select id, wire_run_id, tenant_id, trace_id, stream_id, producer_id, begin_idempotency_key, begin_payload_hash,
+              status, envelope, started_at, completed_at, actual_scope,
+              error_summary, complete_idempotency_key, complete_payload_hash
+         from agent_feed.runs where tenant_id = $1 and wire_run_id = $2`, [tenantId, runId]);
     const row = rows[0];
     return row ? this.loadRun(this.pool, row.id) : null;
   }
@@ -592,9 +681,30 @@ export class PostgresAgentFeedPersistence {
     return this.getRun(runId);
   }
 
+  async get_run_for_tenant(tenantId: string, runId: string): Promise<RunRecord | null> {
+    return this.getRunForTenant(tenantId, runId);
+  }
+
   async listRuns(options: ListRunsOptions = {}): Promise<RunRecord[]> {
+    return this.listRunsInternal(undefined, options);
+  }
+
+  /** Tenant-scoped run listing for authenticated producer/API callers. */
+  async listRunsForTenant(tenantId: string, options: ListRunsOptions = {}): Promise<RunRecord[]> {
+    return this.listRunsInternal(tenantId, options);
+  }
+
+  async list_runs_for_tenant(tenantId: string, options: ListRunsOptions = {}): Promise<RunRecord[]> {
+    return this.listRunsForTenant(tenantId, options);
+  }
+
+  private async listRunsInternal(tenantId: string | undefined, options: ListRunsOptions): Promise<RunRecord[]> {
     const values: unknown[] = [];
     const predicates: string[] = [];
+    if (tenantId !== undefined) {
+      values.push(tenantId);
+      predicates.push(`tenant_id = $${values.length}`);
+    }
     if (options.stream_id !== undefined) {
       values.push(options.stream_id);
       predicates.push(`stream_id = $${values.length}`);
@@ -608,7 +718,7 @@ export class PostgresAgentFeedPersistence {
     values.push(limit, offset);
     const where = predicates.length === 0 ? "" : `where ${predicates.join(" and ")}`;
     const rows = await this.query<DbRunRow>(this.pool,
-      `select id, tenant_id, trace_id, stream_id, producer_id, begin_idempotency_key, begin_payload_hash,
+      `select id, wire_run_id, tenant_id, trace_id, stream_id, producer_id, begin_idempotency_key, begin_payload_hash,
               status, envelope, started_at, completed_at, actual_scope,
               error_summary, complete_idempotency_key, complete_payload_hash
          from agent_feed.runs ${where}
@@ -719,7 +829,7 @@ export class PostgresAgentFeedPersistence {
 
   private async loadRun(client: PgPool | PoolClient, runId: string): Promise<RunRecord> {
     const rows = await this.query<DbRunRow>(client,
-      `select id, tenant_id, trace_id, stream_id, producer_id, begin_idempotency_key, begin_payload_hash,
+      `select id, wire_run_id, tenant_id, trace_id, stream_id, producer_id, begin_idempotency_key, begin_payload_hash,
               status, envelope, started_at, completed_at, actual_scope,
               error_summary, complete_idempotency_key, complete_payload_hash
          from agent_feed.runs where id = $1`, [runId]);
@@ -747,7 +857,7 @@ export class PostgresAgentFeedPersistence {
     };
     const envelope = {
       ...asJsonObject(row.envelope),
-      run_id: row.id,
+      run_id: row.wire_run_id,
       status: row.status,
       completed_at: iso(row.completed_at),
       actual_scope: row.actual_scope,
@@ -755,7 +865,7 @@ export class PostgresAgentFeedPersistence {
       error_summary: row.error_summary,
     } as RunEnvelope;
     return {
-      run_id: row.id,
+      run_id: row.wire_run_id,
       tenant_id: row.tenant_id,
       trace_id: row.trace_id,
       stream_id: row.stream_id,
@@ -770,7 +880,7 @@ export class PostgresAgentFeedPersistence {
       envelope,
       batches: batches.map((batch) => ({
         id: batch.id,
-        run_id: batch.run_id,
+        run_id: row.wire_run_id,
         batch_id: batch.batch_id,
         idempotency_key: batch.idempotency_key,
         sequence_number: asInt(batch.sequence_number),
@@ -779,8 +889,8 @@ export class PostgresAgentFeedPersistence {
         metadata: asJsonObject(batch.metadata),
         accepted_at: requiredIso(batch.accepted_at),
       })),
-      findings: findings.map((finding) => ({ id: finding.id, run_id: finding.run_id, batch_id: finding.batch_id, finding: finding.payload, created_at: requiredIso(finding.created_at) })),
-      evidence: evidence.map((item) => ({ id: item.id, run_id: item.run_id, batch_id: item.batch_id, evidence: item.payload, created_at: requiredIso(item.created_at) })),
+      findings: findings.map((finding) => ({ id: finding.id, run_id: row.wire_run_id, batch_id: finding.batch_id, finding: finding.payload, created_at: requiredIso(finding.created_at) })),
+      evidence: evidence.map((item) => ({ id: item.id, run_id: row.wire_run_id, batch_id: item.batch_id, evidence: item.payload, created_at: requiredIso(item.created_at) })),
       stats,
     };
   }

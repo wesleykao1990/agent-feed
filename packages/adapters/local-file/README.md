@@ -1,14 +1,27 @@
-# local-file adapter
+# Local-file run-bundle adapter
 
-Imports a validated run-bundle JSON file. This is the safe fallback for agent environments, including ChatGPT Scheduled Tasks, that cannot call outbound webhooks or MCP tools.
+This adapter is the durable fallback for producers that cannot call the Agent
+Feed REST API, MCP, or a webhook. It reads a JSON run bundle, validates the
+protocol `0.1` `run-bundle` contract from `@agent-feed/schema`, and delegates
+the lifecycle to an injected `ProducerService` boundary.
 
-The first runnable path is:
+The adapter never owns SQL, persistence, authentication, or an in-memory store.
+The injected principal and service determine the producer scope; in production
+the service is composed with `PostgresAgentFeedPersistence`.
 
-    cd prototype
-    npm ci
-    npm run import:file -- ../examples/run-bundle.zero-findings.example.json
+```ts
+import { LocalFileRunBundleAdapter } from "@agent-feed/local-file-adapter";
 
-The importer validates protocol 0.1 structure and semantic invariants before
-changing state. It rejects secret-bearing submitted evidence and preserves
-security flags and the original untrusted wire payload. It never promotes a
-finding or submitted evidence into a consumer-domain fact.
+const adapter = new LocalFileRunBundleAdapter({
+  service: producerService,
+  principal: authenticatedProducer,
+});
+
+const result = await adapter.importFile("./run-bundle.json");
+```
+
+Import order is deterministic: `beginRunWithWireId(bundle.run_id, begin)`,
+then every batch in array order, then `completeRun`. Exact retries are delegated
+to the durable service's idempotency contract. The bundle's producer-visible
+`run_id` is passed unchanged, including non-UUID IDs; the adapter does not
+silently replace it with a generated UUID.

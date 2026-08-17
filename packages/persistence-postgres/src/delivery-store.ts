@@ -168,6 +168,22 @@ export async function appendOutboxEventInTransaction(
   client: PoolClient,
   event: DeliveryEvent,
 ): Promise<void> {
+  // DeliveryEvent.runId is the producer-visible wire identity. Resolve it to
+  // the internal UUID before touching the relational FK, while accepting the
+  // internal UUID as a backwards-compatible alias for generated IDs.
+  const runRows = await client.query<{ id: string; wire_run_id: string; stream_id: string }>(
+    `select id, wire_run_id, stream_id
+       from agent_feed.runs
+      where tenant_id = $1 and (wire_run_id = $2 or id::text = $2)
+      order by (wire_run_id = $2) desc
+      limit 1`,
+    [event.tenantId, event.runId],
+  );
+  const sourceRun = runRows.rows[0];
+  if (!sourceRun) throw new Error("outbox_event_run_not_found");
+  if (sourceRun.stream_id !== event.streamId) throw new Error("outbox_event_stream_scope_mismatch");
+  const internalRunId = sourceRun.id;
+  const wireRunId = sourceRun.wire_run_id;
   const findingDbId = event.databaseFindingId ?? uuidOrNull(event.findingId);
   const eligible = event.deliveryEligible;
   const canonicalEventPayloadHash = payloadHash(event.payload);
@@ -178,18 +194,18 @@ export async function appendOutboxEventInTransaction(
   const inserted = await client.query<{ event_id: string }>(
     `insert into agent_feed.outbox_events (
        id, tenant_id, event_id, event_key, event_type, protocol_version,
-       stream_id, run_id, finding_id, wire_finding_id, finding_type,
+       stream_id, run_id, wire_run_id, finding_id, wire_finding_id, finding_type,
        routing_tags, payload, occurred_at, payload_hash, delivery_eligibility,
        quarantine_reason, trace_id
      ) values (
-       $1, $2, $3, $4, $5, '0.1', $6, $7, $8, $9, $10,
-       $11::jsonb, $12::jsonb, $13, $14, $15, $16, $17
+       $1, $2, $3, $4, $5, '0.1', $6, $7, $8, $9, $10, $11,
+       $12::jsonb, $13::jsonb, $14, $15, $16, $17, $18
      )
      on conflict (tenant_id, event_key) do nothing
      returning event_id`,
     [
       randomUUID(), event.tenantId, event.eventId, event.eventId, event.eventType,
-      event.streamId, event.runId, findingDbId, event.findingId, event.findingType,
+      event.streamId, internalRunId, wireRunId, findingDbId, event.findingId, event.findingType,
       json(event.routingTags), json(event.payload), new Date(event.occurredAt),
       eventPayloadHash, eligible ? "eligible" : "quarantined",
       eligible ? null : "event marked ineligible by ingress policy", event.traceId,
@@ -203,6 +219,7 @@ export async function appendOutboxEventInTransaction(
       protocol_version: string;
       stream_id: string;
       run_id: string;
+      wire_run_id: string;
       finding_id: string | null;
       wire_finding_id: string | null;
       finding_type: string | null;
@@ -213,7 +230,7 @@ export async function appendOutboxEventInTransaction(
       delivery_eligibility: string;
       trace_id: string | null;
     }>(
-      `select event_id, event_type, protocol_version, stream_id, run_id::text,
+      `select event_id, event_type, protocol_version, stream_id, run_id::text, wire_run_id,
               finding_id::text, wire_finding_id, finding_type, routing_tags,
               payload, occurred_at, payload_hash, delivery_eligibility, trace_id
          from agent_feed.outbox_events
@@ -236,7 +253,8 @@ export async function appendOutboxEventInTransaction(
       || row.event_type !== event.eventType
       || row.protocol_version !== "0.1"
       || row.stream_id !== event.streamId
-      || row.run_id !== event.runId
+      || row.run_id !== internalRunId
+      || row.wire_run_id !== wireRunId
       || row.finding_id !== findingDbId
       || row.wire_finding_id !== event.findingId
       || row.finding_type !== event.findingType
@@ -849,7 +867,7 @@ export class PostgresDeliveryRepository implements DeliveryRepository {
 
   private async loadClaim(client: PgPool | PoolClient, deliveryId: string): Promise<DeliveryClaim | null> {
     const rows = await client.query<DbRow>(
-      `select d.*, e.protocol_version, e.event_type, e.stream_id, e.run_id,
+      `select d.*, e.protocol_version, e.event_type, e.stream_id, e.wire_run_id as run_id,
               e.wire_finding_id, e.occurred_at, e.delivery_position,
               e.trace_id, e.payload, e.payload_hash, e.finding_type,
               e.routing_tags, e.delivery_eligibility,

@@ -318,7 +318,7 @@ export class PostgresDeliveryConsumerRepository implements DeliveryConsumerRepos
       const rows = await this.pool.query<DbRow>(
         `select d.id::text as delivery_id, d.state, d.attempt_count,
                 d.next_attempt_at, d.last_error_code, d.last_error_detail,
-                e.event_id, e.event_type, e.stream_id, e.run_id::text as run_id,
+                e.event_id, e.event_type, e.stream_id, e.wire_run_id as run_id,
                 coalesce(e.wire_finding_id, e.finding_id::text) as finding_id,
                 e.occurred_at, e.payload, e.finding_type, e.routing_tags,
                 e.delivery_position::text as delivery_position, e.trace_id
@@ -493,7 +493,7 @@ export class PostgresDeliveryConsumerRepository implements DeliveryConsumerRepos
         `select d.id::text as delivery_id, d.state, d.attempt_count,
                 d.next_attempt_at, d.last_error_code, d.last_error_detail,
                 d.dead_lettered_at, e.event_id, e.event_type, e.stream_id,
-                e.run_id::text as run_id,
+                e.wire_run_id as run_id,
                 coalesce(e.wire_finding_id, e.finding_id::text) as finding_id,
                 e.occurred_at, e.payload, e.finding_type, e.routing_tags,
                 e.delivery_position::text as delivery_position, e.trace_id
@@ -708,7 +708,7 @@ export class PostgresDeliveryConsumerRepository implements DeliveryConsumerRepos
     const rows = await client.query<DbRow>(
       `select d.id::text as delivery_id, d.state, d.attempt_count,
               d.next_attempt_at, d.last_error_code, d.last_error_detail,
-              e.event_id, e.event_type, e.stream_id, e.run_id::text as run_id,
+              e.event_id, e.event_type, e.stream_id, e.wire_run_id as run_id,
               coalesce(e.wire_finding_id, e.finding_id::text) as finding_id,
               e.occurred_at, e.payload, e.finding_type, e.routing_tags,
               e.delivery_position::text as delivery_position, e.trace_id

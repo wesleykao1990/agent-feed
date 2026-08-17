@@ -37,7 +37,7 @@ body.
 Milestone 2 implementation acceptance is complete for the accepted repository
 surface. The latest local evidence is protocol 5, pure conformance 6,
 architecture 4, live PostgreSQL 3, delivery-core 18, delivery-consumer 10,
-persistence 10, webhook 8, worker 6, and API 5. The corrected serialized live
+persistence 11, webhook 8, worker 6, and API 5. The corrected serialized live
 PostgreSQL gate and all seven clean package installs/builds/tests pass. Hosted
 GitHub Actions CI run #5 also passed on draft PR #2 for commit `ad4ea3a`. The
 API remains transport-neutral with no deployable HTTP server; the
