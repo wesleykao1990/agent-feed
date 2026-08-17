@@ -46,11 +46,16 @@ function usage() {
   ].join("\n");
 }
 
+export function releaseTagFromEnvironment(environment = process.env) {
+  if (environment.GITHUB_REF_TYPE !== "tag") return null;
+  return environment.GITHUB_REF_NAME ?? null;
+}
+
 function parseArgs(argv) {
   const options = {
     packageDir: DEFAULT_PACKAGE_DIR,
     outputDir: DEFAULT_OUTPUT_DIR,
-    tag: process.env.GITHUB_REF_NAME ?? null,
+    tag: releaseTagFromEnvironment(),
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -187,7 +192,7 @@ export function buildSchemaArtifact({
   root = REPOSITORY_ROOT,
   packageDir = DEFAULT_PACKAGE_DIR,
   outputDir = DEFAULT_OUTPUT_DIR,
-  tag = process.env.GITHUB_REF_NAME ?? null,
+  tag = releaseTagFromEnvironment(),
 } = {}) {
   const repositoryRoot = resolve(root);
   const schemaDir = packagePath(repositoryRoot, packageDir);

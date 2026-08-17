@@ -19,6 +19,7 @@
     "m1:architecture": "node scripts/check_producer_architecture.mjs",
     "m1:ingress": "node scripts/run_m1_ingress_conformance.mjs",
     "schema:artifact": "node scripts/build_schema_artifact.mjs",
+    "schema:artifact:test": "node --test tests/schema-artifact/*.test.mjs",
     "schema:artifact:verify": "node scripts/verify_schema_artifact.mjs",
     "prototype:test": "cd prototype && npm test",
     "prototype:demo": "cd prototype && npm run demo"

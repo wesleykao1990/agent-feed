@@ -29,7 +29,7 @@ Current green evidence:
 - full M2 conformance: architecture 4, pure 6, live PostgreSQL 3,
   protocol-runtime 5, delivery-core 18, delivery-consumer 10, persistence 11,
   webhook 8, worker 6, and delivery API 5;
-- final repository source-integrity inventory: **236/236**, from a
+- final repository source-integrity inventory: **237/237**, from a
   clean-equivalent checkout (ignored build/release outputs are excluded).
 
 The live producer gate rejects a missing database URL rather than converting it
@@ -44,8 +44,10 @@ exact producer scope, migration-ledger, media-type/draining, and static-boundary
 issues. The first hosted PR run then found a source-linked concrete adapter
 dependency that a populated local checkout had masked. The producer service now
 owns an adapter-neutral persistence port and its architecture gate rejects that
-dependency class. The only remaining release dependency is the intentional
-post-merge schema publication and downstream Rewards pin.
+dependency class. The next hosted run cleared that stage and exposed a synthetic
+pull-request ref being mistaken for a schema tag; ref-type regression tests now
+separate PR candidates from tag releases. The only remaining release dependency
+is the intentional post-merge schema publication and downstream Rewards pin.
 
 ## Schema release candidate
 

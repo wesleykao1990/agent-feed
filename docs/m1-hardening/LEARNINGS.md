@@ -127,3 +127,10 @@ does not prove that an application package owns only its declared boundary.
 Keep the producer service dependent on an adapter-neutral port, reject concrete
 PostgreSQL imports and manifest entries statically, and run its clean install
 before installing the durable adapter graph used by the API composition root.
+
+## M1-L019 — A GitHub ref name is not necessarily a release tag
+
+Pull-request workflows expose synthetic ref names such as `3/merge`. Release
+logic must use the ref type (or an explicit workflow argument), not the mere
+presence of `GITHUB_REF_NAME`. Keep ordinary PR candidate builds untagged and
+retain strict tag/version equality only for actual schema tag releases.

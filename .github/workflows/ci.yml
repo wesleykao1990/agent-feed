@@ -101,7 +101,9 @@ jobs:
           npm --prefix apps/api test
 
       - name: Build immutable schema release candidate
-        run: npm run schema:artifact
+        run: |
+          npm run schema:artifact:test
+          npm run schema:artifact
 
       - name: Verify schema release candidate as an external consumer
         run: npm run schema:artifact:verify
