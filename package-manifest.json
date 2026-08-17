@@ -7,7 +7,7 @@
   "counts": {
     "json_schemas": 9,
     "example_run_bundles": 3,
-    "prototype_tests": 8
+    "prototype_tests": 19
   },
   "canonical_files": {
     "protocol": "docs/01_protocol.md",

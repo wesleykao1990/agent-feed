@@ -20,9 +20,16 @@ Core tables:
 - delivery_attempts;
 - acknowledgements.
 
+Milestone 1's in-memory prototype keeps liveness incidents and protocol events
+behind the same shape a durable adapter would use. A missed-run incident is
+opened once per stream/window, remains in the incident ledger after recovery,
+and is updated to `resolved` when any terminal run proves that the producer
+executed. Finding and terminal-run events are append-only records; reads return
+copies so a caller cannot mutate accepted payloads.
+
 ## Outbox and queue
 
-The batch transaction writes findings/evidence and outbox events atomically. A queue worker delivers signed events to consumers. Failed delivery is retried and ultimately placed in a dead-letter state. External delivery is at-least-once. A 2xx response is acknowledged only after the consumer has durably recorded its idempotency receipt.
+The batch transaction writes findings/evidence and outbox events atomically. A queue worker delivers signed events to consumers. Failed delivery is retried and ultimately placed in a dead-letter state. External delivery is at-least-once. A 2xx response is acknowledged only after the consumer has durably recorded its idempotency receipt. These outbox, queue, retry, acknowledgement, and dead-letter concerns remain deferred to Milestone 2; this slice only generates and signs immutable event-shaped records.
 
 ## Realtime
 

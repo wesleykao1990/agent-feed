@@ -23,4 +23,4 @@ Batch sequence numbers must increase, but consumers must not rely on network arr
 
 ## Signatures
 
-Outbound webhooks include event ID, timestamp, protocol version, and signature. Consumers reject stale timestamps and record the event before returning success.
+Outbound webhooks include event ID, timestamp, protocol version, and signature. The prototype signs the canonical event body with the pinned HMAC-SHA256 `timestamp.body` input and five-minute replay window. Consumers reject stale timestamps and record the event before returning success. The generated finding events precede one terminal event (`run.completed`, `run.partial`, or `run.failed`); cancellation remains represented by the terminal payload while the v0.1 event enum has no separate `run.cancelled` value.

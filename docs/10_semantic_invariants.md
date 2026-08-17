@@ -24,3 +24,11 @@ A registered stream with an expected cadence owes terminal runs. A missing run i
 - only `completed` with zero findings means “checked successfully; no changes found”;
 - recovered streams resolve, but do not delete, their missed-run incidents;
 - liveness state must be computable without trusting producer-supplied schedule metadata.
+
+The prototype exposes `observation` alongside the health status so consumers
+can distinguish `zero_findings` (a completed check), `absent_run` (never seen),
+and `partial`/`failed`/`cancelled` degraded outcomes. Missed-run incident
+creation is idempotent for an open stream/window; recovery updates the existing
+record to `resolved` and never deletes it. Finding and terminal events are
+stored as immutable event-shaped records and signed using the pinned replay
+window constants.

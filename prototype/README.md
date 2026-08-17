@@ -6,8 +6,9 @@ A TypeScript prototype of the generic protocol. It implements:
 - idempotency-key payload consistency;
 - immutable terminal runs with idempotent completion retry;
 - completed zero-finding semantics;
-- consumer-owned expected cadence and overdue-run detection;
-- finding/evidence delivery events;
+- consumer-owned expected cadence, absent/degraded/zero-finding observations, and overdue-run detection;
+- append-only-shaped missed-run incidents that open idempotently and resolve without deletion;
+- immutable finding and terminal-run delivery events;
 - HMAC-SHA256 signing with a five-minute replay window;
 - fixed batch/body limits and key-rotation overlap constants;
 - preservation of hostile-source security flags.
@@ -55,3 +56,13 @@ Legacy token mode is intentionally wildcard-scoped for the prototype’s existin
 local REST/run-bundle examples; production credentials should always name their
 producer and allowed streams. Quarantine callbacks receive IDs, flags, and
 field paths, never secret values or evidence excerpts.
+
+Liveness and event
+records are held behind in-memory methods that mirror a persistence port; the
+transactional outbox, queue, retries, acknowledgements, and dead-letter flow are
+Milestone 2 work.
+
+`AgentFeedStore#signedEvents(runId, secret, { timestampSeconds })` signs the
+finding events followed by the terminal event. The returned `rawBody`/`body`
+is the canonical event body used by `signBody` and `verifyBody`; callers should
+pass an explicit timestamp in deterministic tests.

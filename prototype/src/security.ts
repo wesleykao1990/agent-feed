@@ -474,6 +474,18 @@ export function enforceFindingSecurity(
   }
 }
 
+/** Stable JSON representation used for payload hashes and signatures. */
+export function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, child]) => `${JSON.stringify(key)}:${canonicalJson(child)}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
 export function signBody(rawBody: string, timestampSeconds: number, secret: string): string {
   return createHmac("sha256", secret)
     .update(`${timestampSeconds}.${rawBody}`, "utf8")

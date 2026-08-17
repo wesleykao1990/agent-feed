@@ -54,6 +54,7 @@ interface WireBatch {
   batch_id: string;
   idempotency_key: string;
   sequence_number: number;
+  submitted_at: string;
   findings: WireFinding[];
   evidence: WireEvidence[];
   metadata?: Record<string, unknown>;
@@ -319,6 +320,7 @@ export class RunBundleImporter {
         runId: batch.run_id,
         batchId: batch.batch_id,
         idempotencyKey: batch.idempotency_key,
+        occurredAt: batch.submitted_at,
         findings: batch.findings.map(finding),
         evidence: batch.evidence.map(evidence),
       }, { security: storageSecurity });
