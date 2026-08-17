@@ -1,0 +1,48 @@
+# Agent Feed protocol runtime
+
+Status: **implemented foundation; the M2 delivery worker and webhook adapter
+now consume this package through its public package export.**
+
+This package contains dependency-light, protocol-only runtime helpers for
+Agent Feed delivery. It has no dependency on the prototype, PostgreSQL, an
+HTTP server, Supabase, or any consumer domain.
+
+## Responsibilities
+
+- one canonical JSON implementation for hashes and signatures;
+- SHA-256 and HMAC-SHA256 over `timestamp.body`;
+- the pinned 300-second replay window;
+- key-ring lookup, validity intervals, and 24-hour rotation overlap;
+- exact snake_case Delivery Event `0.1` encoding/decoding;
+- signed-delivery transport headers, including event, delivery, attempt,
+  protocol, key, timestamp, signature, and optional W3C trace headers.
+
+The strict event body contains only the fields in
+`packages/schema/contracts/delivery-event.schema.json`. Signature metadata is
+returned separately as headers. `rawBody` is the exact canonical string that
+must be sent; reserializing the parsed event can invalidate the signature.
+The required `attempt` field stays inside the signed event body. A retry or
+replay re-encodes and re-signs the body with a new attempt while preserving
+event ID, payload, occurred time, and payload hash.
+The `x-agent-feed-signature` header is the lowercase hexadecimal HMAC digest
+over `timestamp.rawBody`; the verifier accepts hexadecimal case-insensitively.
+
+## Key rotation
+
+Key validity uses half-open intervals `[activeFrom, expiresAt)`. Calling
+`KeyRing.rotate` activates the new key immediately and expires currently valid
+predecessors at most 24 hours later. The key ID is required for verification;
+the key secret is never included in metadata or transport headers.
+
+## Development
+
+```sh
+npm test
+npm run build
+```
+
+The current package evidence is 5/5 tests, a clean install, and a clean
+TypeScript build. Production persistence hashing and worker/webhook signing
+use this public runtime boundary. The in-memory prototype retains historical
+reference helpers by design; that non-production duplication is not an M2 gate
+blocker.

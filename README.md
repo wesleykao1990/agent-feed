@@ -1,6 +1,25 @@
 # Agent Feed Foundation v0.1.1
 
-Agent Feed is a standalone, reusable project for transmitting structured agent runs, findings, and submitted evidence to multiple consumer applications.
+Agent Feed is a standalone, reusable project for transmitting structured agent
+runs, findings, and submitted evidence to multiple consumer applications.
+
+Milestone 2 status: **implementation gate complete in this repository**. The
+corrected full acceptance is green: architecture 4, pure conformance 6, live
+PostgreSQL 3, protocol-runtime 5, delivery-core 18, delivery-consumer 10,
+persistence 10, webhook adapter 8, delivery worker 6, and delivery API 5.
+All seven M2 packages/applications pass clean installs, builds, and tests.
+M2-023 through M2-038 and M2-L027 through M2-L042 are resolved in the
+append-only bug/learning logs. The
+delivery API remains transport-neutral (there is no deployable HTTP server),
+the worker has no production process/CLI entrypoint, and observability
+exporter/deployment work remains future operational work. The migration loader
+is intentionally explicit for `0001_agent_feed.sql` followed by
+`0002_durable_delivery.sql`.
+
+The repository CI workflow installs, builds, and tests all seven M2
+packages/applications with live PostgreSQL. GitHub Actions CI run #5 passed on
+draft PR #2 for commit `ad4ea3a`. The root runner serializes package tests so
+persistence migrations cannot race.
 
 It is intentionally separate from the Japan Rewards Optimizer. The two projects communicate through Agent Feed protocol `0.1`; neither project reads the other's database.
 
@@ -8,11 +27,20 @@ It is intentionally separate from the Japan Rewards Optimizer. The two projects 
 
 ```text
 packages/schema
+packages/protocol-runtime
+packages/delivery-core
+packages/delivery-consumer
+packages/webhook-adapter
 packages/sdk/typescript
 packages/sdk/python
 packages/adapters
 apps/mcp-server
 apps/api
+apps/delivery-api (transport-neutral handlers; no HTTP server)
+apps/delivery-worker (composition foundation; no production entrypoint yet)
+docs/adr
+docs/m2
+docs/operations
 skills/chatgpt
 skills/claude
 examples/postgres
@@ -29,9 +57,34 @@ A `Finding` means “a producer submitted this claim,” not “this is true.”
 
 `prototype/` implements the thin run lifecycle, idempotency, terminal immutability, signed events, expected-cadence liveness, and hostile-finding preservation without external dependencies. Run `cd prototype && npm test`.
 
+The new M2 packages can be checked independently while integration is in
+progress:
+
+```sh
+cd packages/protocol-runtime && npm test && npm run build
+cd ../delivery-core && npm test && npm run build
+cd ../delivery-consumer && npm test && npm run build
+cd ../webhook-adapter && npm test && npm run build
+cd ../persistence-postgres && npm test
+cd ../.. && node --test tests/delivery/*.test.mjs
+cd apps/delivery-worker && npm test && npm run build
+cd ../delivery-api && npm test && npm run build
+cd ../.. && node scripts/run_m2_conformance.mjs --allow-live-skip
+```
+
+The combined M2 gate uses clean package installs and a disposable PostgreSQL
+database. `npm run m2:conformance` is the gate command and requires
+`AGENT_FEED_DATABASE_URL`; `--allow-live-skip` is local-only and never counts
+as acceptance. See `docs/12_milestone_2_delivery.md` for the evidence record
+and remaining operational caveats.
+
 ## Start implementation
 
 Use `prompts/CODEX_INITIATING_PROMPT.md`, then `prompts/CODEX_MILESTONE_2_DELIVERY_PROMPT.md`.
+
+Read `docs/12_milestone_2_delivery.md`, its ADR index, and the operational
+runbook before adding code. Decisions, bugs, and learnings are append-only in
+`docs/adr/`, `docs/m2/BUGS.md`, and `docs/m2/LEARNINGS.md`.
 
 ## ChatGPT monitoring
 

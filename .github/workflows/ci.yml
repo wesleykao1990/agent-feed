@@ -12,7 +12,7 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     services:
       postgres:
@@ -72,16 +72,42 @@ jobs:
       - name: Test Milestone 0/1 conformance
         run: npm run conformance:test
 
-      - name: Install PostgreSQL persistence dependencies
-        working-directory: packages/persistence-postgres
-        run: npm ci
+      # Keep the integrity/checksum steps above the install steps: node_modules
+      # is intentionally excluded from SHA256SUMS, while every package,
+      # workflow, test, and M2 script must be covered by the manifest.
+      - name: Install Milestone 2 package dependencies
+        run: |
+          npm --prefix packages/protocol-runtime ci
+          npm --prefix packages/delivery-core ci
+          npm --prefix packages/delivery-consumer ci
+          npm --prefix packages/persistence-postgres ci
+          npm --prefix packages/webhook-adapter ci
+          npm --prefix apps/delivery-worker ci
+          npm --prefix apps/delivery-api ci
 
-      - name: Build PostgreSQL persistence boundary
-        working-directory: packages/persistence-postgres
-        run: npm run build
+      - name: Build Milestone 2 packages and applications
+        run: |
+          npm --prefix packages/protocol-runtime run build
+          npm --prefix packages/delivery-core run build
+          npm --prefix packages/delivery-consumer run build
+          npm --prefix packages/persistence-postgres run build
+          npm --prefix packages/webhook-adapter run build
+          npm --prefix apps/delivery-worker run build
+          npm --prefix apps/delivery-api run build
 
-      - name: Test PostgreSQL persistence boundary
-        working-directory: packages/persistence-postgres
-        run: npm test
+      - name: Test Milestone 2 packages and applications
+        run: |
+          npm --prefix packages/protocol-runtime test
+          npm --prefix packages/delivery-core test
+          npm --prefix packages/delivery-consumer test
+          npm --prefix packages/persistence-postgres test
+          npm --prefix packages/webhook-adapter test
+          npm --prefix apps/delivery-worker test
+          npm --prefix apps/delivery-api test
+        env:
+          AGENT_FEED_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_feed_test
+
+      - name: Run combined Milestone 2 conformance gate
+        run: npm run m2:conformance
         env:
           AGENT_FEED_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_feed_test

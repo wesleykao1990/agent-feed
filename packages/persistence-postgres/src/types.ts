@@ -57,6 +57,7 @@ export interface EvidencePayload extends JsonObject {
 
 export interface BeginRunRequest {
   protocol_version: "0.1";
+  tenant_id?: string;
   idempotency_key: string;
   stream_id: string;
   producer: Producer;
@@ -71,6 +72,7 @@ export interface BeginRunRequest {
 
 export interface SubmitBatchRequest {
   protocol_version: "0.1";
+  tenant_id?: string;
   run_id: string;
   batch_id: string;
   idempotency_key: string;
@@ -83,6 +85,7 @@ export interface SubmitBatchRequest {
 
 export interface CompleteRunRequest {
   protocol_version: "0.1";
+  tenant_id?: string;
   run_id: string;
   idempotency_key: string;
   status: TerminalRunStatus;
@@ -176,6 +179,8 @@ export interface RunStats {
 
 export interface RunRecord {
   run_id: string;
+  tenant_id: string;
+  trace_id: string;
   stream_id: string;
   producer_id: string;
   begin_idempotency_key: string;

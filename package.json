@@ -15,6 +15,7 @@
     "types:check": "python3 scripts/generate_protocol_types.py --check",
     "protocol:compatibility": "python3 scripts/check_protocol_compatibility.py",
     "conformance:test": "node --experimental-strip-types --test tests/conformance/*.test.ts",
+    "m2:conformance": "node scripts/run_m2_conformance.mjs",
     "prototype:test": "cd prototype && npm test",
     "prototype:demo": "cd prototype && npm run demo"
   }
