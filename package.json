@@ -2,6 +2,7 @@
   "name": "agent-feed-foundation",
   "version": "0.1.1",
   "private": true,
+  "type": "module",
   "packageManager": "pnpm@10",
   "engines": {
     "node": ">=22"
@@ -13,6 +14,7 @@
     "types:write": "python3 scripts/generate_protocol_types.py --write",
     "types:check": "python3 scripts/generate_protocol_types.py --check",
     "protocol:compatibility": "python3 scripts/check_protocol_compatibility.py",
+    "conformance:test": "node --experimental-strip-types --test tests/conformance/*.test.ts",
     "prototype:test": "cd prototype && npm test",
     "prototype:demo": "cd prototype && npm run demo"
   }

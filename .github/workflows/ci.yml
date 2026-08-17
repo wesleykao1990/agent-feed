@@ -53,3 +53,6 @@ jobs:
       - name: Test lifecycle and security invariants
         working-directory: prototype
         run: npm test
+
+      - name: Test Milestone 0/1 conformance
+        run: npm run conformance:test

@@ -1,4 +1,4 @@
-.PHONY: validate checksums types compatibility
+.PHONY: validate checksums types compatibility conformance
 validate:
 	python scripts/validate_package.py
 checksums:
@@ -7,3 +7,5 @@ types:
 	python3 scripts/generate_protocol_types.py --check
 compatibility:
 	python3 scripts/check_protocol_compatibility.py
+conformance:
+	npm run conformance:test
