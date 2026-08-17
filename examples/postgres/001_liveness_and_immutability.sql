@@ -6,14 +6,17 @@ insert into agent_feed.stream_expectations (
 ) values ('rewards.daily', 3600, 60, true, 'db-test');
 
 insert into agent_feed.runs (
-  id, stream_id, producer_id, begin_idempotency_key, status, envelope, started_at, completed_at
+  id, stream_id, producer_id, begin_idempotency_key, begin_payload_hash,
+  status, envelope, started_at, completed_at, actual_scope,
+  complete_idempotency_key, complete_payload_hash
 ) values (
-  '00000000-0000-0000-0000-000000000101', 'rewards.daily', 'producer-test', 'begin-1',
-  'running', '{}'::jsonb, '2026-08-17T00:00:00Z', null
+  '00000000-0000-0000-0000-000000000101', 'rewards.daily', 'producer-test', 'begin-1', 'begin-hash',
+  'running', '{}'::jsonb, '2026-08-17T00:00:00Z', null, null, null, null
 );
 
 update agent_feed.runs
-   set status='completed', completed_at='2026-08-17T00:01:00Z'
+   set status='completed', completed_at='2026-08-17T00:01:00Z', actual_scope='{}'::jsonb,
+       complete_idempotency_key='complete-1', complete_payload_hash='complete-hash'
  where id='00000000-0000-0000-0000-000000000101';
 
 -- A completed zero-finding run is present and advances expected liveness.
