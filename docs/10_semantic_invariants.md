@@ -57,8 +57,8 @@ stored as immutable event-shaped records and signed using the pinned replay
 window constants.
 
 The M2 implementation gate is green in this repository: architecture 4, pure
-conformance 6, live PostgreSQL 3, protocol-runtime 5, delivery-core 11,
-delivery-consumer 8, persistence 9, webhook adapter 7, worker 4, and API 3,
+conformance 6, live PostgreSQL 3, protocol-runtime 5, delivery-core 18,
+delivery-consumer 10, persistence 10, webhook adapter 8, worker 6, and API 5,
 with clean installs and builds passing. The transport-neutral API still has no
 deployable HTTP server, the worker still has no production process/CLI
 entrypoint, and observability exporter/deployment remains future operational

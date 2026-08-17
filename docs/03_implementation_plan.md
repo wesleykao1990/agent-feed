@@ -48,7 +48,8 @@ persistence-postgres 10, webhook adapter 8, delivery-worker 6, and
 delivery-api 5. All seven M2 packages/applications pass clean installs,
 builds, and tests; M2-023 through M2-038 and M2-L027 through M2-L042 are
 resolved in the append-only bug/learning logs. The repository workflow is configured to install/build/test
-all seven and require live PostgreSQL, but no hosted GitHub CI run is claimed.
+all seven and require live PostgreSQL. Hosted GitHub Actions CI run #5 passed
+on draft PR #2 for commit `ad4ea3a`.
 The API remains transport-neutral without an HTTP server; worker process
 deployment and observability export remain future operational work. Migration
 loading is intentionally explicit `0001` followed by `0002`, not arbitrary

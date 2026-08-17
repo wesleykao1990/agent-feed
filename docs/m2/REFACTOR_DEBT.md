@@ -60,9 +60,9 @@ The following checks were run or are represented by repository tests on
   and all package/application suites pass in the combined gate.
 
 These checks prove the current repository implementation gate, including live
-transactional delivery behavior. They do not claim that hosted GitHub CI has
-run, that an HTTP server or production worker process is deployed, or that a
-production observability exporter is wired.
+transactional delivery behavior. GitHub Actions CI run #5 passed on draft PR
+#2 for commit `ad4ea3a`. This does not claim that an HTTP server or production
+worker process is deployed or that a production observability exporter is wired.
 
 ## Remaining refactor debt
 
@@ -74,14 +74,13 @@ production observability exporter is wired.
 | Explicit migration pair rather than arbitrary directory discovery | Future migrations need an explicit ordering/gap policy | Keep the tested `0001` → `0002` loader; add discovery only when a future migration set requires it. Nonblocking. |
 | No deployable worker/live external transport process | Composition code is accepted, but deployment wiring and endpoint operations are not part of this repository gate | Add a production CLI/process and endpoint rollout when operational deployment begins. Nonblocking. |
 | Production metrics exporter/deployment | Bounded test sink and labels pass, but no production exporter is wired | Define exporter allowlists and deployment integration during operations work. Nonblocking. |
-| Hosted CI execution | The workflow definition covers all seven M2 packages/apps and requires live PostgreSQL, but hosted execution has not been observed | Run/record GitHub Actions after the branch is pushed; do not treat local evidence as a hosted CI result. Nonblocking. |
-| Hosted CI and release handoff | Local evidence cannot prove the remote workflow result | Push the draft PR, observe GitHub Actions, and record the result before handoff. Nonblocking for local implementation; required for PR handoff. |
+| Hosted CI retention | A later workflow edit could silently reduce remote coverage | Keep all seven clean builds/tests and the live PostgreSQL gate required; run #5 on draft PR #2 is the current hosted baseline. Nonblocking ongoing maintenance. |
 
 ## Conclusion
 
 The current layout has acceptable single-responsibility boundaries, and the
 M2 implementation gate is **GO**. No package-graph refactor is required. The
 remaining items are explicitly nonblocking operational or release-handoff
-work: a deployable worker/HTTP transport, production metrics exporter,
-arbitrary future migration discovery, hosted GitHub CI execution, and final
-packaging/checksum refresh.
+work: a deployable worker/HTTP transport, production metrics exporter, and
+arbitrary future migration discovery. Hosted CI and checksum handoff evidence
+are complete for draft PR #2.

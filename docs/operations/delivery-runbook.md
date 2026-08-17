@@ -32,8 +32,8 @@ The additive `0002_durable_delivery.sql` shape, transaction-aware outbox,
 PostgreSQL delivery repository, webhook adapter, and transport-neutral delivery
 API handler are present in the current checkout. The combined acceptance is
 green: architecture 4, pure conformance 6, live PostgreSQL 3, and package/app
-tests protocol 5, core 11, consumer 8, persistence 9, webhook 7, worker 4,
-and API 3, with clean installs/builds. The loader explicitly applies `0001`
+tests protocol 5, core 18, consumer 10, persistence 10, webhook 8, worker 6,
+and API 5, with clean installs/builds. The loader explicitly applies `0001`
 and `0002`; it is not an arbitrary directory-discovery runner. The delivery
 worker has a tested composition/loop foundation but no production deployment/
 CLI entrypoint, and the HTTP server is not operational. Do not execute an

@@ -16,10 +16,10 @@ exporter/deployment work remains future operational work. The migration loader
 is intentionally explicit for `0001_agent_feed.sql` followed by
 `0002_durable_delivery.sql`.
 
-The repository CI workflow is configured to install, build, and test all seven
-M2 packages/applications and requires live PostgreSQL. The root runner now
-serializes package tests so persistence migrations cannot race. This document
-does not claim that the hosted GitHub workflow has run successfully yet.
+The repository CI workflow installs, builds, and tests all seven M2
+packages/applications with live PostgreSQL. GitHub Actions CI run #5 passed on
+draft PR #2 for commit `ad4ea3a`. The root runner serializes package tests so
+persistence migrations cannot race.
 
 It is intentionally separate from the Japan Rewards Optimizer. The two projects communicate through Agent Feed protocol `0.1`; neither project reads the other's database.
 

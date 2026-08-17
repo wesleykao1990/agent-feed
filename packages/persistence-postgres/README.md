@@ -77,5 +77,4 @@ database: **10/10 tests pass**, including the consumer-service composition and
 the two repository/live persistence
 cases that are skipped when no database URL is provided. All seven M2 package
 and application installs/builds/tests are exercised by the repository workflow;
-the workflow definition is present, but this README does not claim a hosted
-GitHub Actions run.
+GitHub Actions CI run #5 passed on draft PR #2 for commit `ad4ea3a`.

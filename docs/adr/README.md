@@ -19,7 +19,7 @@ are added as new numbered files; accepted decisions are not silently rewritten.
 Implementation status is tracked in `docs/12_milestone_2_delivery.md` and the
 combined acceptance matrix. The current decision is **GO for the M2
 implementation gate in this repository**; transport deployment, observability
-export, explicit migration-pair expansion, hosted GitHub CI execution, and
-release packaging remain separate follow-ups. Any implementation that conflicts with these records must
+export, and explicit migration-pair expansion remain separate follow-ups.
+Hosted CI run #5 passed on draft PR #2. Any implementation that conflicts with these records must
 add a new ADR or an explicit superseding decision; it must not silently change
 protocol, scope, cursor, or acknowledgement semantics.

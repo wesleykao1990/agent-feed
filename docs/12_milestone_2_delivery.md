@@ -7,14 +7,14 @@ Milestone 2. The current branch contains the protocol runtime, pure delivery
 core, consumer service, PostgreSQL delivery repository/outbox, webhook adapter,
 worker composition, transport-neutral API handlers, and explicit `0001` then
 `0002` migration loading. The combined acceptance is green: architecture 4,
-pure conformance 6, live PostgreSQL 3, protocol-runtime 5, delivery-core 11,
-delivery-consumer 8, persistence 9, webhook adapter 7, worker 4, and API 3.
+pure conformance 6, live PostgreSQL 3, protocol-runtime 5, delivery-core 18,
+delivery-consumer 10, persistence 10, webhook adapter 8, worker 6, and API 5.
 All seven M2 packages/applications have clean installs, builds, and tests. The
 API remains transport-neutral without a deployable HTTP server; the worker has
 no production process/CLI entrypoint; and observability exporter/deployment
-remains future operational work. The repository workflow is configured to
-install/build/test all seven and require live PostgreSQL, but no hosted GitHub
-CI run is claimed.
+remains future operational work. The repository workflow installs/builds/tests
+all seven with live PostgreSQL; GitHub Actions CI run #5 passed on draft PR #2
+for commit `ad4ea3a`.
 
 ## Objective
 
@@ -325,12 +325,12 @@ not claim that deferred production deployment surfaces already exist:
 | Queue worker process/webhook transport | Accepted composition boundary | Worker 6 tests and webhook 8 tests pass; production process/endpoint deployment is future operational work |
 | Pull API/ack/replay handlers | Accepted transport-neutral boundary | API 5 tests; clean install/build; no deployable HTTP server by design |
 | Metrics/trace lineage | Accepted contract foundation | Pure metrics/trace behavior passes; production exporter/deployment remains future operational work |
-| Root clean installs/builds/tests | Workflow configured | Repository workflow covers all seven M2 packages/applications and requires live PostgreSQL; no hosted GitHub run is claimed |
+| Root clean installs/builds/tests | Accepted locally and hosted | Repository workflow covers all seven M2 packages/applications with live PostgreSQL; GitHub Actions CI run #5 passed on draft PR #2 for commit `ad4ea3a` |
 | Operations/docs | Reconciled for implementation gate | Evidence, ADRs, runbooks, bug log, learning log, and modularity audit updated |
 
 The M2 implementation gate is complete in this repository when the combined
-acceptance command passes with PostgreSQL. Hosted GitHub CI execution and final
-release packaging/checksum refresh remain separate handoff steps.
+acceptance command passes with PostgreSQL. The checksum manifest and hosted CI
+handoff evidence are now complete for draft PR #2.
 
 ## Implementation gate decision — 2026-08-18
 
@@ -342,16 +342,17 @@ The combined acceptance is green:
 - pure conformance: **6**;
 - live PostgreSQL conformance: **3**;
 - protocol-runtime: **5**;
-- delivery-core: **11**;
-- delivery-consumer: **8**;
-- persistence-postgres: **9**;
-- webhook-adapter: **7**;
-- delivery-worker: **4**;
-- delivery-api: **3**.
+- delivery-core: **18**;
+- delivery-consumer: **10**;
+- persistence-postgres: **10**;
+- webhook-adapter: **8**;
+- delivery-worker: **6**;
+- delivery-api: **5**.
 
 All seven M2 packages/applications have clean installs, builds, and tests. The
 repository workflow definition installs/builds/tests all seven and requires a
-live PostgreSQL URL. No hosted GitHub Actions run is claimed by this document.
+live PostgreSQL URL. GitHub Actions CI run #5 passed on draft PR #2 for commit
+`ad4ea3a`.
 
 The following are accepted nonblocking scope caveats, not failed M2 evidence:
 
@@ -362,8 +363,8 @@ The following are accepted nonblocking scope caveats, not failed M2 evidence:
 - migration loading is explicitly `0001_agent_feed.sql` followed by
   `0002_durable_delivery.sql`, rather than arbitrary directory discovery;
 - the in-memory prototype retains historical protocol helpers as a reference;
-- release packaging/checksum refresh and a hosted GitHub CI run remain handoff
-  tasks after the shared worktree is finalized.
+- production deployment remains a later operational milestone; release
+  checksum and hosted CI handoff evidence are complete for draft PR #2.
 
 No skipped live PostgreSQL test was counted in this decision. The detailed
 resolution evidence is appended in `docs/m2/BUGS.md` and
@@ -388,5 +389,5 @@ claims:
   production exporter and deployment remain future operational work.
 - The loader intentionally applies the explicit `0001`/`0002` pair; arbitrary
   migration-directory discovery is not part of this M2 implementation gate.
-- The repository workflow definition covers all seven M2 packages/apps and
-  requires live PostgreSQL, but no hosted GitHub CI result is claimed here.
+- The repository workflow covers all seven M2 packages/apps with live
+  PostgreSQL; hosted CI run #5 passed on draft PR #2 for commit `ad4ea3a`.

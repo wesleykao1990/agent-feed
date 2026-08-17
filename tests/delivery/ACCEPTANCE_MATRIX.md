@@ -79,10 +79,10 @@ node scripts/run_m2_conformance.mjs
 node scripts/run_m2_conformance.mjs --allow-live-skip  # local-only, not a gate
 ```
 
-The repository workflow definition exposes the equivalent validation steps and
-installs/builds/tests all seven M2 packages/applications. It requires a live
-PostgreSQL service. This matrix does not claim that the hosted GitHub workflow
-has run successfully yet:
+The repository workflow exposes the equivalent validation steps and
+installs/builds/tests all seven M2 packages/applications with a live
+PostgreSQL service. GitHub Actions CI run #5 passed on draft PR #2 for commit
+`ad4ea3a`:
 
 ```sh
 npm run validate:foundation

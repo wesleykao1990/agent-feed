@@ -188,6 +188,10 @@ database before the checksum manifest was regenerated.
 | M2-037 | An un-cursored pull started at the newest selector version's activation position, and the PostgreSQL adapter also filtered rows to that version. | A delivery materialized under the previous selector version could become permanently invisible after a future-only selector update, blocking the contiguous ACK watermark. | Un-cursored reads now begin at zero over materialized pending rows, while cursor tokens remain bound to the current selector version. The repository no longer filters pending rows by selector version. Consumer unit coverage and the live PostgreSQL composition test leave an old-version row pending, update the selector, and prove both the old and new rows remain pullable. | Resolved for M2. Keep cross-version pending-delivery coverage. |
 | M2-038 | The PostgreSQL consumer adapter's unknown-error fallback returned raw exception text, and its uniqueness error included a database constraint name. | Internal SQL/schema details or injected source text could escape through the transport-neutral API error mapping. | Repository fallbacks now return fixed generic messages; known errors retain stable codes without constraint names. TypeScript builds, consumer tests, and the live PostgreSQL suite pass. | Resolved for M2. Raw database exceptions remain server-side only. |
 
+Release handoff evidence: GitHub Actions CI run #5 passed on draft PR #2 for
+commit `ad4ea3a`. This validates the hosted workflow definition in addition to
+the local clean/live evidence above; the PR remains intentionally unmerged.
+
 ## Resolution-note format
 
 Append entries in this form when an item is fixed:
