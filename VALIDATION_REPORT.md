@@ -7,6 +7,11 @@ Validated: **2026-08-18**
 **Milestone 1 corrective implementation gate passed locally; immutable schema
 publication and the Rewards Optimizer dependency pin remain release actions.**
 
+Hosted pull-request CI also passed on source commit
+`b217470552d668d6694edfa7e28b15b3279a73f5` in run `32056120146`, including
+clean installs/builds, the schema candidate and external consumer, live
+PostgreSQL ingress, and the full Milestone 2 regression gate.
+
 The executable producer surface is now `apps/api`, composed through
 `@agent-feed/producer-service` and backed by
 `PostgresAgentFeedPersistence`. It accepts canonical protocol `0.1` requests,

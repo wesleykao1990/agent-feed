@@ -27,7 +27,7 @@ The table above preserves the baseline observations. Resolutions recorded on
 | M1H-003 | Added publishable `@agent-feed/schema@0.1.1`, public exports for all nine schemas/types, clean build/tests, deterministic pack manifest, and tag-gated release workflow. | Schema 4/4, artifact build and clean external-consumer verification. | Implementation resolved; immutable tag/URL pending merge |
 | M1H-004 | Added fail-closed live HTTP and local-file acceptance against disposable PostgreSQL. | `AGENT_FEED_DATABASE_URL=... npm run m1:ingress` passes 5/5 without skips. | Resolved in PR branch |
 | M1H-005 | Added exact-version artifact production and integrity verification. | Candidate SHA-256/SHA-512 in acceptance report; release workflow rejects tag/version mismatch and replacement. | Release asset and Rewards lockfile pin pending |
-| M1H-006 | CI now clean-installs/builds/tests all corrective packages, builds/verifies the artifact, and runs live ingress before M2. | Full local combined gate is green; hosted PR check is required before merge. | Resolved in PR branch |
+| M1H-006 | CI now clean-installs/builds/tests all corrective packages, builds/verifies the artifact, and runs live ingress before M2. | Full local combined gate is green; hosted run `32056120146` passed on commit `b217470552d668d6694edfa7e28b15b3279a73f5`. | Resolved in PR branch |
 
 ## Bugs encountered during implementation
 
@@ -48,6 +48,9 @@ The table above preserves the baseline observations. Resolutions recorded on
 | M1H-019 | POST routes accepted JSON bytes without requiring the JSON media type and could reject a declared oversize body without draining it. | The HTTP adapter requires `application/json`, returns 415 before mutation, and drains rejected/oversize request streams. |
 | M1H-020 | Hosted CI's clean producer build followed a source-linked `@agent-feed/persistence-postgres` dependency and failed on the adapter's undeclared build context, although a populated local checkout passed. | The producer service now owns an adapter-neutral `ProducerPersistence` port and lifecycle record types. Its source, manifest, and downstream lock entry have no PostgreSQL dependency; the architecture gate enforces exact/subpath imports plus manifest/lock boundaries. Recognized adapter failures cross only as an allowlisted code/status with messages and details sanitized; unknown failures collapse to `storage_error`. The API remains the explicit composition root and installs the durable adapter dependency graph before its build. |
 | M1H-021 | GitHub sets `GITHUB_REF_NAME` to values such as `3/merge` for pull-request runs, and the artifact builder treated every ref name as a release tag. | Candidate builds now infer a tag only when `GITHUB_REF_TYPE=tag`; the tag release workflow still passes `--tag` explicitly. A focused environment regression covers PR, tag, and local contexts. |
+
+Hosted CI run `32056120146` passed every configured gate after M1H-020 and
+M1H-021 on source commit `b217470552d668d6694edfa7e28b15b3279a73f5`.
 
 The independent 2026-08-18 re-audit verified M1H-015 through M1H-019. M1H-020
 was found by the first hosted PR run and corrected without weakening the
