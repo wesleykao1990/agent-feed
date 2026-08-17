@@ -1,5 +1,4 @@
-import type { FromSchema } from "json-schema-to-ts";
 import findingSchema from "./contracts/finding.schema.json";
+export type { Finding } from "../sdk/typescript/generated/protocol";
 
-export type Finding = FromSchema<typeof findingSchema>;
 export { findingSchema };

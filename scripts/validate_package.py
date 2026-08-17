@@ -4,6 +4,8 @@ import json, sys
 from pathlib import Path
 from jsonschema import Draft202012Validator, FormatChecker
 from referencing import Registry, Resource
+from check_protocol_compatibility import check_baseline, check_protocol
+from generate_protocol_types import check_outputs, outputs
 BASE=Path(__file__).resolve().parents[1]
 SCHEMAS=BASE/'packages/schema/contracts'
 EXPECTED={'run-envelope.schema.json','finding.schema.json','evidence.schema.json','begin-run.schema.json','submit-batch.schema.json','complete-run.schema.json','delivery-event.schema.json','run-bundle.schema.json','stream-expectation.schema.json'}
@@ -22,6 +24,10 @@ def main():
  files={p.name for p in SCHEMAS.glob('*.json')}
  if files!=EXPECTED: fail(f'schema set mismatch missing={EXPECTED-files} extra={files-EXPECTED}')
  schemas={n:load(SCHEMAS/n) for n in EXPECTED}; reg=registry(schemas)
+ generated_failures=check_outputs(outputs(schemas))
+ if generated_failures: fail('generated protocol types are stale')
+ compatibility_failures=check_protocol(schemas)+check_baseline(schemas)
+ if compatibility_failures: fail('protocol compatibility check failed: '+ '; '.join(compatibility_failures))
  manifest=load(BASE/'package-manifest.json')
  if manifest['version']!='0.1.1' or manifest['protocol_version']!='0.1': fail('manifest version mismatch')
  if manifest['counts']['json_schemas']!=len(schemas): fail('manifest schema count mismatch')
@@ -52,8 +58,9 @@ def main():
   'docs/07_chatgpt_monitoring.md':['do not provide webhooks','run-bundle','active-task caps','missing run'],
   'docs/08_supabase_reference.md':['separate Supabase project','Realtime: optional'],
   'skills/chatgpt/SKILL.md':['Scheduled Tasks','run-bundle.schema.json'],
-  'docs/06_rewards_optimizer_consumer.md':['separate project','must not'],
-  'docs/10_semantic_invariants.md':['terminal run state is immutable','idempotency key with a different payload','missing run is not equivalent']
+ 'docs/06_rewards_optimizer_consumer.md':['separate project','must not'],
+ 'docs/10_semantic_invariants.md':['terminal run state is immutable','idempotency key with a different payload','missing run is not equivalent'],
+ 'docs/11_protocol_compatibility.md':['protocol `0.1`','snake_case','--check']
  }
  for rel,markers in required_docs.items():
   text=(BASE/rel).read_text(encoding='utf-8')

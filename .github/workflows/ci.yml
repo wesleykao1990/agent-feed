@@ -33,6 +33,12 @@ jobs:
       - name: Verify package integrity
         run: python scripts/generate_checksums.py --check
 
+      - name: Verify generated protocol types
+        run: python scripts/generate_protocol_types.py --check
+
+      - name: Verify protocol compatibility
+        run: python scripts/check_protocol_compatibility.py
+
       - name: Validate protocol foundation
         run: python scripts/validate_package.py
 

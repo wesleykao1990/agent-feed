@@ -10,6 +10,9 @@
     "validate:foundation": "python scripts/validate_package.py",
     "checksums:check": "python scripts/generate_checksums.py --check",
     "checksums:write": "python scripts/generate_checksums.py --write",
+    "types:write": "python3 scripts/generate_protocol_types.py --write",
+    "types:check": "python3 scripts/generate_protocol_types.py --check",
+    "protocol:compatibility": "python3 scripts/check_protocol_compatibility.py",
     "prototype:test": "cd prototype && npm test",
     "prototype:demo": "cd prototype && npm run demo"
   }

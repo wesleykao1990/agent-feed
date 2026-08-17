@@ -4,7 +4,10 @@ Planned public surfaces:
 
 - producer client: `beginRun`, `submitBatch`, `completeRun`, and portable run-bundle export;
 - consumer client: event signature verification, event parsing, acknowledgements, replay cursor, and dead-letter inspection;
-- schema validation generated from `packages/schema/contracts`;
+- protocol types generated from all nine schemas at `generated/protocol.ts` (run `python3 scripts/generate_protocol_types.py --check` to detect drift);
 - idempotent retries and typed errors.
 
 The SDK must not encode consumer-domain concepts such as reward rates, stock signals, jobs, or events.
+
+The generated type fields preserve the protocol's wire snake_case. Runtime
+validation still uses the JSON Schemas in `packages/schema/contracts`.
