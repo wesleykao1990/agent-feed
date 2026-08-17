@@ -36,6 +36,10 @@ jobs:
       - name: Validate protocol foundation
         run: python scripts/validate_package.py
 
+      - name: Install prototype dependencies
+        working-directory: prototype
+        run: npm ci
+
       - name: Build prototype
         working-directory: prototype
         run: npm run build

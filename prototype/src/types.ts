@@ -38,6 +38,7 @@ export interface Finding {
   evidenceRefs: string[];
   securityFlags: string[];
   attributes: Record<string, unknown>;
+  wirePayload?: Record<string, unknown>;
 }
 
 export interface SubmittedEvidence {
@@ -46,6 +47,12 @@ export interface SubmittedEvidence {
   sourceUri: string | null;
   excerpt: string | null;
   securityFlags?: string[];
+  handling?: {
+    containsPersonalData: boolean;
+    containsSecrets: boolean;
+    redistributionRestricted: boolean;
+  };
+  wirePayload?: Record<string, unknown>;
 }
 
 export interface StreamExpectation {
