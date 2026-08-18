@@ -160,3 +160,22 @@ jobs:
 
       - name: Run combined Milestone 3 conformance gate
         run: npm run m3:conformance
+
+  milestone-4-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install generic reference-consumer dependencies
+        run: |
+          npm --prefix packages/sdk/typescript ci
+          npm --prefix examples/rewards-optimizer ci
+
+      - name: Run Milestone 4 generic reference-consumer gate
+        run: npm run m4:conformance

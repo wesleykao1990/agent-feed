@@ -1,6 +1,18 @@
 # Changelog
 
-## Unreleased — Milestone 3
+## Unreleased — Milestone 4
+
+- Added a buildable, packed TypeScript reference consumer at the historical
+  `examples/rewards-optimizer/` path without implementing the external app.
+- Added authenticated tenant/consumer/stream scope, explicitly untrusted
+  observation mapping, separate transport/semantic dedupe, and fail-closed
+  reused-event payload conflict handling.
+- Added hostile/evidence/unknown-attribute preservation with no promotion,
+  database, Agent Feed server, private-source, or Realtime dependency.
+- Added a zero-skip M4 architecture/behavior/package gate and a separate
+  Node-only GitHub Actions job.
+
+## Milestone 3
 
 - Added a production MCP stdio server exposing exactly `begin_run`,
   `submit_batch`, and `complete_run` through the shared producer service.
@@ -10,6 +22,7 @@
   ChatGPT manual-export adapters with explicit failure recovery.
 - Added capability-gated ChatGPT/Claude skills, runnable M3 examples, ADRs, and
   a no-skip combined M3 architecture/conformance gate.
+- Merged PR #4 after hosted CI run `32089258429` passed.
 
 ## 0.1.1 — 2026-08-17
 

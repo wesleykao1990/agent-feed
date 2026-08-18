@@ -4,11 +4,12 @@ Validated: **2026-08-18**
 
 ## Result
 
-**Milestone 3 implementation and hosted pull-request CI gates passed. Agent
-Feed's immutable `schema-v0.1.1` release is published.**
+**Milestone 4 generic reference-consumer local gates passed; hosted CI is
+pending. Milestones 0–3 remain green and Agent Feed's immutable
+`schema-v0.1.1` release is published.**
 
-Milestone 3 GitHub Actions run `32089066103` passed on reviewed source commit
-`52594aa` in draft PR #4. The pull request remains intentionally unmerged.
+Milestone 3 GitHub Actions run `32089258429` passed on PR #4, which is merged
+to `main` as `60315f85224a0751b0e86a3a8dcfb309e582cba3`.
 
 Hosted pull-request CI also passed on source commit
 `b217470552d668d6694edfa7e28b15b3279a73f5` in run `32056120146`, including
@@ -88,3 +89,26 @@ protocol, prototype, live M1, and live M2 regressions also pass. Hosted run
 The Milestone 3 candidate source-integrity inventory passes **318/318** files;
 ignored dependency, build, and release outputs are excluded.
 See `docs/m3/ACCEPTANCE.md`.
+
+## Milestone 4 candidate evidence
+
+The Agent Feed–owned deliverable is the runnable generic reference package in
+`examples/rewards-optimizer/`; it is not the separate Rewards Optimizer app.
+The no-skip `npm run m4:conformance` gate passed locally:
+
+- static architecture checker: passed, 4 paths checked;
+- architecture tests: **6/6**;
+- public built-artifact behavioral tests: **10/10**;
+- focused TypeScript package tests: **9/9**;
+- clean ESM/declaration build and public import: passed; and
+- `npm pack --dry-run`: passed with 11 intended files using a disposable cache.
+
+The same candidate also passed the foundation validator, generated-type and
+protocol compatibility checks, M0/M1 conformance **23/23**, live PostgreSQL M1
+ingress **5/5**, the complete live PostgreSQL M2 gate, and the complete M3 gate
+including external TypeScript package and Python wheel install/import smoke
+tests. Hosted M4 CI remains pending.
+See `docs/14_milestone_4_reference_consumer.md` and `docs/m4/ACCEPTANCE.md`.
+
+The candidate source-integrity inventory passes **339/339** files; ignored
+dependency/build/package outputs are excluded. Hosted M4 CI remains pending.

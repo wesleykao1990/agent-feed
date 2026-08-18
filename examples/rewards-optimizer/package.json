@@ -1,0 +1,36 @@
+{
+  "name": "@agent-feed/rewards-optimizer-reference",
+  "version": "0.1.1",
+  "description": "Generic TypeScript reference consumer for untrusted Agent Feed findings.",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "package.json",
+    "*.example.json"
+  ],
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run typecheck && node --experimental-strip-types --test --test-concurrency=1 test/*.test.ts",
+    "verify": "npm run build && npm test"
+  },
+  "dependencies": {
+    "@agent-feed/sdk": "file:../../packages/sdk/typescript"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.1",
+    "typescript": "7.0.2"
+  }
+}

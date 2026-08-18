@@ -3,9 +3,15 @@
 Agent Feed is a standalone, reusable project for transmitting structured agent
 runs, findings, and submitted evidence to multiple consumer applications.
 
-Milestone 3 status: **implementation and hosted pull-request CI gates green**.
-GitHub Actions run `32089066103` passed on draft PR #4 at source commit
-`52594aa`. The repository now includes an MCP server, TypeScript and Python
+Milestone 4 status: **generic reference-consumer local gate green; hosted CI
+pending**. The buildable example maps protocol `0.1` findings to scoped,
+explicitly untrusted observations, separates transport and semantic identity,
+preserves hostile/unknown evidence as data, and imports no Agent Feed server or
+database internals. It does not implement the separate Rewards Optimizer app.
+
+Milestone 3 status: **merged with hosted CI green**. GitHub Actions run
+`32089258429` passed on PR #4; merge commit `60315f8` is on `main`. The
+repository includes an MCP server, TypeScript and Python
 producer/consumer SDKs, REST/local-file/webhook/Claude/ChatGPT adapters,
 capability-gated skills, and executable examples. Agent Feed wire protocol
 remains `0.1`; the MCP transport uses the separate MCP revision `2026-07-28`
@@ -96,6 +102,19 @@ npm run m3:conformance
 Run the root foundation/protocol gates and live M1/M2 PostgreSQL gates as
 documented in `docs/m3/ACCEPTANCE.md` before accepting a final commit.
 
+The Milestone 4 gate is Node-only and deliberately has no PostgreSQL or
+Rewards Optimizer dependency:
+
+```sh
+npm --prefix packages/sdk/typescript ci
+npm --prefix examples/rewards-optimizer ci
+npm run m4:conformance
+```
+
+It builds and imports the public artifact, runs zero-skip architecture and
+behavioral suites, and performs a pack smoke check. See
+`docs/14_milestone_4_reference_consumer.md` for its exact claims and limits.
+
 ## Durable producer ingress
 
 Milestone 1's production-shaped producer path is `apps/api`, backed by
@@ -110,12 +129,12 @@ repository.
 ## Start implementation
 
 Use `prompts/CODEX_INITIATING_PROMPT.md`, then the prompt for the milestone in
-scope. Milestone 3 uses
-`prompts/CODEX_MILESTONE_3_MCP_SDK_ADAPTERS_PROMPT.md`.
+scope. Milestone 4 maintenance uses
+`prompts/CODEX_MILESTONE_4_REFERENCE_CONSUMER_PROMPT.md`.
 
 Read the relevant milestone record, the ADR index, and the operational runbook
-before adding code. Milestone 3 decisions, bugs, learnings, and refactor-debt
-review are append-only in `docs/m3/`.
+before adding code. Milestone decisions, bugs, learnings, and refactor-debt
+reviews are append-only in `docs/m3/` and `docs/m4/`.
 
 ## ChatGPT monitoring
 

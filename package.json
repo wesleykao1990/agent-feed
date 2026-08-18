@@ -18,6 +18,8 @@
     "m2:conformance": "node scripts/run_m2_conformance.mjs",
     "m3:architecture": "node scripts/check_m3_architecture.mjs",
     "m3:conformance": "node scripts/run_m3_conformance.mjs",
+    "m4:architecture": "node scripts/check_m4_architecture.mjs",
+    "m4:conformance": "node scripts/run_m4_conformance.mjs",
     "m1:architecture": "node scripts/check_producer_architecture.mjs",
     "m1:ingress": "node scripts/run_m1_ingress_conformance.mjs",
     "schema:artifact": "node scripts/build_schema_artifact.mjs",
