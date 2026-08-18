@@ -77,8 +77,9 @@ jobs:
           npm --prefix packages/schema ci
           npm --prefix packages/producer-service ci
           npm --prefix packages/adapters/local-file ci
+          npm --prefix packages/adapters/rest ci
           # The executable API is the composition root for the durable adapter.
-          # Install that adapter's source dependencies before the API clean build.
+          # Install every source-linked adapter dependency before the API clean build.
           npm --prefix packages/protocol-runtime ci
           npm --prefix packages/delivery-core ci
           npm --prefix packages/delivery-consumer ci
@@ -148,3 +149,14 @@ jobs:
         run: npm run m2:conformance
         env:
           AGENT_FEED_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_feed_test
+
+      - name: Install Milestone 3 package dependencies
+        run: |
+          npm --prefix apps/mcp-server ci
+          npm --prefix packages/sdk/typescript ci
+          npm --prefix packages/adapters/generic-webhook ci
+          npm --prefix packages/adapters/claude-hook ci
+          npm --prefix packages/adapters/chatgpt-manual-export ci
+
+      - name: Run combined Milestone 3 conformance gate
+        run: npm run m3:conformance

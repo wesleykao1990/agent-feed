@@ -25,7 +25,8 @@
   },
   "dependencies": {
     "@agent-feed/persistence-postgres": "file:../../packages/persistence-postgres",
-    "@agent-feed/producer-service": "file:../../packages/producer-service"
+    "@agent-feed/producer-service": "file:../../packages/producer-service",
+    "@agent-feed/rest-adapter": "file:../../packages/adapters/rest"
   },
   "devDependencies": {
     "@types/node": "22.20.1",

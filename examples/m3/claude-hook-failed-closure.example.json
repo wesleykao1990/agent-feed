@@ -1,0 +1,75 @@
+{
+  "protocol_version": "0.1",
+  "run_id": "run_claude_hook_20260818_001",
+  "begin": {
+    "protocol_version": "0.1",
+    "idempotency_key": "begin_claude_hook_001",
+    "stream_id": "claude.hook.monitor",
+    "producer": {
+      "producer_id": "claude-monitor-hook",
+      "type": "claude",
+      "name": "Claude Monitor Hook",
+      "version": null
+    },
+    "task": {
+      "task_type": "hook_monitor",
+      "definition_id": "failed-closure-example",
+      "definition_version": "0.1"
+    },
+    "expected_scope": {
+      "source_ids": [
+        "source.example.claude"
+      ],
+      "subjects": [
+        "Example Subject"
+      ],
+      "queries": [
+        "official change"
+      ],
+      "metadata": {
+        "cadence": "on_demand"
+      }
+    },
+    "started_at": "2026-08-18T03:00:00.000Z",
+    "parent_run_id": null,
+    "metadata": {
+      "synthetic": true,
+      "hook_event": "session_end"
+    }
+  },
+  "batches": [],
+  "complete": {
+    "protocol_version": "0.1",
+    "run_id": "run_claude_hook_20260818_001",
+    "idempotency_key": "complete_claude_hook_001",
+    "status": "failed",
+    "completed_at": "2026-08-18T03:00:10.000Z",
+    "actual_scope": {
+      "source_ids": [],
+      "subjects": [],
+      "queries": [],
+      "metadata": {
+        "hook_stopped_before_source_check": true
+      }
+    },
+    "stats": {
+      "sources_attempted": 0,
+      "sources_succeeded": 0,
+      "findings_submitted": 0,
+      "evidence_submitted": 0,
+      "batches_submitted": 0
+    },
+    "errors": [
+      {
+        "code": "hook_unavailable",
+        "message": "The hook stopped before the source check completed.",
+        "source_id": "source.example.claude",
+        "retryable": false
+      }
+    ],
+    "metadata": {
+      "synthetic": true,
+      "export_mode": "manual_local_file"
+    }
+  }
+}

@@ -16,8 +16,10 @@ Gate:
 
 ## Milestone 1 — Persistence and REST ingress
 
-Status: **corrective implementation gate green; release publication and the
-Rewards consumer pin are pending**. `apps/api` is now an executable producer
+Status: **corrective implementation and Agent Feed release gates green**.
+`schema-v0.1.1` published the immutable schema artifact from commit `ad7e1a7`.
+The separate Rewards Optimizer dependency pin is downstream work and is not
+part of this repository's Milestone 3. `apps/api` is an executable producer
 HTTP adapter composed through `@agent-feed/producer-service` and backed by
 PostgreSQL. The prototype remains supporting in-memory evidence only. The
 corrective acceptance matrix and exact evidence are in
@@ -54,9 +56,10 @@ Gate:
   artifact, and its exact integrity pin is verified by a clean consumer install;
 - the complete M0/M1/M2 gate is rerun with no live-PostgreSQL skips.
 
-All implementation checks pass. Milestone 1 becomes release-ready only after
-the reviewed PR is merged, `schema-v0.1.1` publishes the recorded immutable
-artifact, and Rewards Optimizer commits the exact artifact/integrity pin.
+All implementation checks pass and the Agent Feed release action is complete.
+The immutable release facts are recorded in `docs/m1-hardening/ACCEPTANCE.md`.
+Whether the separate Rewards Optimizer has merged its exact dependency pin is
+tracked in that repository and does not block later Agent Feed milestones.
 
 ## Initial build constraint
 
@@ -104,13 +107,18 @@ consumer handlers are accepted as the application boundary; an HTTP server is
 an explicitly deferred operational adapter. Do not add undocumented body
 fields or treat a future production deployment as already present.
 
-This M2 status is scoped to the durable delivery implementation and its recorded
-acceptance evidence. It does not waive the Milestone 1 corrective gate above:
-the Agent Feed release and Rewards Optimizer Milestone 2.5 remain blocked until
-the producer REST ingress and immutable schema artifact are accepted through
-`docs/m1-hardening/ACCEPTANCE.md`.
+This M2 status is scoped to the durable delivery implementation and its
+recorded acceptance evidence. Durable producer ingress and the immutable
+schema artifact are accepted through `docs/m1-hardening/ACCEPTANCE.md`.
 
 ## Milestone 3 — MCP, SDKs, and adapters
+
+Status: **implementation and hosted pull-request CI gates green**. GitHub
+Actions run `32089066103` passed on draft PR #4 at source commit `52594aa`.
+The integrated branch supplies the current MCP server, TypeScript and Python
+SDKs, producer adapters, capability-gated skills, examples, and a no-skip M3
+gate. See `docs/13_milestone_3_mcp_sdks_adapters.md` and `docs/m3/` for the
+acceptance matrix, decisions, bugs, learnings, and modularity review.
 
 Deliver:
 

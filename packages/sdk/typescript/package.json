@@ -1,0 +1,41 @@
+{
+  "name": "@agent-feed/sdk",
+  "version": "0.1.1",
+  "description": "Exact-version TypeScript client for the Agent Feed protocol and delivery API.",
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js",
+      "default": "./dist/src/index.js"
+    },
+    "./generated/protocol": {
+      "types": "./dist/generated/protocol.d.ts",
+      "import": "./dist/generated/protocol.js",
+      "default": "./dist/generated/protocol.js"
+    }
+  },
+  "types": "./dist/src/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "package.json"
+  ],
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --experimental-strip-types --test --test-concurrency=1 test/*.test.ts test/*.test.mjs",
+    "pack:smoke": "node --test test/pack-smoke.test.mjs",
+    "verify": "npm run build && npm test",
+    "prepack": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.1",
+    "typescript": "7.0.2"
+  }
+}

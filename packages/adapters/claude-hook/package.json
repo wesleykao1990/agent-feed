@@ -1,0 +1,27 @@
+{
+  "name": "@agent-feed/claude-hook-adapter",
+  "version": "0.1.1",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "files": ["src", "test", "README.md", "package.json"],
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test --test-concurrency=1 test/*.test.ts"
+  },
+  "dependencies": {
+    "@agent-feed/local-file-adapter": "file:../local-file",
+    "@agent-feed/producer-service": "file:../../producer-service"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.1",
+    "typescript": "7.0.2"
+  }
+}

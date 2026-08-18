@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import {
   LocalFileAdapterError,
+  LocalFileImportFailure,
   LocalFileRunBundleAdapter,
   type ProducerLifecycleService,
   type RunBundle,
@@ -149,6 +150,22 @@ class DurableReceiptSpy implements ProducerLifecycleService {
   }
 }
 
+class FailingBatchService extends DurableReceiptSpy {
+  override async submitBatch(runId: string, value: unknown, principal: ProducerPrincipal): Promise<unknown> {
+    this.calls.push("submitBatch");
+    this.arguments.push({ method: "submitBatch", runId, value });
+    throw Object.assign(new Error("upstream Authorization Bearer should-never-leak"), { code: "storage_error" });
+  }
+}
+
+class FailingBeginService extends DurableReceiptSpy {
+  override async beginRunWithWireId(runId: string, value: unknown, principal: ProducerPrincipal): Promise<unknown> {
+    this.calls.push("beginRunWithWireId");
+    this.arguments.push({ method: "beginRunWithWireId", runId, value });
+    throw Object.assign(new Error("upstream timeout"), { code: "storage_error" });
+  }
+}
+
 function makeAdapter(service = new DurableReceiptSpy()): { adapter: LocalFileRunBundleAdapter; service: DurableReceiptSpy } {
   return {
     adapter: new LocalFileRunBundleAdapter({ service, principal: PRINCIPAL }),
@@ -230,4 +247,92 @@ test("rejects malformed JSON without invoking the service", async () => {
     (error: unknown) => error instanceof LocalFileAdapterError && error.code === "invalid_json",
   );
   assert.deepEqual(service.calls, []);
+});
+
+test("rejects malformed UTF-8 bytes without invoking the service", async () => {
+  const { adapter, service } = makeAdapter();
+  const bytes = Buffer.from(JSON.stringify(bundle()), "utf8");
+  const marker = Buffer.from("A non-sensitive local-file fixture.", "utf8");
+  const offset = bytes.indexOf(marker);
+  assert.notEqual(offset, -1);
+  bytes[offset] = 0xc3;
+  bytes[offset + 1] = 0x28;
+  await assert.rejects(
+    adapter.importJson(bytes),
+    (error: unknown) => error instanceof LocalFileAdapterError && error.code === "invalid_json",
+  );
+  assert.deepEqual(service.calls, []);
+});
+
+test("preserves an uncertain begin outcome as an explicit resumable recovery artifact", async () => {
+  const service = new FailingBeginService();
+  let persisted: unknown;
+  const adapter = new LocalFileRunBundleAdapter({
+    service,
+    principal: PRINCIPAL,
+    recovery_store: { persist: async (artifact) => { persisted = artifact; } },
+  });
+  await assert.rejects(
+    adapter.importJson(JSON.stringify(bundle())),
+    (error: unknown) => {
+      assert.ok(error instanceof LocalFileImportFailure);
+      assert.equal(error.details.phase, "begin");
+      assert.equal(error.details.recovery_status, "resumable");
+      assert.equal(Object.keys(error).includes("recovery"), false);
+      assert.equal(JSON.stringify(error).includes('"bundle"'), false);
+      assert.equal(error.recovery.failure.phase, "begin");
+      return true;
+    },
+  );
+  assert.equal((persisted as { failure: { phase: string } }).failure.phase, "begin");
+});
+
+test("closes a mid-import failure as partial and keeps diagnostics redacted", async () => {
+  const service = new FailingBatchService();
+  const { adapter } = makeAdapter(service);
+  await assert.rejects(
+    adapter.importJson(JSON.stringify(bundle())),
+    (error: unknown) => {
+      assert.ok(error instanceof LocalFileImportFailure);
+      assert.equal(error.code, "lifecycle_failed");
+      assert.equal(error.details.phase, "batch");
+      assert.equal(error.details.recovery_status, "closed");
+      assert.equal(Object.keys(error).includes("recovery"), false);
+      assert.equal(JSON.stringify(error).includes('"bundle"'), false);
+      assert.equal(error.message.includes("should-never-leak"), false);
+      assert.equal(error.recovery.next_batch_index, 0);
+      return true;
+    },
+  );
+  assert.deepEqual(service.calls, ["beginRunWithWireId", "submitBatch", "completeRun"]);
+  const completion = service.arguments[2]?.value as Record<string, unknown>;
+  assert.equal(completion.status, "partial");
+  assert.deepEqual(completion.errors, [{
+    code: "adapter_lifecycle_failed",
+    message: "adapter lifecycle operation failed",
+    source_id: null,
+    retryable: true,
+  }]);
+});
+
+test("returns exact recovery material when terminal closure is unavailable", async () => {
+  const service = new FailingBatchService();
+  service.completeRun = async () => {
+    service.calls.push("completeRun");
+    throw Object.assign(new Error("database credentials must not escape"), { code: "storage_error" });
+  };
+  let persisted: unknown;
+  const { adapter } = makeAdapter(service);
+  const recovering = new LocalFileRunBundleAdapter({
+    service,
+    principal: PRINCIPAL,
+    recovery_store: { persist: async (artifact) => { persisted = artifact; } },
+  });
+  await assert.rejects(
+    recovering.importJson(JSON.stringify(bundle())),
+    (error: unknown) => error instanceof LocalFileImportFailure
+      && error.details.recovery_status === "resumable"
+      && error.message.includes("credentials") === false,
+  );
+  assert.equal((persisted as { run_id: string }).run_id, RUN_ID);
 });

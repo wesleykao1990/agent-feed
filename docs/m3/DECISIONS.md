@@ -1,0 +1,26 @@
+# Milestone 3 decision log
+
+Status: accepted; hosted CI green
+Started: 2026-08-18
+
+This is an append-only implementation log. Architectural decisions live in
+ADR-0006 through ADR-0008; this file records the smaller integration choices
+made while applying them.
+
+| ID | Decision | Reason | Verification |
+|---|---|---|---|
+| M3-D001 | Implement Milestone 3 from merged `origin/main` at `ad7e1a7`, on `agent/milestone-3-mcp-sdks-adapters`. | Keeps the milestone independent of the separate Rewards Optimizer work and includes the published schema source. | Branch ancestry and clean starting status. |
+| M3-D002 | Keep root integration, CI, documentation, checksum regeneration, and conflict resolution with the orchestrator; assign non-overlapping implementation directories to Luna Max agents. | Shared filesystem work is safe only with explicit ownership; cross-package decisions need one integration authority. | Final diff ownership review and combined gate. |
+| M3-D003 | Treat the existing producer service as the only lifecycle policy boundary for every producer adapter. | Prevents transport-specific validation, auth, and idempotency drift. | ADR-0006 and architecture conformance. |
+| M3-D004 | Expose producer and consumer SDKs over injected transports; do not couple them to PostgreSQL or claim the transport-neutral delivery API is deployed. | Preserves package portability and matches the accepted Milestone 2 boundary. | ADR-0007, package imports, and documentation review. |
+| M3-D005 | Treat failure preservation as a state machine, not a logging concern. | Once begin succeeds, an adapter must close the run or provide deterministic recovery material. | ADR-0008 and injected-failure tests. |
+| M3-D006 | Scheduled Task direct export is opt-in only when an explicit capability is present; run-bundle export is the default fallback. | Avoids documenting unavailable webhook/tool behavior. | Capability-present/absent examples and conformance. |
+| M3-D007 | Serve MCP revision `2026-07-28` through the current official TypeScript server package, with an explicit tested legacy-2025 compatibility path. | The modern MCP era is stateless and has different discovery/envelope behavior; a fixed 2025 handshake is not current as of this implementation date. | Modern discovery/tool calls, per-request metadata, legacy initialize/tool calls, and exact dependency lock. |
+| M3-D008 | Consolidate REST routing in `packages/adapters/rest`; keep `apps/api` as the established executable composition and compatibility name. | Eliminates duplicate HTTP parsing/error logic without breaking the accepted M1 entrypoint. | Both packages build/test, M1 architecture/ingress remains green, and import graph has one router. |
+| M3-D009 | Retain the handwritten MCP facade only as an unexported deterministic compatibility-test helper; the executable always uses the official server package. | Keeps low-level error/revision fixtures stable without creating a second public MCP implementation. | Package exports, executable imports, architecture scan, and public stdio conformance. |
+| M3-D010 | Treat recovery bundles as sensitive operational artifacts, while keeping public errors and diagnostics redacted. | Exact replay requires original protocol inputs; redacting the recovery payload would make it unusable. | Recovery replay tests and explicit deployment warning in ADR-0008/adapter docs. |
+| M3-D011 | Make the root M3 runner build every M3 package, exercise the M1 API wrapper, and build the Python wheel from an isolated copy. | A passing source-tree unit suite is insufficient evidence of package independence or clean artifact creation. | `npm run m3:conformance` passes with zero skips and leaves no package build metadata in source. |
+| M3-D012 | Keep recovery material explicitly accessible but non-enumerable on public errors, with safe `toJSON()` output. | Exact replay needs the original bundle, while ordinary logging and telemetry must not serialize evidence or credentials. | Adversarial `Object.keys`/`JSON.stringify` tests across all recovery-bearing adapters. |
+| M3-D013 | Derive generated ChatGPT identities from canonical response, context, and occurrence time; exact retries reuse the same exported bundle or explicit identity inputs. | Response text alone is not an occurrence identity and caused different tasks/times to collide under one idempotency key. | Same-response/different-context and same-context/different-time tests. |
+| M3-D014 | Require a stable webhook event ID and claim it before mapping; support an injected durable atomic replay store while retaining a process-local default. | Signature freshness alone does not prevent replay, and mappers must never receive authentication/cookie/signature headers. | Process-local replay, cross-instance durable replay, safe-header, and secret-serialization tests. |
+| M3-D015 | Make Python partial-recovery timestamps explicit and include only successfully accepted batches. | Auto-generated timestamps can drift under one idempotency key; recording a failed in-flight batch overstates durable progress. | Python recovery/bookkeeping and required-argument tests plus isolated wheel install/import. |
