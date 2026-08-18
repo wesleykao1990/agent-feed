@@ -1,6 +1,6 @@
 # Milestone 3 — MCP, SDKs, and adapters
 
-Status: **local implementation gate green; hosted CI pending**
+Status: **implementation and hosted CI gates green**
 Branch: `agent/milestone-3-mcp-sdks-adapters`
 Baseline: merged Agent Feed `ad7e1a7` (`schema-v0.1.1`)
 
@@ -47,7 +47,7 @@ tests in the integrated checkout.
 | M3-A11 | Scheduled Task behavior is capability-gated. | Direct-capability and no-capability fixtures; no unsupported webhook claim. | Passed locally |
 | M3-A12 | Existing M0-M2 correctness remains green. | Foundation, prototype, M1 live ingress, M2 live delivery, checksum, compatibility, and type gates. | Passed locally |
 | M3-A13 | Package boundaries do not require immediate refactoring. | Final modularity audit, no circular/direct-source imports, clean package installs. | Passed locally |
-| M3-A14 | Hosted CI reproduces the complete gate. | Green GitHub Actions run for the final reviewed commit. | Pending |
+| M3-A14 | Hosted CI reproduces the complete gate. | Green GitHub Actions run for the reviewed source commit. | Passed — run `32089066103`, source `52594aa` |
 
 ## Dependency direction
 
@@ -74,8 +74,9 @@ Python SDK 10 plus an isolated wheel build/install/import, REST 4, local-file
 regression also passed against disposable PostgreSQL with no live-test skips.
 Exact commands and environment evidence are in `docs/m3/ACCEPTANCE.md`.
 
-Hosted CI remains the only pending acceptance row. Until it passes for the
-reviewed branch, this document makes a local implementation claim only.
+Hosted GitHub Actions run `32089066103` passed the complete clean-checkout gate
+on reviewed source commit `52594aa` in draft PR #4. All acceptance rows are
+green; the pull request intentionally remains unmerged for human review.
 
 Supporting records:
 

@@ -1,7 +1,7 @@
 # Milestone 3 modularity and refactor-debt audit
 
 Reviewed: 2026-08-18
-Status: local final review complete; hosted CI pending
+Status: final review complete; hosted CI green
 
 ## Intended ownership
 
@@ -14,7 +14,7 @@ Status: local final review complete; hosted CI pending
 | `skills/*` | Accurate agent operating instructions | Claims about unavailable runtime capabilities |
 | `@agent-feed/producer-service` | Producer validation, authorization, security, and lifecycle policy | Concrete transport behavior |
 
-## Final local verdict
+## Final verdict
 
 Milestone 3 fits the accepted Milestone 0-2 graph without a foundational or
 immediate follow-up refactor. Routing duplication found during integration was

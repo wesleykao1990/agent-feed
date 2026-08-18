@@ -113,7 +113,8 @@ schema artifact are accepted through `docs/m1-hardening/ACCEPTANCE.md`.
 
 ## Milestone 3 — MCP, SDKs, and adapters
 
-Status: **local implementation gate green; hosted pull-request CI pending**.
+Status: **implementation and hosted pull-request CI gates green**. GitHub
+Actions run `32089066103` passed on draft PR #4 at source commit `52594aa`.
 The integrated branch supplies the current MCP server, TypeScript and Python
 SDKs, producer adapters, capability-gated skills, examples, and a no-skip M3
 gate. See `docs/13_milestone_3_mcp_sdks_adapters.md` and `docs/m3/` for the

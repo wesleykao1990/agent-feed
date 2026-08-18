@@ -1,6 +1,6 @@
 # ADR-0007: Keep SDKs transport-injected and pin protocol separately from package version
 
-Status: Accepted and implemented locally; hosted CI pending
+Status: Accepted and implemented; hosted CI green
 Date: 2026-08-18
 
 ## Context

@@ -1,6 +1,6 @@
 # ADR-0006: Share one producer application boundary across REST, MCP, and adapters
 
-Status: Accepted and implemented locally; hosted CI pending
+Status: Accepted and implemented; hosted CI green
 Date: 2026-08-18
 
 ## Context

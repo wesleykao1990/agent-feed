@@ -1,6 +1,6 @@
 # Milestone 3 decision log
 
-Status: locally accepted; hosted CI pending
+Status: accepted; hosted CI green
 Started: 2026-08-18
 
 This is an append-only implementation log. Architectural decisions live in

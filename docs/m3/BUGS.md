@@ -1,6 +1,6 @@
 # Milestone 3 bug and gap log
 
-Status: local implementation gaps resolved; hosted CI pending
+Status: implementation gaps resolved; hosted CI green
 Started: 2026-08-18
 
 This log is append-only. A resolution must name its regression evidence; an
@@ -29,7 +29,7 @@ The table above preserves the initial observations. Resolutions validated on
 | M3-002 | Added independently buildable TypeScript and Python producer/consumer SDKs with injected transports. | TypeScript 5/5 including packed import; Python 10/10 plus isolated wheel install/import. | Resolved locally |
 | M3-003 | Implemented REST, signed generic-webhook, Claude-hook, and ChatGPT manual-export packages. | Adapter suites 4/4, 7/7, 5/5, and 6/6. | Resolved locally |
 | M3-004 | Local-file imports now attempt terminal failure closure and emit deterministic recovery material when closure is unavailable. | Local-file 10/10 plus cross-boundary recovery replay. | Resolved locally |
-| M3-005 | Added `m3:architecture` and a no-skip `m3:conformance` runner; CI installs M3 dependencies and executes it. | Local M3 gate passed; hosted CI pending. | Resolved locally |
+| M3-005 | Added `m3:architecture` and a no-skip `m3:conformance` runner; CI installs M3 dependencies and executes it. | Local M3 gate and hosted run `32089066103` passed. | Resolved |
 | M3-006 | Rewrote both skills around explicit capabilities and a validated run-bundle fallback. | Capability-present/absent conformance fixtures. | Resolved locally |
 | M3-007 | Reconciled Milestone 1 documentation with the published immutable schema release while leaving Rewards status to its repository. | Documentation and manifest review. | Resolved locally |
 | M3-008 | Upgraded the executable path to exact `@modelcontextprotocol/server@2.0.0`, modern discovery/meta, and tested legacy compatibility. | Public stdio MCP conformance and dependency lock. | Resolved locally |

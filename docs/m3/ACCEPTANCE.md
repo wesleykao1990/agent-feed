@@ -1,7 +1,7 @@
 # Milestone 3 acceptance evidence
 
 Validated: 2026-08-18
-Status: **local implementation gate green; hosted pull-request CI pending**
+Status: **implementation and hosted pull-request CI gates green**
 
 ## Integrated result
 
@@ -68,7 +68,7 @@ passed architecture 4, pure 6, PostgreSQL 3, protocol-runtime 5, delivery-core
 
 ## Release decision
 
-Rows M3-A01 through M3-A13 are accepted locally. M3-A14 remains pending until
-the final reviewed commit passes the repository's hosted GitHub Actions
-workflow. The branch should remain a draft and must not be merged on local
-evidence alone.
+Rows M3-A01 through M3-A14 are accepted. GitHub Actions run `32089066103`
+passed the complete clean-checkout workflow on reviewed source commit
+`52594aa` in draft PR #4. The branch remains intentionally unmerged for human
+review.

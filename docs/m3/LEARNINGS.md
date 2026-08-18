@@ -1,6 +1,6 @@
 # Milestone 3 engineering learnings
 
-Status: locally accepted; hosted CI pending
+Status: accepted; hosted CI green
 Started: 2026-08-18
 
 This is an append-only record of facts learned during implementation and

@@ -3,8 +3,9 @@
 Agent Feed is a standalone, reusable project for transmitting structured agent
 runs, findings, and submitted evidence to multiple consumer applications.
 
-Milestone 3 status: **local implementation gate green; hosted pull-request CI
-pending**. The repository now includes an MCP server, TypeScript and Python
+Milestone 3 status: **implementation and hosted pull-request CI gates green**.
+GitHub Actions run `32089066103` passed on draft PR #4 at source commit
+`52594aa`. The repository now includes an MCP server, TypeScript and Python
 producer/consumer SDKs, REST/local-file/webhook/Claude/ChatGPT adapters,
 capability-gated skills, and executable examples. Agent Feed wire protocol
 remains `0.1`; the MCP transport uses the separate MCP revision `2026-07-28`

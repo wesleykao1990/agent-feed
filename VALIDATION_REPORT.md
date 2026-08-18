@@ -4,8 +4,11 @@ Validated: **2026-08-18**
 
 ## Result
 
-**Milestone 3 local implementation gate passed; hosted pull-request CI is
-pending. Agent Feed's immutable `schema-v0.1.1` release is published.**
+**Milestone 3 implementation and hosted pull-request CI gates passed. Agent
+Feed's immutable `schema-v0.1.1` release is published.**
+
+Milestone 3 GitHub Actions run `32089066103` passed on reviewed source commit
+`52594aa` in draft PR #4. The pull request remains intentionally unmerged.
 
 Hosted pull-request CI also passed on source commit
 `b217470552d668d6694edfa7e28b15b3279a73f5` in run `32056120146`, including
@@ -79,8 +82,9 @@ cross-boundary conformance 12, producer service 9, API 2, MCP 10, TypeScript
 SDK 5 including packed external import, Python SDK 10 plus an isolated
 wheel/install/import, REST 4, local-file 10, generic webhook 7, Claude hook 5,
 and ChatGPT manual export 6. Full foundation,
-protocol, prototype, live M1, and live M2 regressions also pass. The final
-hosted workflow is deliberately not claimed before the draft PR runs it.
+protocol, prototype, live M1, and live M2 regressions also pass. Hosted run
+`32089066103` reproduced the clean-checkout workflow on source commit
+`52594aa`.
 The Milestone 3 candidate source-integrity inventory passes **318/318** files;
 ignored dependency, build, and release outputs are excluded.
 See `docs/m3/ACCEPTANCE.md`.

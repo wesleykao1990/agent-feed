@@ -1,6 +1,6 @@
 # ADR-0008: Preserve adapter failures and gate automated export by capability
 
-Status: Accepted and implemented locally; hosted CI pending
+Status: Accepted and implemented; hosted CI green
 Date: 2026-08-18
 
 ## Context
