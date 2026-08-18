@@ -1,9 +1,10 @@
 # Capability-gated ChatGPT Scheduled Task export
 
-This is an export procedure, not a claim that Scheduled Tasks can deliver to
-Agent Feed. Current Scheduled Tasks do not provide outbound webhooks by
-default. A task must inspect the capabilities of its actual runtime on every
-deployment.
+ChatGPT web Scheduled Tasks can use installed plugins and connected MCP tools.
+This procedure still does not assume that an arbitrary scheduled chat has
+Agent Feed access: the task must inspect the capabilities of its actual runtime
+on every deployment and use the manual bundle path when the full lifecycle is
+not callable.
 
 ## Gate direct ingestion
 
@@ -17,11 +18,11 @@ these paths before the run starts:
    repository's reference routes are `POST /v1/runs:begin`,
    `POST /v1/runs/{run_id}/batches`, and `POST /v1/runs/{run_id}:complete`.
 
-The presence of a Scheduled Task, a generic HTTP concept, or a URL in a
-prompt is not a capability. If the check cannot prove the complete lifecycle,
-choose manual export. Never emit a claim that a webhook or MCP call happened
-without an observed receipt. Never fabricate an unavailable operation,
-endpoint, header, or response field.
+The presence of a Scheduled Task, an installed plugin without the Agent Feed
+connection, a generic HTTP concept, or a URL in a prompt is not a capability.
+If the check cannot prove the complete lifecycle, choose manual export. Never
+emit a claim that a webhook or MCP call happened without an observed receipt.
+Never fabricate an unavailable operation, endpoint, header, or response field.
 
 The decision is deliberately binary:
 

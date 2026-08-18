@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { PassThrough } from "node:stream";
 import test from "node:test";
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
@@ -544,4 +545,15 @@ test("environment composition parses scoped credentials without exposing secrets
   const fake = new FakeService();
   const official = createOfficialMcpServerFromEnvironment({ service: fake, principal: PRINCIPAL, env });
   assert.equal(official.getCapabilities().tools !== undefined, true);
+});
+
+test("tunnel launcher keeps MCP stdout free of package-manager banners", async () => {
+  const launcher = await readFile(
+    new URL("../bin/agent-feed-mcp-stdio", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(launcher, /exec node --experimental-strip-types src\/main\.ts/u);
+  assert.doesNotMatch(launcher, /\bnpm\b|\bpnpm\b|\byarn\b/u);
+  assert.doesNotMatch(launcher, /\becho\b|\bprintf\b/u);
 });

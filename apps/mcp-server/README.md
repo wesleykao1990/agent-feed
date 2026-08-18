@@ -53,6 +53,36 @@ Agent Feed `0.1` schemas and are strictly snake_case.
 credentials are configured; otherwise `AGENT_FEED_MCP_PRODUCER_SECRET`,
 `AGENT_FEED_PRODUCER_SECRET`, or the sole configured credential is used.
 
+## ChatGPT Scheduled Tasks through Secure MCP Tunnel
+
+OpenAI Secure MCP Tunnel can forward a private ChatGPT developer-mode plugin
+connection directly to this stdio command. Run `tunnel-client` in the same
+environment as this package and configure its MCP command as an absolute,
+portable equivalent of:
+
+```sh
+/absolute/path/to/agent-feed/apps/mcp-server/bin/agent-feed-mcp-stdio
+```
+
+Do not use `npm start` (including `npm --prefix ... start`) as the stdio target.
+The package-manager lifecycle banner is written to stdout before the server
+starts and is not JSON-RPC, so an MCP host can reject discovery even though the
+Node process is healthy. The checked-in launcher changes to the package root
+and executes Node directly without writing anything to stdout.
+
+The child process inherits `AGENT_FEED_DATABASE_URL`, the producer credential
+configuration, and the selected MCP authorization value from `tunnel-client`.
+Do not put any of those values in a ChatGPT prompt or plugin description. Keep
+the client, PostgreSQL, and this MCP subprocess available for every scheduled
+run. The complete operator procedure and failure checks are in
+`docs/operations/chatgpt-scheduled-task.md`.
+
+The tunnel is a transport, not a second policy boundary. The three existing
+tools, annotations, schemas, authentication, validation, idempotency, and
+persistence behavior remain unchanged. A public plugin deployment still needs
+a stable HTTPS streamable-HTTP endpoint and suitable user authentication; the
+development tunnel is not a public-distribution mechanism.
+
 ## Composition and tests
 
 Production code can use `createOfficialMcpServerFromEnvironment` or inject an

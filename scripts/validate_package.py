@@ -55,7 +55,8 @@ def main():
  required_docs={
   'docs/02_trust_model.md':['Finding is not fact','Submitted evidence is not canonical evidence'],
   'docs/04_storage_and_delivery.md':['at-least-once','Realtime is optional'],
-  'docs/07_chatgpt_monitoring.md':['do not provide webhooks','run-bundle','active-task caps','missing run'],
+  'docs/07_chatgpt_monitoring.md':['installed plugins','`begin_run`','Secure MCP Tunnel','run-bundle','missing run'],
+  'docs/operations/chatgpt-scheduled-task.md':['agent-feed-mcp-stdio','npm start','ChatGPT workspace','Run now'],
   'docs/08_supabase_reference.md':['separate Supabase project','Realtime: optional'],
   'skills/chatgpt/SKILL.md':['Scheduled Tasks','run-bundle.schema.json'],
  'docs/06_rewards_optimizer_consumer.md':['separate project','must not'],

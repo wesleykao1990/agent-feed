@@ -126,13 +126,19 @@ Deliver:
 - TypeScript and Python producer/consumer SDKs;
 - Claude hook, REST, generic-webhook, and local-file adapters;
 - ChatGPT and Claude skills;
-- capability-gated ChatGPT Scheduled Task export path.
+- capability-gated ChatGPT Scheduled Task direct MCP path with validated
+  run-bundle fallback.
 
 Gate:
 
 - REST and MCP call the same application service;
 - an agent that cannot call tools can produce an importable run bundle;
 - adapter failures close or preserve a partial run instead of silently disappearing.
+
+The current private acceptance deployment reuses the stdio MCP server through
+OpenAI Secure MCP Tunnel. Do not add a second ChatGPT-specific lifecycle
+implementation. Public plugin distribution is a separate future deployment
+decision requiring stable HTTPS streamable HTTP and production authentication.
 
 ## Milestone 4 — Rewards Optimizer reference consumer
 

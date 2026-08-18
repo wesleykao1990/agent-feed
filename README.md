@@ -74,6 +74,13 @@ A `Finding` means “a producer submitted this claim,” not “this is true.”
 
 `prototype/` implements the thin run lifecycle, idempotency, terminal immutability, signed events, expected-cadence liveness, and hostile-finding preservation without external dependencies. Run `cd prototype && npm test`.
 
+The foundation validator needs the Python packages declared in
+`requirements-dev.txt`. A one-command managed invocation is:
+
+```sh
+uv run --with-requirements requirements-dev.txt python scripts/validate_package.py
+```
+
 The M2 packages can be checked independently:
 
 ```sh
@@ -140,7 +147,13 @@ reviews are append-only in `docs/m3/` and `docs/m4/`.
 
 ## ChatGPT monitoring
 
-ChatGPT monitoring tasks can serve as independent sentinels. Current Scheduled Tasks do not provide webhooks, so automatic production ingestion must use a tool-capable runtime or a separate API worker. The fallback is a validated run-bundle imported through `local-file`.
+ChatGPT monitoring tasks can submit automatically when the scheduled chat has
+an installed Agent Feed plugin exposing all three MCP lifecycle tools. For a
+private development deployment, the existing stdio MCP server can be connected
+through OpenAI Secure MCP Tunnel; no public Agent Feed listener or second MCP
+implementation is required. The task must fall back to a validated run-bundle
+imported through `local-file` whenever the complete tool capability is absent.
+See `docs/operations/chatgpt-scheduled-task.md`.
 
 ## Supabase
 
