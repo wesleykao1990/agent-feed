@@ -126,7 +126,8 @@ Deliver:
 - TypeScript and Python producer/consumer SDKs;
 - Claude hook, REST, generic-webhook, and local-file adapters;
 - ChatGPT and Claude skills;
-- capability-gated ChatGPT Scheduled Task export path.
+- capability-gated ChatGPT Scheduled Task direct MCP path with validated
+  run-bundle fallback.
 
 Gate:
 
@@ -134,16 +135,45 @@ Gate:
 - an agent that cannot call tools can produce an importable run bundle;
 - adapter failures close or preserve a partial run instead of silently disappearing.
 
+The current private acceptance deployment reuses the stdio MCP server through
+OpenAI Secure MCP Tunnel. Do not add a second ChatGPT-specific lifecycle
+implementation. Public plugin distribution is a separate future deployment
+decision requiring stable HTTPS streamable HTTP and production authentication.
+
 ## Milestone 4 — Rewards Optimizer reference consumer
 
-Deliver only the generic reference integration in `examples/rewards-optimizer/`. The actual consumer implementation lives in the separate Rewards Optimizer project.
+Status: **local and hosted gates green on draft PR #5**.
+
+Deliver only the generic reference integration in
+`examples/rewards-optimizer/`. The actual Rewards Optimizer application,
+database, review workflow, and deployment remain a separate project.
+
+Implemented:
+
+- a buildable public TypeScript example consuming only `@agent-feed/sdk`;
+- authenticated caller scope (`tenant_id`, `consumer_id`, stream allowlist);
+- protocol `0.1` validation and untrusted observation mapping;
+- separate scoped transport receipts and versioned semantic keys;
+- exact-retry idempotency with fail-closed event-ID payload conflict handling;
+- evidence, hostile flags, restrictions, and unknown-attribute preservation;
+- no promotion, database, SQL, Agent Feed server/private source, or Realtime
+  dependency; and
+- a no-skip Node-only architecture, behavioral, build, and package gate.
 
 Gate:
 
-- a generic finding maps to an untrusted source observation, not a reward rule;
-- transport dedupe and reward-domain semantic dedupe remain separate;
-- submitted evidence is not promoted automatically;
-- no direct database access exists between projects.
+- a generic finding maps to an untrusted observation, never a reward rule;
+- transport and semantic identity remain separate across tenant, consumer, and
+  stream scope;
+- evidence and hostile/unknown data remain untrusted and non-promoted;
+- lifecycle events create no observation and unauthorized streams fail closed;
+- the built public package and packed artifact are usable; and
+- all prior Agent Feed regressions and hosted CI remain green.
+
+Production signed ingress, durable receipt-before-ACK, retries/dead letters,
+canonical evidence, and review/promotion belong to downstream applications and
+are not claimed by this reference milestone. See
+`docs/14_milestone_4_reference_consumer.md` and `docs/m4/`.
 
 ## Milestone 5 — Portability and operations
 

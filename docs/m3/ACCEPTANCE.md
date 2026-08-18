@@ -41,7 +41,7 @@ wheel check. Create that environment with `python3 -m venv` and install
 | ChatGPT manual-export adapter | 6/6 |
 | Python SDK | 10/10 |
 | Python isolated wheel build, install, and external import | Passed |
-| Repository source-integrity inventory | 318/318 |
+| Repository source-integrity inventory | 340/340 |
 | Acceptance skips | 0 |
 
 ## Full regression gate
@@ -62,13 +62,19 @@ npm run checksums:check
 The disposable PostgreSQL suites ran live; no acceptance skip flag was used.
 The foundation validator passed all nine schemas, examples, generated-type
 drift, semantic invariants, and trust checks. M0/M1 conformance passed 23/23,
-the prototype passed 29/29, live M1 ingress passed 5/5, and the full M2 gate
+the prototype passed 29/29, live M1 ingress passed 6/6, and the full M2 gate
 passed architecture 4, pure 6, PostgreSQL 3, protocol-runtime 5, delivery-core
 18, delivery-consumer 10, persistence 11, webhook 8, worker 6, and API 5.
+
+## Post-acceptance ChatGPT tunnel regression
+
+The 2026-08-18 private ChatGPT acceptance added an eleventh MCP test for the
+protocol-clean direct-Node launcher. MCP is now 11/11 on the maintenance
+branch. A real scheduled occurrence also completed durably through Secure MCP
+Tunnel; see `docs/operations/chatgpt-scheduled-task.md` for the bounded record.
 
 ## Release decision
 
 Rows M3-A01 through M3-A14 are accepted. GitHub Actions run `32089066103`
 passed the complete clean-checkout workflow on reviewed source commit
-`52594aa` in draft PR #4. The branch remains intentionally unmerged for human
-review.
+`52594aa` in PR #4, which was subsequently merged.

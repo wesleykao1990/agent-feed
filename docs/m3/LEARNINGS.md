@@ -120,3 +120,75 @@ real `now()` insertion time as the calendar advances. Time-sensitive database
 tests should establish one explicit epoch from the database clock and derive
 their synthetic operation sequence from it; production scheduling must not be
 changed to accommodate a stale fixture date.
+
+## M3-L017 — Terminal immutability must not erase prior idempotent receipts
+
+Completion forbids new batches, but an exact replay of a batch accepted before
+completion is not a mutation. Persistence must check the existing idempotency
+receipt and payload hash while holding the run lock, then reject only payload
+drift or a previously unseen batch. Zero-batch lifecycle fixtures cannot prove
+this at-least-once behavior; a representative evidence-bearing bundle must be
+part of the durable gate.
+
+## M3-L018 — Gate dependencies follow test imports, not milestone labels
+
+Moving a representative adapter test into an earlier durable gate also moves
+that adapter's clean-install prerequisites. CI dependency phases must be
+derived from the test module graph actually executed at that point; a package
+being historically classified as M3 does not make it available to an M1 test.
+
+## M3-L019 — A capability gate must track product capabilities, not freeze an old limitation
+
+The safe invariant is not "Scheduled Tasks cannot call tools"; it is "claim
+delivery only when this run exposes the complete lifecycle and returns actual
+receipts." Product support can change while that invariant remains valid.
+Current installed-plugin support enables a direct path, and Secure MCP Tunnel
+can reuse a private stdio server without adding a second lifecycle surface.
+
+## M3-L020 — Process health is weaker than protocol health
+
+An MCP child can stay alive while being unusable. `npm start` printed its
+lifecycle banner to stdout before the first JSON-RPC response, so the tunnel
+looked locally healthy while ChatGPT discovery failed. Stdio launchers must
+reserve stdout exclusively for protocol frames; operational text belongs on
+stderr or outside the child process.
+
+## M3-L021 — Tunnel visibility is scoped to the consuming workspace
+
+A tunnel associated with a Platform organization was not selectable in the
+target ChatGPT workspace. The consuming workspace must also be associated
+explicitly. Tunnel health, organization authorization, workspace visibility,
+plugin discovery, and tool execution are separate acceptance checkpoints.
+
+## M3-L022 — Scheduled occurrence state belongs in the durable feed
+
+ChatGPT's task UI can show research in progress, but the Agent Feed run row is
+the authoritative lifecycle record. A real manual occurrence proved that
+`begin_run` was durable before research. Completion, batch, finding, evidence,
+and outbox counts must be verified from PostgreSQL rather than inferred from a
+chat response or notification.
+
+## M3-L023 — Producer time and persistence time answer different questions
+
+The live task reported a coherent 59-second producer interval, while its
+completion timestamp preceded PostgreSQL's begin-row creation time by about six
+seconds because the systems use different clocks. Producer timestamps describe
+the claimed occurrence; database creation and acceptance timestamps describe
+durability and ordering. Cross-system acceptance checks must not treat small
+clock deltas as duplicate or lifecycle failures.
+
+## M3-L024 — A gate command still depends on its declared tool environment
+
+An `npm` script that invokes Python does not install Python packages. A bare
+shell can therefore fail before any repository assertion even when the code is
+sound. Local acceptance records should distinguish dependency bootstrap from a
+test failure and show a reproducible managed invocation of
+`requirements-dev.txt`.
+
+## M3-L025 — Git ignore and integrity inventory are separate controls
+
+Adding `.runtime/` to `.gitignore` prevented an accidental commit but did not
+stop the checksum generator's independent recursive scan. Integrity tooling
+must apply its own fail-closed private-path policy. A source manifest should be
+stable while PostgreSQL writes WAL and must never contain local runtime,
+virtual-environment, or secret environment paths.

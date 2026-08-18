@@ -25,7 +25,7 @@ HTTP deployment.
 | Claude hook | Lifecycle mapping that closes or preserves partial/failed runs | Passed locally |
 | ChatGPT manual export | Protocol-valid tool-less run-bundle construction and validation | Passed locally |
 | Skills | ChatGPT and Claude instructions aligned with real capabilities and trust boundaries | Passed locally |
-| Scheduled Task path | Explicit capability gate with run-bundle fallback | Passed locally |
+| Scheduled Task path | Installed-plugin MCP capability gate with Secure MCP Tunnel operator path and run-bundle fallback | Repository path passed; live account connection is an operator step |
 
 ## Acceptance matrix
 
@@ -44,7 +44,7 @@ tests in the integrated checkout.
 | M3-A08 | Retry is bounded and only used for safe/idempotency-protected operations. | Timeout, abort, retry-budget, and unsafe-write tests in both SDKs. | Passed locally |
 | M3-A09 | Generic webhook verifies upstream authenticity before lifecycle writes. | Invalid/stale/replayed/tampered signature tests and no-call assertions. | Passed locally, 7/7 |
 | M3-A10 | Adapter/SDK errors do not leak credentials, evidence excerpts, or payloads. | Adversarial redaction corpus across public errors/recovery output. | Passed locally |
-| M3-A11 | Scheduled Task behavior is capability-gated. | Direct-capability and no-capability fixtures; no unsupported webhook claim. | Passed locally |
+| M3-A11 | Scheduled Task behavior is capability-gated. | Direct-capability and no-capability fixtures; installed-plugin/tunnel runbook; no unsupported delivery claim. | Passed locally; live connection requires operator account setup |
 | M3-A12 | Existing M0-M2 correctness remains green. | Foundation, prototype, M1 live ingress, M2 live delivery, checksum, compatibility, and type gates. | Passed locally |
 | M3-A13 | Package boundaries do not require immediate refactoring. | Final modularity audit, no circular/direct-source imports, clean package installs. | Passed locally |
 | M3-A14 | Hosted CI reproduces the complete gate. | Green GitHub Actions run for the reviewed source commit. | Passed — run `32089066103`, source `52594aa` |

@@ -3,7 +3,7 @@
   "version": "0.1.1",
   "protocol_version": "0.1",
   "research_cutoff": "2026-08-17",
-  "status": "milestone_3_accepted",
+  "status": "milestone_4_accepted",
   "counts": {
     "json_schemas": 9,
     "example_run_bundles": 3,
@@ -24,7 +24,10 @@
     "local_file_adapter_m3_tests": 10,
     "generic_webhook_adapter_tests": 7,
     "claude_hook_adapter_tests": 5,
-    "chatgpt_manual_export_tests": 6
+    "chatgpt_manual_export_tests": 6,
+    "m4_architecture_tests": 6,
+    "m4_behavioral_tests": 10,
+    "m4_reference_package_tests": 9
   },
   "canonical_files": {
     "protocol": "docs/01_protocol.md",
@@ -60,6 +63,10 @@
     "prd_index": "PRD.md",
     "milestone_3_acceptance": "docs/m3/ACCEPTANCE.md",
     "milestone_3_plan": "docs/13_milestone_3_mcp_sdks_adapters.md",
-    "milestone_3_gate": "scripts/run_m3_conformance.mjs"
+    "milestone_3_gate": "scripts/run_m3_conformance.mjs",
+    "milestone_4_acceptance": "docs/m4/ACCEPTANCE.md",
+    "milestone_4_plan": "docs/14_milestone_4_reference_consumer.md",
+    "milestone_4_gate": "scripts/run_m4_conformance.mjs",
+    "milestone_4_reference": "examples/rewards-optimizer/README.md"
   }
 }

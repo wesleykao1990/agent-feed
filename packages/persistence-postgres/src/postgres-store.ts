@@ -418,8 +418,10 @@ export class PostgresAgentFeedPersistence {
       const run = locked[0];
       if (!run) throw new PersistenceError("run_not_found", `run ${input.run_id} was not found`, { run_id: input.run_id });
       if (run.tenant_id !== tenantId) throw new PersistenceError("run_not_found", `run ${input.run_id} is outside the requested tenant`, { run_id: input.run_id });
-      if (run.status !== "running") throw new PersistenceError("terminal_run_immutable", `run ${input.run_id} is terminal`, { run_id: input.run_id });
 
+      // At-least-once producers can retry an accepted batch after complete_run
+      // committed. Recognize the exact receipt before enforcing terminal
+      // immutability; payload drift under the same key must still fail closed.
       const byKey = await this.query<DbBatchRow>(client,
         `select id, run_id, batch_id, idempotency_key, sequence_number, payload_hash,
                 submitted_at, metadata, accepted_at
@@ -431,6 +433,7 @@ export class PostgresAgentFeedPersistence {
         }
         return this.loadRun(client, run.id);
       }
+      if (run.status !== "running") throw new PersistenceError("terminal_run_immutable", `run ${input.run_id} is terminal`, { run_id: input.run_id });
 
       const byBatchId = await this.query<DbBatchRow>(client,
         `select id, run_id, batch_id, idempotency_key, sequence_number, payload_hash,

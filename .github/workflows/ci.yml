@@ -77,6 +77,9 @@ jobs:
           npm --prefix packages/schema ci
           npm --prefix packages/producer-service ci
           npm --prefix packages/adapters/local-file ci
+          # The durable M1 gate now imports the ChatGPT adapter directly.
+          # Install it here rather than waiting for the later M3 gate.
+          npm --prefix packages/adapters/chatgpt-manual-export ci
           npm --prefix packages/adapters/rest ci
           # The executable API is the composition root for the durable adapter.
           # Install every source-linked adapter dependency before the API clean build.
@@ -156,7 +159,25 @@ jobs:
           npm --prefix packages/sdk/typescript ci
           npm --prefix packages/adapters/generic-webhook ci
           npm --prefix packages/adapters/claude-hook ci
-          npm --prefix packages/adapters/chatgpt-manual-export ci
 
       - name: Run combined Milestone 3 conformance gate
         run: npm run m3:conformance
+
+  milestone-4-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install generic reference-consumer dependencies
+        run: |
+          npm --prefix packages/sdk/typescript ci
+          npm --prefix examples/rewards-optimizer ci
+
+      - name: Run Milestone 4 generic reference-consumer gate
+        run: npm run m4:conformance

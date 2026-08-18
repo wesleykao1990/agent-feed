@@ -20,11 +20,12 @@ Direct ingestion is available only when one of these has been verified:
   `POST /v1/runs/{run_id}:complete` in this repository's API).
 
 If any operation, credential, endpoint, or permission is missing or cannot be
-verified, treat the run as tool-less. Current ChatGPT Scheduled Tasks do not
-provide outbound webhooks by default. Never claim that a Scheduled Task sent a
-webhook, called MCP, or delivered a run unless the current runtime returned an
-actual receipt for that operation. Do not invent a webhook URL, tool name,
-request field, or response field.
+verified, treat the run as tool-less. ChatGPT web Scheduled Tasks may use an
+installed plugin and its connected MCP tools, but a task does not gain Agent
+Feed access merely because it is scheduled. Never claim that a Scheduled Task
+called MCP, sent a webhook, or delivered a run unless the current runtime
+returned an actual receipt for that operation. Do not invent a webhook URL,
+tool name, request field, or response field.
 
 The gate is binary: direct ingestion requires all three callable lifecycle
 operations, or a documented REST base URL plus scoped credential and network

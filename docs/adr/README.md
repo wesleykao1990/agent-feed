@@ -1,7 +1,7 @@
 # Agent Feed ADR index
 
 These ADRs describe the accepted durable-delivery design and the Milestone 3
-MCP, SDK, adapter, and capability-gating boundaries. Reviewed against the
+and 4 SDK, adapter, capability, and reference-consumer boundaries. Reviewed against the
 combined implementation checkout on **2026-08-18**.
 
 Each ADR records context, the decision, rejected alternatives, consequences,
@@ -18,9 +18,12 @@ are added as new numbered files; accepted decisions are not silently rewritten.
 | [0006](0006-m3-shared-producer-service-boundary.md) | Share one producer application boundary across REST, MCP, and producer adapters | Accepted and implemented; hosted CI green |
 | [0007](0007-m3-sdk-transport-and-version-boundary.md) | Keep SDKs transport-injected and protocol-version pinned | Accepted and implemented; hosted CI green |
 | [0008](0008-m3-failure-preservation-and-capability-gating.md) | Preserve partial adapter work and gate automation by actual capability | Accepted and implemented; hosted CI green |
+| [0009](0009-m4-reference-consumer-trust-boundary.md) | Keep the generic consumer untrusted, scoped, portable, and separate from the Rewards app | Accepted and implemented; hosted CI green |
+| [0010](0010-chatgpt-scheduled-task-mcp-tunnel.md) | Reuse the stdio MCP server for ChatGPT Scheduled Tasks through Secure MCP Tunnel | Accepted; repository runbook complete, live operator connection pending |
 
 Implementation status is tracked in `docs/12_milestone_2_delivery.md` and
-`docs/13_milestone_3_mcp_sdks_adapters.md`. The current decision is **GO for the M2
+`docs/13_milestone_3_mcp_sdks_adapters.md`, and
+`docs/14_milestone_4_reference_consumer.md`. The current decision is **GO for the M2
 implementation gate in this repository**; transport deployment, observability
 export, and explicit migration-pair expansion remain separate follow-ups. The
 M3 combined local and hosted gates are green; GitHub Actions run `32089066103`
