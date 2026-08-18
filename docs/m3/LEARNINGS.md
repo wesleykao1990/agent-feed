@@ -129,3 +129,10 @@ receipt and payload hash while holding the run lock, then reject only payload
 drift or a previously unseen batch. Zero-batch lifecycle fixtures cannot prove
 this at-least-once behavior; a representative evidence-bearing bundle must be
 part of the durable gate.
+
+## M3-L018 — Gate dependencies follow test imports, not milestone labels
+
+Moving a representative adapter test into an earlier durable gate also moves
+that adapter's clean-install prerequisites. CI dependency phases must be
+derived from the test module graph actually executed at that point; a package
+being historically classified as M3 does not make it available to an M1 test.
