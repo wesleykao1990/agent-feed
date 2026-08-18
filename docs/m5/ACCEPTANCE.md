@@ -29,6 +29,11 @@ GitHub Actions run `32128149827` passed the dedicated clean-checkout M5A job in
 PostgreSQL `validate` job in 1 minute 22 seconds. All ran against the revision
 above with zero skipped acceptance tests.
 
+The initial run warned about the old Node 20 runtime in GitHub's v4 actions.
+After updating the official checkout/setup actions to v7, replacement run
+`32128438231` passed M5A in 6 seconds, M4 in 8 seconds, and complete validation
+in 1 minute 21 seconds without that annotation.
+
 ## Live operator smoke
 
 A separate disposable PostgreSQL cluster on localhost was used; the existing

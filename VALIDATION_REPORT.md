@@ -142,3 +142,7 @@ jobs at source revision `b6d4a821894b8ef2d4403e04df908d73e469a93d`. See `docs/15
 and `docs/m5/ACCEPTANCE.md`. The source-only integrity inventory passes
 **362/362** files; ignored runtime, dependency, build, virtual-environment, and
 release outputs are excluded.
+
+Replacement run `32128438231` then passed the same three jobs after the
+repository's official GitHub actions were updated to v7, clearing the prior
+Node 20 action-runtime deprecation annotation.
