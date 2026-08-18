@@ -2,6 +2,11 @@
 
 ## Unreleased — Milestone 4
 
+- Fixed durable full-bundle replay after completion: exact accepted batch
+  retries return the original receipt, while payload drift and new terminal
+  batches remain rejected.
+- Added a PostgreSQL-backed ChatGPT Scheduled Task adapter regression with an
+  evidence-bearing bundle, closing the zero-batch retry coverage gap.
 - Added a buildable, packed TypeScript reference consumer at the historical
   `examples/rewards-optimizer/` path without implementing the external app.
 - Added authenticated tenant/consumer/stream scope, explicitly untrusted

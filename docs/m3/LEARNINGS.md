@@ -120,3 +120,12 @@ real `now()` insertion time as the calendar advances. Time-sensitive database
 tests should establish one explicit epoch from the database clock and derive
 their synthetic operation sequence from it; production scheduling must not be
 changed to accommodate a stale fixture date.
+
+## M3-L017 — Terminal immutability must not erase prior idempotent receipts
+
+Completion forbids new batches, but an exact replay of a batch accepted before
+completion is not a mutation. Persistence must check the existing idempotency
+receipt and payload hash while holding the run lock, then reject only payload
+drift or a previously unseen batch. Zero-batch lifecycle fixtures cannot prove
+this at-least-once behavior; a representative evidence-bearing bundle must be
+part of the durable gate.

@@ -36,7 +36,7 @@ reference. Replacement run `32092602939` passed.
 | Evidence | Status |
 |---|---|
 | Foundation/type/compatibility and M0 conformance | Passed; validator plus 23/23 tests |
-| Live PostgreSQL M1 ingress | Passed; 5/5 tests |
+| Live PostgreSQL M1 ingress | Passed; 6/6 tests, including evidence-bearing ChatGPT exact replay |
 | Complete M2 gate with live PostgreSQL | Passed; all configured gates, zero skips |
 | Complete M3 gate | Passed; architecture, behavioral, all packages, external npm/wheel smoke tests |
 | GitHub Actions `validate` job | Passed in run `32092602939` (1m16s) |

@@ -219,6 +219,13 @@ test("live PostgreSQL persistence regression suite", { skip: databaseUrl ? false
     assert.equal(completed.stats.findings_submitted, 1);
     const completeRetry = await store.completeRun({ ...complete });
     assert.equal(completeRetry.run_id, completed.run_id);
+    const terminalBatchRetry = await store.submitBatch({ ...batch });
+    assert.equal(terminalBatchRetry.run_id, completed.run_id);
+    assert.equal(terminalBatchRetry.batches.length, 1, "an exact accepted batch retry remains idempotent after completion");
+    await assert.rejects(
+      store.submitBatch({ ...batch, metadata: { changed_after_completion: true } }),
+      (error: unknown) => error instanceof PersistenceError && error.code === "idempotency_payload_conflict",
+    );
     await assert.rejects(
       store.completeRun({ ...complete, metadata: { changed: true } }),
       (error: unknown) => error instanceof PersistenceError && error.code === "idempotency_payload_conflict",
