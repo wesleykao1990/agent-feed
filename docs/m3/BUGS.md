@@ -54,6 +54,7 @@ The table above preserves the initial observations. Resolutions validated on
 | M3-022 | REST's class wrapper dropped `service_name` and rejected SDK-encoded slash-containing wire IDs. | Class and factory now share options; percent-encoded slash data is accepted while literal path separators still cannot match the route. |
 | M3-023 | Python `ProducerRun` retained a failed batch and could not export partial progress; optional recovery timestamps could drift under one key. | Only successful batches are recorded, explicit partial bundles are supported, and both idempotency key and completion timestamp are required. |
 | M3-024 | The local-file lockfile retained obsolete PostgreSQL dependency metadata from the pre-M1 producer-service graph. | Regenerated the lockfile from current manifests; the adapter remains database-neutral. |
+| M3-025 | Hosted PR #4 built `apps/api` before installing the source-linked REST adapter's own dependency graph. A populated local checkout masked the missing clean-install prerequisite. | Moved the REST adapter install into the API/Milestone 1 dependency phase and removed the later duplicate install. The API is now built only after all source-linked package dependencies are present; the updated hosted workflow is the clean-checkout regression. |
 
 Public diagnostics are redacted. Recovery bundles intentionally preserve the
 original evidence required for exact replay and therefore belong in a secured,

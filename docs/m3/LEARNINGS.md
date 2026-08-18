@@ -104,3 +104,11 @@ must reuse one exact artifact rather than regenerate time-dependent payloads.
 An HMAC timestamp bounds age but does not make an event unique. A stable event
 ID plus an atomic claim is required; production deployments that need restart
 durability must inject the documented replay store.
+
+## M3-L015 — A composition root inherits source-linked build prerequisites
+
+Installing a local `file:` dependency at the application root does not prove
+that TypeScript can resolve that dependency's own source imports from a clean
+checkout. CI must install every source-linked package before compiling the
+composition root; populated developer `node_modules` directories are not
+acceptable build evidence.
