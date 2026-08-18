@@ -39,8 +39,8 @@ reference. Replacement run `32092602939` passed.
 | Live PostgreSQL M1 ingress | Passed; 6/6 tests, including evidence-bearing ChatGPT exact replay |
 | Complete M2 gate with live PostgreSQL | Passed; all configured gates, zero skips |
 | Complete M3 gate | Passed; architecture, behavioral, all packages, external npm/wheel smoke tests |
-| GitHub Actions `validate` job | Passed in run `32092602939` (1m16s) |
-| GitHub Actions Node-only `milestone-4-reference` job | Passed in run `32092602939` (9s) |
+| GitHub Actions `validate` job | Passed in run `32096064685` (1m19s) |
+| GitHub Actions Node-only `milestone-4-reference` job | Passed in run `32096064685` (10s) |
 
 This ledger covers only the Agent Feed generic reference consumer. Production
 durability, signed ingress, acknowledgement, and Rewards Optimizer domain

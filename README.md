@@ -4,7 +4,7 @@ Agent Feed is a standalone, reusable project for transmitting structured agent
 runs, findings, and submitted evidence to multiple consumer applications.
 
 Milestone 4 status: **generic reference-consumer local and hosted gates green**.
-GitHub Actions run `32092602939` passed both the dedicated Node-only M4 job and
+GitHub Actions run `32096064685` passed both the dedicated Node-only M4 job and
 the full repository validation on PR #5. The buildable example maps protocol
 `0.1` findings to scoped,
 explicitly untrusted observations, separates transport and semantic identity,
