@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const PACKAGE_ROOT = join(ROOT, "examples/rewards-optimizer");
+const SDK_ROOT = join(ROOT, "packages/sdk/typescript");
 const failures = [];
 
 function acceptanceSkipCount(output) {
@@ -51,6 +52,18 @@ function packageTestFiles() {
 }
 
 const manifestPath = join(PACKAGE_ROOT, "package.json");
+const sdkManifestPath = join(SDK_ROOT, "package.json");
+if (!existsSync(sdkManifestPath)) {
+  failures.push("packages/sdk/typescript/package.json is missing");
+} else {
+  try {
+    const sdkManifest = JSON.parse(readFileSync(sdkManifestPath, "utf8"));
+    if (sdkManifest.name !== "@agent-feed/sdk") failures.push("public TypeScript SDK package identity is invalid");
+    if (typeof sdkManifest.scripts?.build !== "string") failures.push("public TypeScript SDK build script is missing");
+  } catch (error) {
+    failures.push(`public TypeScript SDK manifest is invalid: ${error instanceof Error ? error.message : "parse error"}`);
+  }
+}
 if (!existsSync(manifestPath)) {
   failures.push("examples/rewards-optimizer/package.json is missing");
 } else {
@@ -67,6 +80,7 @@ if (packageTestFiles().length === 0) failures.push("reference package has no foc
 
 run("architecture guard", process.execPath, ["scripts/check_m4_architecture.mjs"]);
 run("architecture tests", process.execPath, ["--test", "tests/m4/architecture.test.mjs"], ROOT, { test: true });
+run("public TypeScript SDK dependency build", "npm", ["run", "build"], SDK_ROOT);
 run("reference package clean build", "npm", ["run", "build"], PACKAGE_ROOT);
 run("behavioral conformance", process.execPath, ["--test", "tests/m4/conformance.test.mjs"], ROOT, { test: true });
 run("reference package focused tests", "npm", ["test"], PACKAGE_ROOT, { test: true });

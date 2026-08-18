@@ -39,3 +39,10 @@ states prevents source-only and stale-`dist` false confidence.
 
 Artifact smoke tests should not depend on user-global cache ownership. A
 disposable task-local npm cache made the pack proof portable and deterministic.
+
+## M4-L008 — Installing a source-linked package is not building its exports
+
+An exact local `file:` dependency can be present as a symlink while its
+declared `dist` entrypoint is still absent. A clean gate must build public
+source-linked dependencies in dependency order; a populated checkout can hide
+that requirement.

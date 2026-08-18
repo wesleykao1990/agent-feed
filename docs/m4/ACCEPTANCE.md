@@ -26,6 +26,11 @@ npm run m4:conformance
 The command uses a disposable npm cache for the pack smoke test, so it is
 independent of user-global npm cache ownership.
 
+The first hosted run (`32092456477`) caught a missing clean-build ordering
+step: the local SDK was installed but its public `dist` export was absent. The
+runner now validates and builds the SDK before compiling/importing the
+reference. A replacement hosted run is pending.
+
 ## Remaining acceptance evidence
 
 | Evidence | Status |
