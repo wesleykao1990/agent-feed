@@ -1,7 +1,7 @@
 # Agent Feed ADR index
 
-These ADRs describe the accepted durable-delivery design and the Milestone 3
-and 4 SDK, adapter, capability, and reference-consumer boundaries. Reviewed against the
+These ADRs describe the accepted durable-delivery design and the Milestone 3,
+4, and 5A SDK, adapter, capability, reference-consumer, and operator boundaries. Reviewed against the
 combined implementation checkout on **2026-08-18**.
 
 Each ADR records context, the decision, rejected alternatives, consequences,
@@ -19,16 +19,17 @@ are added as new numbered files; accepted decisions are not silently rewritten.
 | [0007](0007-m3-sdk-transport-and-version-boundary.md) | Keep SDKs transport-injected and protocol-version pinned | Accepted and implemented; hosted CI green |
 | [0008](0008-m3-failure-preservation-and-capability-gating.md) | Preserve partial adapter work and gate automation by actual capability | Accepted and implemented; hosted CI green |
 | [0009](0009-m4-reference-consumer-trust-boundary.md) | Keep the generic consumer untrusted, scoped, portable, and separate from the Rewards app | Accepted and implemented; hosted CI green |
-| [0010](0010-chatgpt-scheduled-task-mcp-tunnel.md) | Reuse the stdio MCP server for ChatGPT Scheduled Tasks through Secure MCP Tunnel | Accepted; repository runbook complete, live operator connection pending |
+| [0010](0010-chatgpt-scheduled-task-mcp-tunnel.md) | Reuse the stdio MCP server for ChatGPT Scheduled Tasks through Secure MCP Tunnel | Accepted; private live acceptance complete |
+| [0011](0011-m5a-operator-runtime-boundary.md) | Keep GitHub setup local, private, non-destructive, and separate from account operations | Accepted; local integrated gates green, hosted CI pending |
 
 Implementation status is tracked in `docs/12_milestone_2_delivery.md` and
 `docs/13_milestone_3_mcp_sdks_adapters.md`, and
-`docs/14_milestone_4_reference_consumer.md`. The current decision is **GO for the M2
-implementation gate in this repository**; transport deployment, observability
-export, and explicit migration-pair expansion remain separate follow-ups. The
-M3 combined local and hosted gates are green; GitHub Actions run `32089066103`
-passed on source commit `52594aa` in draft PR #4.
-Hosted CI run #5 passed on draft PR #2. Any implementation that conflicts with these records must
+`docs/14_milestone_4_reference_consumer.md`, and
+`docs/15_milestone_5a_installability.md`. M2 is accepted, M3 and M4 are merged
+with hosted gates green, and M5A has local integrated evidence with hosted
+pull-request CI pending. Production deployment, observability export, and the
+remaining Milestone 5 portability/retention/audit/dashboard slices stay
+separate follow-ups. Any implementation that conflicts with these records must
 add a new ADR or an explicit superseding decision; it must not silently change
-protocol, scope, cursor, acknowledgement, failure-preservation, or capability
-semantics.
+protocol, scope, cursor, acknowledgement, failure-preservation, capability, or
+operator-security semantics.

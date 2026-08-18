@@ -181,3 +181,20 @@ jobs:
 
       - name: Run Milestone 4 generic reference-consumer gate
         run: npm run m4:conformance
+
+  milestone-5-installability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install locked MCP runtime dependencies
+        run: npm --prefix apps/mcp-server ci
+
+      - name: Run Milestone 5A GitHub installability gate
+        run: npm run m5:conformance

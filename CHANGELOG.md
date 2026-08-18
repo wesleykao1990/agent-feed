@@ -1,6 +1,19 @@
 # Changelog
 
-## Unreleased — Milestone 4
+## Unreleased — Milestone 5A
+
+- Added a GitHub-oriented operator CLI for private setup, diagnostics,
+  non-destructive PostgreSQL lifecycle, and protocol-clean MCP launch.
+- Added a localhost-only PostgreSQL 16 Compose profile with a persistent named
+  volume and an owner-only existing-database credential-file option.
+- Added path containment, symlink refusal, ambient credential scrubbing, safe
+  forced-upgrade credential preservation, and secret-free output/wrappers.
+- Added a clean-checkout M5A CI gate, adversarial tests, installation and
+  upgrade runbooks, ADR, and append-only decisions/bugs/learnings/debt records.
+- Kept OpenAI tunnel/plugin/task mutations and the remainder of the broader
+  Milestone 5 roadmap explicitly out of scope.
+
+## Milestone 4
 
 - Fixed durable full-bundle replay after completion: exact accepted batch
   retries return the original receipt, while payload drift and new terminal

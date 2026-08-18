@@ -61,7 +61,9 @@ def main():
   'skills/chatgpt/SKILL.md':['Scheduled Tasks','run-bundle.schema.json'],
  'docs/06_rewards_optimizer_consumer.md':['separate project','must not'],
  'docs/10_semantic_invariants.md':['terminal run state is immutable','idempotency key with a different payload','missing run is not equivalent'],
- 'docs/11_protocol_compatibility.md':['protocol `0.1`','snake_case','--check']
+ 'docs/11_protocol_compatibility.md':['protocol `0.1`','snake_case','--check'],
+ 'docs/operations/github-installation.md':['bin/agent-feed setup','bin/agent-feed doctor','never prints secrets','explicit account-side'],
+ 'docs/15_milestone_5a_installability.md':['Milestone 5A','Remaining Milestone 5 roadmap','protocol-clean MCP launcher']
  }
  for rel,markers in required_docs.items():
   text=(BASE/rel).read_text(encoding='utf-8')

@@ -177,6 +177,22 @@ are not claimed by this reference milestone. See
 
 ## Milestone 5 — Portability and operations
 
+Status: **Milestone 5A local and integrated gates green; hosted pull-request CI
+pending**.
+
+Implemented in the first independently gated slice:
+
+- private generated operator runtime and scoped producer credentials;
+- localhost-only persistent PostgreSQL Compose option plus an external
+  PostgreSQL credential-file option;
+- protocol-clean launch of the existing MCP server;
+- setup, doctor, and non-destructive PostgreSQL lifecycle commands;
+- clean-checkout CI, adversarial guards, installation/upgrade documentation,
+  and an explicit account-side handoff for ChatGPT Secure MCP Tunnel.
+
+Milestone 5A does not complete the full milestone. Its evidence is tracked in
+`docs/15_milestone_5a_installability.md` and `docs/m5/`.
+
 Deliver Postgres, Supabase, and SQLite examples; retention and deletion; audit export; cost and backlog metrics; and an optional admin dashboard.
 
 Realtime may update the dashboard, but the protocol and delivery remain fully functional without it.
