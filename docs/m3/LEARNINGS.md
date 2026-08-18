@@ -112,3 +112,11 @@ that TypeScript can resolve that dependency's own source imports from a clean
 checkout. CI must install every source-linked package before compiling the
 composition root; populated developer `node_modules` directories are not
 acceptable build evidence.
+
+## M3-L016 — Integration-test clocks must share an explicit epoch
+
+A hard-coded claim timestamp can silently become earlier than a database row's
+real `now()` insertion time as the calendar advances. Time-sensitive database
+tests should establish one explicit epoch from the database clock and derive
+their synthetic operation sequence from it; production scheduling must not be
+changed to accommodate a stale fixture date.

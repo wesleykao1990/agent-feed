@@ -52,6 +52,10 @@ test("Postgres delivery repository claims, scopes, acknowledges, and replays dur
   try {
     await migrateAgentFeed(pool);
     const persistence = new PostgresAgentFeedPersistence(pool);
+    const databaseClock = await pool.query<{ now: Date }>("select clock_timestamp() as now");
+    const operationEpoch = new Date(databaseClock.rows[0]?.now ?? Date.now()).getTime() + 60_000;
+    const operationTime = (offsetSeconds: number): string =>
+      new Date(operationEpoch + offsetSeconds * 1_000).toISOString();
     let cursorNow = 1_000;
     const cursorCodec = new BoundCursorCodec({
       canonicalize: (payload) => canonicalJson(payload),
@@ -132,7 +136,7 @@ test("Postgres delivery repository claims, scopes, acknowledges, and replays dur
       [tenantId, started.run_id],
     );
     assert.deepEqual(findingOutbox.rows[0]?.payload.submitted_evidence?.[0], batch.evidence[0], "finding events preserve full evidence payloads");
-    const claims = await delivery.claimDue({ now: "2026-08-18T00:00:02.000Z", limit: 10, leaseDurationSeconds: 30, workerId: "worker-a", tenantId, consumerId: "consumer-a" });
+    const claims = await delivery.claimDue({ now: operationTime(2), limit: 10, leaseDurationSeconds: 30, workerId: "worker-a", tenantId, consumerId: "consumer-a" });
     assert.equal(claims.length, 1);
     const claim = claims[0];
     assert.ok(claim);
@@ -142,7 +146,7 @@ test("Postgres delivery repository claims, scopes, acknowledges, and replays dur
       tenantId, consumerId: "consumer-a", subscriptionId: subscription.subscriptionId,
       deliveryId: claim.job.deliveryId, leaseToken: claim.job.leaseToken ?? "",
       attempt: claim.job.attempt, replayGeneration: claim.job.replayGeneration,
-      now: "2026-08-18T00:00:03.000Z", status: 204,
+      now: operationTime(3), status: 204,
     });
     assert.equal(acknowledged.applied, true);
 
@@ -171,7 +175,7 @@ test("Postgres delivery repository claims, scopes, acknowledges, and replays dur
     assert.equal(Number(unsafeDeliveries.rows[0]?.count), 0, "quarantined evidence must not be fanned out");
 
     const secondRun = await persistence.beginRun({ ...begin(tenantId, streamId), idempotency_key: `begin-${randomUUID()}` });
-    const secondClaim = (await delivery.claimDue({ now: "2026-08-18T00:00:04.000Z", limit: 10, leaseDurationSeconds: 30, workerId: "worker-a", tenantId, consumerId: "consumer-a" }))[0];
+    const secondClaim = (await delivery.claimDue({ now: operationTime(4), limit: 10, leaseDurationSeconds: 30, workerId: "worker-a", tenantId, consumerId: "consumer-a" }))[0];
     assert.equal(secondClaim, undefined, "run.started remains excluded by finding selector");
     assert.notEqual(secondRun.run_id, started.run_id);
 
@@ -195,33 +199,33 @@ test("Postgres delivery repository claims, scopes, acknowledges, and replays dur
       stats: { sources_attempted: 1, sources_succeeded: 1, findings_submitted: 0, evidence_submitted: 0, batches_submitted: 0 },
     } satisfies CompleteRunRequest;
     await persistence.completeRun(terminal2);
-    const pull = await delivery.pull({ tenantId, consumerId: "consumer-a", subscriptionId: terminalSubscription.subscriptionId, selectorVersion: terminalSubscription.selectorVersion, cursor: null, limit: 1, now: "2026-08-18T00:02:00.000Z" });
+    const pull = await delivery.pull({ tenantId, consumerId: "consumer-a", subscriptionId: terminalSubscription.subscriptionId, selectorVersion: terminalSubscription.selectorVersion, cursor: null, limit: 1, now: operationTime(120) });
     assert.equal(pull.deliveries.length, 1, "terminal subscription receives the terminal event");
     assert.equal(pull.deliveries[0]?.event?.eventType, "run.completed");
     assert.ok(pull.nextCursor);
     const validCursor = pull.nextCursor;
     await assert.rejects(
-      delivery.pull({ tenantId, consumerId: "consumer-a", subscriptionId: terminalSubscription.subscriptionId, selectorVersion: terminalSubscription.selectorVersion, cursor: `${validCursor.slice(0, -1)}x`, limit: 1, now: "2026-08-18T00:02:00.000Z" }),
+      delivery.pull({ tenantId, consumerId: "consumer-a", subscriptionId: terminalSubscription.subscriptionId, selectorVersion: terminalSubscription.selectorVersion, cursor: `${validCursor.slice(0, -1)}x`, limit: 1, now: operationTime(120) }),
       /cursor_signature_mismatch|invalid_cursor/,
     );
     await assert.rejects(
-      delivery.pull({ tenantId, consumerId: "consumer-b", subscriptionId: terminalSubscription.subscriptionId, selectorVersion: terminalSubscription.selectorVersion, cursor: validCursor, limit: 1, now: "2026-08-18T00:02:00.000Z" }),
+      delivery.pull({ tenantId, consumerId: "consumer-b", subscriptionId: terminalSubscription.subscriptionId, selectorVersion: terminalSubscription.selectorVersion, cursor: validCursor, limit: 1, now: operationTime(120) }),
       /cursor_scope_mismatch/,
     );
     cursorNow = 1_060;
     await assert.rejects(
-      delivery.pull({ tenantId, consumerId: "consumer-a", subscriptionId: terminalSubscription.subscriptionId, selectorVersion: terminalSubscription.selectorVersion, cursor: validCursor, limit: 1, now: "2026-08-18T00:02:00.000Z" }),
+      delivery.pull({ tenantId, consumerId: "consumer-a", subscriptionId: terminalSubscription.subscriptionId, selectorVersion: terminalSubscription.selectorVersion, cursor: validCursor, limit: 1, now: operationTime(120) }),
       /cursor_expired/,
     );
 
-    const dead = await delivery.claimDue({ now: "2026-08-18T00:02:01.000Z", limit: 1, leaseDurationSeconds: 30, workerId: "worker-a", tenantId, consumerId: "consumer-a" });
+    const dead = await delivery.claimDue({ now: operationTime(121), limit: 1, leaseDurationSeconds: 30, workerId: "worker-a", tenantId, consumerId: "consumer-a" });
     const deadClaim = dead[0];
     assert.ok(deadClaim);
     const deadLettered = await delivery.deadLetter({
       tenantId, consumerId: "consumer-a", subscriptionId: terminalSubscription.subscriptionId,
       deliveryId: deadClaim.job.deliveryId, leaseToken: deadClaim.job.leaseToken ?? "",
       attempt: deadClaim.job.attempt, replayGeneration: deadClaim.job.replayGeneration,
-      now: "2026-08-18T00:02:02.000Z", error: {
+      now: operationTime(122), error: {
         code: "permanent", message: "secret=https://private.example/token", retryable: false, status: 400,
       },
     });
@@ -237,7 +241,7 @@ test("Postgres delivery repository claims, scopes, acknowledges, and replays dur
     assert.doesNotMatch(JSON.stringify(redactedError.rows[0]), /private\.example|token/u);
     const replayed = await delivery.replay({
       tenantId, consumerId: "consumer-a", subscriptionId: terminalSubscription.subscriptionId,
-      deliveryId: deadClaim.job.deliveryId, requestedAt: "2026-08-18T00:02:03.000Z",
+      deliveryId: deadClaim.job.deliveryId, requestedAt: operationTime(123),
       reason: "regression test", idempotencyKey: `replay-${randomUUID()}`, payloadHash: "replay-request-v1",
     });
     assert.equal(replayed.state, "queued");

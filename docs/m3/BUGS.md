@@ -55,6 +55,7 @@ The table above preserves the initial observations. Resolutions validated on
 | M3-023 | Python `ProducerRun` retained a failed batch and could not export partial progress; optional recovery timestamps could drift under one key. | Only successful batches are recorded, explicit partial bundles are supported, and both idempotency key and completion timestamp are required. |
 | M3-024 | The local-file lockfile retained obsolete PostgreSQL dependency metadata from the pre-M1 producer-service graph. | Regenerated the lockfile from current manifests; the adapter remains database-neutral. |
 | M3-025 | Hosted PR #4 built `apps/api` before installing the source-linked REST adapter's own dependency graph. A populated local checkout masked the missing clean-install prerequisite. | Moved the REST adapter install into the API/Milestone 1 dependency phase and removed the later duplicate install. The API is now built only after all source-linked package dependencies are present; the updated hosted workflow is the clean-checkout regression. |
+| M3-026 | After M3-025 was fixed, hosted PR #4 reached a pre-existing M2 PostgreSQL test whose hard-coded claim time had become earlier than the database's real insertion time on the same date. | Anchor the test's synthetic operation timeline to PostgreSQL `clock_timestamp()` while leaving protocol fixture timestamps and all production scheduling code unchanged. |
 
 Public diagnostics are redacted. Recovery bundles intentionally preserve the
 original evidence required for exact replay and therefore belong in a secured,

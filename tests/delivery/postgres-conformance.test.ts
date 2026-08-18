@@ -105,6 +105,15 @@ async function migrate(pool: ReturnType<typeof createAgentFeedPool>): Promise<vo
   await migrateAgentFeed(pool);
 }
 
+async function databaseOperationClock(
+  pool: ReturnType<typeof createAgentFeedPool>,
+): Promise<(offsetSeconds: number) => string> {
+  const result = await pool.query<{ now: Date }>("select clock_timestamp() as now");
+  const epoch = new Date(result.rows[0]?.now ?? Date.now()).getTime() + 60_000;
+  return (offsetSeconds: number): string =>
+    new Date(epoch + offsetSeconds * 1_000).toISOString();
+}
+
 test("live PostgreSQL proves transactional outbox, tenant fan-out isolation, per-subscription acknowledgement, and immutable source state", {
   skip: databaseUrl ? false : "AGENT_FEED_DATABASE_URL is not set; live M2 PostgreSQL coverage is not a passing result",
 }, async () => {
@@ -116,6 +125,7 @@ test("live PostgreSQL proves transactional outbox, tenant fan-out isolation, per
   const sharedEventId = `${suffix}_shared_event`;
   try {
     await migrate(pool);
+    const operationTime = await databaseOperationClock(pool);
     const persistence = new PostgresAgentFeedPersistence(pool);
     const delivery = deliveryRepository(pool);
     const runA = await persistence.beginRun(beginInput(tenantA, streamId));
@@ -163,11 +173,11 @@ test("live PostgreSQL proves transactional outbox, tenant fan-out isolation, per
     );
 
     const claimA = (await delivery.claimDue({
-      now: "2026-08-18T00:00:10.000Z", limit: 10, leaseDurationSeconds: 30,
+      now: operationTime(10), limit: 10, leaseDurationSeconds: 30,
       workerId: "worker-a", tenantId: tenantA, consumerId: "consumer_a",
     }))[0];
     const claimB = (await delivery.claimDue({
-      now: "2026-08-18T00:00:10.000Z", limit: 10, leaseDurationSeconds: 30,
+      now: operationTime(10), limit: 10, leaseDurationSeconds: 30,
       workerId: "worker-b", tenantId: tenantB, consumerId: "consumer_b",
     }))[0];
     assert.ok(claimA);
@@ -183,7 +193,7 @@ test("live PostgreSQL proves transactional outbox, tenant fan-out isolation, per
       leaseToken: claim.job.leaseToken ?? "",
       attempt: claim.job.attempt,
       replayGeneration: claim.job.replayGeneration,
-      now: "2026-08-18T00:00:11.000Z",
+      now: operationTime(11),
       status: 204,
     });
     const acknowledgedA = await delivery.acknowledge(ackInput(claimA, tenantA, "consumer_a"));
@@ -223,6 +233,7 @@ test("live PostgreSQL leases exclude concurrent workers, recover crashes, persis
   const streamId = `${suffix}.stream`;
   try {
     await migrate(pool);
+    const operationTime = await databaseOperationClock(pool);
     const delivery = deliveryRepository(pool);
     const runId = randomUUID();
     const subscription = await delivery.registerSubscription(pullSubscription(tenantId, "consumer", streamId));
@@ -236,13 +247,13 @@ test("live PostgreSQL leases exclude concurrent workers, recover crashes, persis
     await delivery.appendOutboxEvent(event);
 
     const first = (await delivery.claimDue({
-      now: "2026-08-18T00:00:10.000Z", limit: 1, leaseDurationSeconds: 30,
+      now: operationTime(10), limit: 1, leaseDurationSeconds: 30,
       workerId: "worker-crashed", tenantId, consumerId: "consumer",
     }))[0];
     assert.ok(first);
     assert.equal(first.job.attempt, 1);
     const concurrent = await delivery.claimDue({
-      now: "2026-08-18T00:00:20.000Z", limit: 1, leaseDurationSeconds: 30,
+      now: operationTime(20), limit: 1, leaseDurationSeconds: 30,
       workerId: "worker-live", tenantId, consumerId: "consumer",
     });
     assert.equal(concurrent.length, 0, "SKIP LOCKED/lease state excludes a concurrent worker");
@@ -250,14 +261,14 @@ test("live PostgreSQL leases exclude concurrent workers, recover crashes, persis
     // Recovery is a global queue sweep, so a shared disposable database may
     // contain stale leases from another fixture. Verify the result for this
     // delivery rather than treating unrelated tenants as a failure.
-    assert.ok(await delivery.recoverExpiredLeases({ now: "2026-08-18T00:00:41.000Z", limit: 10 }) >= 1);
+    assert.ok(await delivery.recoverExpiredLeases({ now: operationTime(41), limit: 10 }) >= 1);
     const recoveredRow = await pool.query<{ state: string }>(
       `select state from agent_feed.consumer_deliveries where tenant_id = $1 and id = $2::uuid`,
       [tenantId, first.job.deliveryId],
     );
     assert.equal(recoveredRow.rows[0]?.state, "retry_wait");
     const reclaimed = (await delivery.claimDue({
-      now: "2026-08-18T00:00:41.000Z", limit: 1, leaseDurationSeconds: 30,
+      now: operationTime(41), limit: 1, leaseDurationSeconds: 30,
       workerId: "worker-live", tenantId, consumerId: "consumer",
     }))[0];
     assert.ok(reclaimed);
@@ -266,7 +277,7 @@ test("live PostgreSQL leases exclude concurrent workers, recover crashes, persis
       tenantId, consumerId: "consumer", subscriptionId: subscription.subscriptionId,
       deliveryId: first.job.deliveryId, leaseToken: first.job.leaseToken ?? "",
       attempt: first.job.attempt, replayGeneration: first.job.replayGeneration,
-      now: "2026-08-18T00:00:41.000Z", status: 204,
+      now: operationTime(41), status: 204,
     });
     assert.equal(staleAck.applied, false);
     assert.equal(staleAck.reason, "stale_lease");
@@ -277,17 +288,17 @@ test("live PostgreSQL leases exclude concurrent workers, recover crashes, persis
       tenantId, consumerId: "consumer", subscriptionId: subscription.subscriptionId,
       deliveryId: reclaimed.job.deliveryId, leaseToken: reclaimed.job.leaseToken ?? "",
       attempt: reclaimed.job.attempt, replayGeneration: reclaimed.job.replayGeneration,
-      now: "2026-08-18T00:00:42.000Z", nextAttemptAt: "2026-08-18T00:01:00.000Z",
+      now: operationTime(42), nextAttemptAt: operationTime(60),
       error: { code: "timeout", message: "synthetic outage", retryable: true, status: null },
     });
     assert.equal(retry.applied, true);
     assert.equal((await delivery.claimDue({
-      now: "2026-08-18T00:00:59.000Z", limit: 1, leaseDurationSeconds: 30,
+      now: operationTime(59), limit: 1, leaseDurationSeconds: 30,
       workerId: "worker-live", tenantId, consumerId: "consumer",
     })).length, 0);
 
     const attemptThree = (await delivery.claimDue({
-      now: "2026-08-18T00:01:00.000Z", limit: 1, leaseDurationSeconds: 30,
+      now: operationTime(60), limit: 1, leaseDurationSeconds: 30,
       workerId: "worker-live", tenantId, consumerId: "consumer",
     }))[0];
     assert.ok(attemptThree);
@@ -296,12 +307,12 @@ test("live PostgreSQL leases exclude concurrent workers, recover crashes, persis
       tenantId, consumerId: "consumer", subscriptionId: subscription.subscriptionId,
       deliveryId: attemptThree.job.deliveryId, leaseToken: attemptThree.job.leaseToken ?? "",
       attempt: attemptThree.job.attempt, replayGeneration: attemptThree.job.replayGeneration,
-      now: "2026-08-18T00:01:01.000Z", error: { code: "permanent", message: "synthetic permanent failure", retryable: false, status: 400 },
+      now: operationTime(61), error: { code: "permanent", message: "synthetic permanent failure", retryable: false, status: 400 },
     });
     assert.equal(dead.applied, true);
     const replayInput = {
       tenantId, consumerId: "consumer", subscriptionId: subscription.subscriptionId,
-      deliveryId: attemptThree.job.deliveryId, requestedAt: "2026-08-18T00:01:02.000Z",
+      deliveryId: attemptThree.job.deliveryId, requestedAt: operationTime(62),
       reason: "M2 deterministic replay", idempotencyKey: fixtureId("replay_key"), payloadHash: "replay-body-v1",
     };
     const replayOne = await delivery.replay(replayInput);
@@ -311,7 +322,7 @@ test("live PostgreSQL leases exclude concurrent workers, recover crashes, persis
     assert.deepEqual(replayTwo, replayOne);
 
     const replayClaim = (await delivery.claimDue({
-      now: "2026-08-18T00:01:02.000Z", limit: 1, leaseDurationSeconds: 30,
+      now: operationTime(62), limit: 1, leaseDurationSeconds: 30,
       workerId: "worker-live", tenantId, consumerId: "consumer",
     }))[0];
     assert.ok(replayClaim);
@@ -321,7 +332,7 @@ test("live PostgreSQL leases exclude concurrent workers, recover crashes, persis
       tenantId, consumerId: "consumer", subscriptionId: subscription.subscriptionId,
       deliveryId: replayClaim.job.deliveryId, leaseToken: replayClaim.job.leaseToken ?? "",
       attempt: replayClaim.job.attempt, replayGeneration: replayClaim.job.replayGeneration,
-      now: "2026-08-18T00:01:03.000Z", status: 204,
+      now: operationTime(63), status: 204,
     });
     assert.equal(finalAck.applied, true);
 
@@ -350,6 +361,7 @@ test("live PostgreSQL pull cursors reject cross-subscription and tampered tokens
   const streamId = `${suffix}.stream`;
   try {
     await migrate(pool);
+    const operationTime = await databaseOperationClock(pool);
     const delivery = deliveryRepository(pool);
     const runId = randomUUID();
     const subscriptionA = await delivery.registerSubscription(pullSubscription(tenantId, "consumer_a", streamId));
@@ -366,14 +378,14 @@ test("live PostgreSQL pull cursors reject cross-subscription and tampered tokens
     const firstPage = await delivery.pull({
       tenantId, consumerId: "consumer_a", subscriptionId: subscriptionA.subscriptionId,
       selectorVersion: subscriptionA.selectorVersion, cursor: null, limit: 1,
-      now: "2026-08-18T00:01:00.000Z",
+      now: operationTime(60),
     });
     assert.equal(firstPage.deliveries.length, 1);
     assert.ok(firstPage.nextCursor, "two events must produce a continuation cursor");
     const secondPage = await delivery.pull({
       tenantId, consumerId: "consumer_a", subscriptionId: subscriptionA.subscriptionId,
       selectorVersion: subscriptionA.selectorVersion, cursor: firstPage.nextCursor, limit: 1,
-      now: "2026-08-18T00:01:00.000Z",
+      now: operationTime(60),
     });
     assert.equal(secondPage.deliveries.length, 1);
 
@@ -383,7 +395,7 @@ test("live PostgreSQL pull cursors reject cross-subscription and tampered tokens
       delivery.pull({
         tenantId, consumerId: "consumer_b", subscriptionId: subscriptionB.subscriptionId,
         selectorVersion: subscriptionB.selectorVersion, cursor: firstPage.nextCursor, limit: 1,
-        now: "2026-08-18T00:01:00.000Z",
+        now: operationTime(60),
       }),
       /cursor|scope|invalid/i,
     );
@@ -398,7 +410,7 @@ test("live PostgreSQL pull cursors reject cross-subscription and tampered tokens
       delivery.pull({
         tenantId, consumerId: "consumer_a", subscriptionId: subscriptionA.subscriptionId,
         selectorVersion: subscriptionA.selectorVersion, cursor: tampered, limit: 1,
-        now: "2026-08-18T00:01:00.000Z",
+        now: operationTime(60),
       }),
       /cursor|scope|invalid/i,
     );
