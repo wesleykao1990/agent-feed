@@ -3,6 +3,13 @@
 Agent Feed is a standalone, reusable project for transmitting structured agent
 runs, findings, and submitted evidence to multiple consumer applications.
 
+Milestone 3 status: **local implementation gate green; hosted pull-request CI
+pending**. The repository now includes an MCP server, TypeScript and Python
+producer/consumer SDKs, REST/local-file/webhook/Claude/ChatGPT adapters,
+capability-gated skills, and executable examples. Agent Feed wire protocol
+remains `0.1`; the MCP transport uses the separate MCP revision `2026-07-28`
+with tested legacy compatibility.
+
 Milestone 2 status: **implementation gate complete in this repository**. The
 corrected full acceptance is green: architecture 4, pure conformance 6, live
 PostgreSQL 3, protocol-runtime 5, delivery-core 18, delivery-consumer 10,
@@ -47,6 +54,7 @@ examples/postgres
 examples/supabase
 examples/sqlite
 examples/rewards-optimizer
+examples/m3
 ```
 
 ## Trust boundary
@@ -57,8 +65,7 @@ A `Finding` means “a producer submitted this claim,” not “this is true.”
 
 `prototype/` implements the thin run lifecycle, idempotency, terminal immutability, signed events, expected-cadence liveness, and hostile-finding preservation without external dependencies. Run `cd prototype && npm test`.
 
-The new M2 packages can be checked independently while integration is in
-progress:
+The M2 packages can be checked independently:
 
 ```sh
 cd packages/protocol-runtime && npm test && npm run build
@@ -78,6 +85,16 @@ database. `npm run m2:conformance` is the gate command and requires
 as acceptance. See `docs/12_milestone_2_delivery.md` for the evidence record
 and remaining operational caveats.
 
+The complete Milestone 3 gate has no skip mode and builds/tests the shared
+producer service, API wrapper, MCP server, both SDKs, and every adapter:
+
+```sh
+npm run m3:conformance
+```
+
+Run the root foundation/protocol gates and live M1/M2 PostgreSQL gates as
+documented in `docs/m3/ACCEPTANCE.md` before accepting a final commit.
+
 ## Durable producer ingress
 
 Milestone 1's production-shaped producer path is `apps/api`, backed by
@@ -85,16 +102,19 @@ PostgreSQL through `@agent-feed/producer-service`. Run `npm run m1:architecture`
 and `AGENT_FEED_DATABASE_URL=... npm run m1:ingress`; the latter is fail-closed
 when no live database is configured. `packages/adapters/local-file` imports run
 bundles through the same service boundary. See
-`docs/m1-hardening/ACCEPTANCE.md` for the release-candidate evidence and the
-remaining schema publication/Rewards pin actions.
+`docs/m1-hardening/ACCEPTANCE.md` for the release evidence and published
+immutable schema artifact. The Rewards Optimizer pin is owned by its separate
+repository.
 
 ## Start implementation
 
-Use `prompts/CODEX_INITIATING_PROMPT.md`, then `prompts/CODEX_MILESTONE_2_DELIVERY_PROMPT.md`.
+Use `prompts/CODEX_INITIATING_PROMPT.md`, then the prompt for the milestone in
+scope. Milestone 3 uses
+`prompts/CODEX_MILESTONE_3_MCP_SDK_ADAPTERS_PROMPT.md`.
 
-Read `docs/12_milestone_2_delivery.md`, its ADR index, and the operational
-runbook before adding code. Decisions, bugs, and learnings are append-only in
-`docs/adr/`, `docs/m2/BUGS.md`, and `docs/m2/LEARNINGS.md`.
+Read the relevant milestone record, the ADR index, and the operational runbook
+before adding code. Milestone 3 decisions, bugs, learnings, and refactor-debt
+review are append-only in `docs/m3/`.
 
 ## ChatGPT monitoring
 

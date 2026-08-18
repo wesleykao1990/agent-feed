@@ -2,8 +2,9 @@
 
 Status: **executable PostgreSQL-backed producer ingress.** The API composes
 `PostgresAgentFeedPersistence` through the `@agent-feed/producer-service`
-application boundary. It does not import the prototype store and does not
-contain SQL.
+application boundary and delegates HTTP routing/framing to the reusable
+`@agent-feed/rest-adapter` package. It does not import the prototype store and
+does not contain SQL.
 
 Run it after configuring `AGENT_FEED_DATABASE_URL` and either a JSON
 `AGENT_FEED_PRODUCER_CREDENTIALS` array or the individual credential

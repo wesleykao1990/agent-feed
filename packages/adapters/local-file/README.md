@@ -25,3 +25,12 @@ then every batch in array order, then `completeRun`. Exact retries are delegated
 to the durable service's idempotency contract. The bundle's producer-visible
 `run_id` is passed unchanged, including non-UUID IDs; the adapter does not
 silently replace it with a generated UUID.
+
+The importer checks file metadata and fatal UTF-8 JSON byte limits before
+parsing. If a lifecycle operation fails, it attempts a deterministic `partial`
+completion with counts for the accepted batch prefix. When Agent Feed cannot
+close the run (including an uncertain begin), `LocalFileImportFailure.recovery`
+and an optional `recovery_store` retain the exact source bundle, wire ID, next
+batch index, and stable failure code for replay. Recovery is explicitly
+accessible but non-enumerable, so generic error serialization cannot emit
+evidence; hooks are best-effort and never replace the original error.

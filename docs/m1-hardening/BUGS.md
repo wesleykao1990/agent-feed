@@ -1,6 +1,6 @@
 # Milestone 1 corrective-hardening bug and gap log
 
-Status: **implementation gaps resolved; release/pin evidence pending** (2026-08-18)
+Status: **Agent Feed implementation and release gaps resolved** (2026-08-18)
 
 This is an append-only log. Do not silently rewrite an observation when a fix
 lands. Add a dated resolution row or note with the implementation commit,
@@ -24,9 +24,9 @@ The table above preserves the baseline observations. Resolutions recorded on
 | ID | Resolution | Regression evidence | Current state |
 |---|---|---|---|
 | M1H-001 | Added executable `apps/api` backed by `PostgresAgentFeedPersistence` through `ProducerService`; the request handler imports neither SQL nor the prototype. | Producer architecture check, API 2/2, live ingress 5/5 including restart. | Resolved in PR branch |
-| M1H-003 | Added publishable `@agent-feed/schema@0.1.1`, public exports for all nine schemas/types, clean build/tests, deterministic pack manifest, and tag-gated release workflow. | Schema 4/4, artifact build and clean external-consumer verification. | Implementation resolved; immutable tag/URL pending merge |
+| M1H-003 | Added publishable `@agent-feed/schema@0.1.1`, public exports for all nine schemas/types, clean build/tests, deterministic pack manifest, and tag-gated release workflow. | Schema 4/4, artifact build, clean external-consumer verification, and published `schema-v0.1.1` asset. | Resolved |
 | M1H-004 | Added fail-closed live HTTP and local-file acceptance against disposable PostgreSQL. | `AGENT_FEED_DATABASE_URL=... npm run m1:ingress` passes 5/5 without skips. | Resolved in PR branch |
-| M1H-005 | Added exact-version artifact production and integrity verification. | Candidate SHA-256/SHA-512 in acceptance report; release workflow rejects tag/version mismatch and replacement. | Release asset and Rewards lockfile pin pending |
+| M1H-005 | Added exact-version artifact production and integrity verification. | Published asset URL, tag commit, SHA-256, and SHA-512 are recorded in the acceptance report; the release workflow rejects tag/version mismatch and replacement. | Agent Feed release resolved; Rewards state is downstream |
 | M1H-006 | CI now clean-installs/builds/tests all corrective packages, builds/verifies the artifact, and runs live ingress before M2. | Full local combined gate is green; hosted run `32056120146` passed on commit `b217470552d668d6694edfa7e28b15b3279a73f5`. | Resolved in PR branch |
 
 ## Bugs encountered during implementation
@@ -54,5 +54,6 @@ M1H-021 on source commit `b217470552d668d6694edfa7e28b15b3279a73f5`.
 
 The independent 2026-08-18 re-audit verified M1H-015 through M1H-019. M1H-020
 was found by the first hosted PR run and corrected without weakening the
-boundary. Immutable release publication and the Rewards dependency pin remain
-sequenced post-merge actions, not hidden implementation exceptions.
+boundary. Immutable Agent Feed release publication is complete. The Rewards
+dependency pin remains a separate repository's state, not an Agent Feed
+implementation exception.

@@ -1,0 +1,156 @@
+{
+  "protocol_version": "0.1",
+  "run_id": "run_chatgpt_manual_20260818_001",
+  "begin": {
+    "protocol_version": "0.1",
+    "idempotency_key": "begin_chatgpt_manual_001",
+    "stream_id": "chatgpt.scheduled.manual",
+    "producer": {
+      "producer_id": "chatgpt-scheduled-task",
+      "type": "chatgpt",
+      "name": "ChatGPT Scheduled Task",
+      "version": null
+    },
+    "task": {
+      "task_type": "scheduled_monitor",
+      "definition_id": "manual-export-example",
+      "definition_version": "0.1"
+    },
+    "expected_scope": {
+      "source_ids": [
+        "source.example.news"
+      ],
+      "subjects": [
+        "Example Program"
+      ],
+      "queries": [
+        "official program update"
+      ],
+      "metadata": {
+        "cadence": "daily"
+      }
+    },
+    "started_at": "2026-08-18T00:00:00.000Z",
+    "parent_run_id": null,
+    "metadata": {
+      "synthetic": true
+    }
+  },
+  "batches": [
+    {
+      "protocol_version": "0.1",
+      "run_id": "run_chatgpt_manual_20260818_001",
+      "batch_id": "batch_chatgpt_manual_001",
+      "idempotency_key": "batch_chatgpt_manual_001",
+      "sequence_number": 1,
+      "submitted_at": "2026-08-18T00:00:30.000Z",
+      "findings": [
+        {
+          "finding_id": "finding_chatgpt_manual_001",
+          "finding_type": "program.update",
+          "title": "Example program published an update",
+          "summary": "The source published a program update during this check.",
+          "subjects": [
+            {
+              "type": "program",
+              "id": "example-program",
+              "name": "Example Program"
+            }
+          ],
+          "effective_time": {
+            "occurred_at": "2026-08-17T23:55:00.000Z",
+            "effective_from": null,
+            "effective_to": null
+          },
+          "assessment": {
+            "novelty": "new",
+            "source_authority_claim": "official_secondary",
+            "evidence_completeness": "complete",
+            "agent_confidence": 0.82
+          },
+          "evidence_refs": [
+            "evidence_chatgpt_manual_001"
+          ],
+          "producer_dedupe_key": "example-program|update|2026-08-17",
+          "routing_tags": [
+            "chatgpt-manual-export"
+          ],
+          "attributes": {
+            "change_kind": "program_update"
+          },
+          "security_flags": []
+        }
+      ],
+      "evidence": [
+        {
+          "evidence_id": "evidence_chatgpt_manual_001",
+          "kind": "web",
+          "source": {
+            "uri": "https://example.invalid/program-update",
+            "title": "Example Program update",
+            "publisher": "Example Publisher",
+            "source_id": "source.example.news"
+          },
+          "captured_at": "2026-08-18T00:00:20.000Z",
+          "published_at": "2026-08-17T23:55:00.000Z",
+          "locator": {
+            "type": "heading",
+            "value": "Update",
+            "page": null
+          },
+          "excerpt": "The Example Program published an update for the next review period.",
+          "content_hash": null,
+          "artifact": {
+            "uri": null,
+            "media_type": "text/html",
+            "size_bytes": null
+          },
+          "handling": {
+            "contains_personal_data": false,
+            "contains_secrets": false,
+            "redistribution_restricted": false
+          },
+          "metadata": {
+            "synthetic": true
+          }
+        }
+      ],
+      "metadata": {
+        "synthetic": true
+      }
+    }
+  ],
+  "complete": {
+    "protocol_version": "0.1",
+    "run_id": "run_chatgpt_manual_20260818_001",
+    "idempotency_key": "complete_chatgpt_manual_001",
+    "status": "completed",
+    "completed_at": "2026-08-18T00:01:00.000Z",
+    "actual_scope": {
+      "source_ids": [
+        "source.example.news"
+      ],
+      "subjects": [
+        "Example Program"
+      ],
+      "queries": [
+        "official program update"
+      ],
+      "metadata": {
+        "checked": true
+      }
+    },
+    "stats": {
+      "sources_attempted": 1,
+      "sources_succeeded": 1,
+      "findings_submitted": 1,
+      "evidence_submitted": 1,
+      "batches_submitted": 1
+    },
+    "errors": [],
+    "metadata": {
+      "synthetic": true,
+      "export_mode": "manual_local_file"
+    }
+  }
+}

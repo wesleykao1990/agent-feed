@@ -4,8 +4,8 @@ Validated: **2026-08-18**
 
 ## Result
 
-**Milestone 1 corrective implementation gate passed locally; immutable schema
-publication and the Rewards Optimizer dependency pin remain release actions.**
+**Milestone 3 local implementation gate passed; hosted pull-request CI is
+pending. Agent Feed's immutable `schema-v0.1.1` release is published.**
 
 Hosted pull-request CI also passed on source commit
 `b217470552d668d6694edfa7e28b15b3279a73f5` in run `32056120146`, including
@@ -34,8 +34,8 @@ Current green evidence:
 - full M2 conformance: architecture 4, pure 6, live PostgreSQL 3,
   protocol-runtime 5, delivery-core 18, delivery-consumer 10, persistence 11,
   webhook 8, worker 6, and delivery API 5;
-- final repository source-integrity inventory: **237/237**, from a
-  clean-equivalent checkout (ignored build/release outputs are excluded).
+- Milestone 2 repository source-integrity inventory: **237/237**, from its
+  accepted clean-equivalent checkout (ignored build/release outputs excluded).
 
 The live producer gate rejects a missing database URL rather than converting it
 to a skip. It covers tenant/producer/stream authorization, exact retries and
@@ -51,22 +51,36 @@ dependency that a populated local checkout had masked. The producer service now
 owns an adapter-neutral persistence port and its architecture gate rejects that
 dependency class. The next hosted run cleared that stage and exposed a synthetic
 pull-request ref being mistaken for a schema tag; ref-type regression tests now
-separate PR candidates from tag releases. The only remaining release dependency
-is the intentional post-merge schema publication and downstream Rewards pin.
+separate PR candidates from tag releases. Agent Feed's publication dependency
+has since been completed. The downstream Rewards pin is owned by its separate
+repository and is not part of M3.
 
-## Schema release candidate
+## Published schema release
 
 `@agent-feed/schema@0.1.1` is independently buildable and publishable while its
-wire protocol remains `0.1`. The deterministic local candidate is:
+wire protocol remains `0.1`. The immutable published artifact is:
 
 - artifact: `agent-feed-schema-0.1.1.tgz`;
-- SHA-256: `b6c8c6beb98fea305346f4a23f049deba8498beba84fa643d49c9ecfb8adce75`;
-- SHA-512 integrity: `sha512-Gy3pWM0xNwuGxwXTHx9PH1HmqUwevtToAuXPJQ1JLCScn8+PPJ6atJkO+/2txRAWSRPJ63LlTw3sqSvHLeAxHQ==`.
+- URL: `https://github.com/wesleykao1990/agent-feed/releases/download/schema-v0.1.1/agent-feed-schema-0.1.1.tgz`;
+- tag source commit: `ad7e1a7270d0ebc09ffdc844d38cfa71a87bf95e`;
+- size: 13,078 bytes;
+- SHA-256: `9e020aba4e291f2e5328897dfb07195aaf392f6ecdd742b5c13b890cffdd9d6e`;
+- SHA-512 integrity: `sha512-KHALcE3zQ/dey5GTXepDeXaz77Qf1DP3ySA+rcbG6eiFvUTws21cry8rfM191wyLeQthJ9ENd0neu23ETwX5/g==`.
 
-The `schema-v*` workflow validates tag/package-version equality, rebuilds and
-verifies the artifact from tagged source, and uploads without replacement.
-The immutable release URL/source commit and Rewards Optimizer lockfile pin
-cannot truthfully be recorded before this PR is reviewed, merged, tagged, and
-released. Those are the only remaining M1 release-gate actions; they do not
-invalidate the green implementation evidence above. See
-`docs/m1-hardening/ACCEPTANCE.md`.
+The `schema-v*` release workflow validated tag/package-version equality,
+rebuilt and verified the artifact from tagged source, and published it without
+replacement.
+See `docs/m1-hardening/ACCEPTANCE.md`.
+
+## Milestone 3 evidence
+
+The integrated no-skip M3 gate passed locally: architecture 4,
+cross-boundary conformance 12, producer service 9, API 2, MCP 10, TypeScript
+SDK 5 including packed external import, Python SDK 10 plus an isolated
+wheel/install/import, REST 4, local-file 10, generic webhook 7, Claude hook 5,
+and ChatGPT manual export 6. Full foundation,
+protocol, prototype, live M1, and live M2 regressions also pass. The final
+hosted workflow is deliberately not claimed before the draft PR runs it.
+The Milestone 3 candidate source-integrity inventory passes **318/318** files;
+ignored dependency, build, and release outputs are excluded.
+See `docs/m3/ACCEPTANCE.md`.

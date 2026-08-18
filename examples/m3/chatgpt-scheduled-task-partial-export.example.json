@@ -1,0 +1,125 @@
+{
+  "protocol_version": "0.1",
+  "run_id": "run_chatgpt_manual_20260818_002",
+  "begin": {
+    "protocol_version": "0.1",
+    "idempotency_key": "begin_chatgpt_manual_002",
+    "stream_id": "chatgpt.scheduled.manual",
+    "producer": {
+      "producer_id": "chatgpt-scheduled-task",
+      "type": "chatgpt",
+      "name": "ChatGPT Scheduled Task",
+      "version": null
+    },
+    "task": {
+      "task_type": "scheduled_monitor",
+      "definition_id": "manual-partial-example",
+      "definition_version": "0.1"
+    },
+    "expected_scope": {
+      "source_ids": [
+        "source.example.news",
+        "source.example.unavailable"
+      ],
+      "subjects": [
+        "Example Program"
+      ],
+      "queries": [
+        "official program update"
+      ],
+      "metadata": {
+        "cadence": "daily"
+      }
+    },
+    "started_at": "2026-08-18T01:00:00.000Z",
+    "parent_run_id": null,
+    "metadata": {
+      "synthetic": true
+    }
+  },
+  "batches": [
+    {
+      "protocol_version": "0.1",
+      "run_id": "run_chatgpt_manual_20260818_002",
+      "batch_id": "batch_chatgpt_manual_002",
+      "idempotency_key": "batch_chatgpt_manual_002",
+      "sequence_number": 1,
+      "submitted_at": "2026-08-18T01:00:30.000Z",
+      "findings": [],
+      "evidence": [
+        {
+          "evidence_id": "evidence_chatgpt_manual_002",
+          "kind": "web",
+          "source": {
+            "uri": "https://example.invalid/program-update",
+            "title": "Example Program update",
+            "publisher": "Example Publisher",
+            "source_id": "source.example.news"
+          },
+          "captured_at": "2026-08-18T01:00:20.000Z",
+          "published_at": null,
+          "locator": null,
+          "excerpt": "No material update was found in the available source during this check.",
+          "content_hash": null,
+          "artifact": {
+            "uri": null,
+            "media_type": "text/html",
+            "size_bytes": null
+          },
+          "handling": {
+            "contains_personal_data": false,
+            "contains_secrets": false,
+            "redistribution_restricted": false
+          },
+          "metadata": {
+            "synthetic": true
+          }
+        }
+      ],
+      "metadata": {
+        "synthetic": true
+      }
+    }
+  ],
+  "complete": {
+    "protocol_version": "0.1",
+    "run_id": "run_chatgpt_manual_20260818_002",
+    "idempotency_key": "complete_chatgpt_manual_002",
+    "status": "partial",
+    "completed_at": "2026-08-18T01:02:00.000Z",
+    "actual_scope": {
+      "source_ids": [
+        "source.example.news",
+        "source.example.unavailable"
+      ],
+      "subjects": [
+        "Example Program"
+      ],
+      "queries": [
+        "official program update"
+      ],
+      "metadata": {
+        "source.example.unavailable": "unavailable"
+      }
+    },
+    "stats": {
+      "sources_attempted": 2,
+      "sources_succeeded": 1,
+      "findings_submitted": 0,
+      "evidence_submitted": 1,
+      "batches_submitted": 1
+    },
+    "errors": [
+      {
+        "code": "source_unavailable",
+        "message": "The source was unavailable during this run.",
+        "source_id": "source.example.unavailable",
+        "retryable": true
+      }
+    ],
+    "metadata": {
+      "synthetic": true,
+      "export_mode": "manual_local_file"
+    }
+  }
+}

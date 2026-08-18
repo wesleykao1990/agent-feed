@@ -3,7 +3,7 @@
   "version": "0.1.1",
   "protocol_version": "0.1",
   "research_cutoff": "2026-08-17",
-  "status": "milestone_1_corrective_candidate",
+  "status": "milestone_3_local_candidate",
   "counts": {
     "json_schemas": 9,
     "example_run_bundles": 3,
@@ -11,10 +11,20 @@
     "conformance_tests": 23,
     "postgres_persistence_tests": 11,
     "schema_package_tests": 4,
-    "producer_service_tests": 8,
+    "producer_service_tests": 9,
     "producer_api_tests": 2,
     "local_file_adapter_tests": 6,
-    "durable_ingress_tests": 5
+    "durable_ingress_tests": 5,
+    "m3_architecture_tests": 4,
+    "m3_behavioral_tests": 12,
+    "mcp_server_tests": 10,
+    "typescript_sdk_tests": 5,
+    "python_sdk_tests": 10,
+    "rest_adapter_tests": 4,
+    "local_file_adapter_m3_tests": 10,
+    "generic_webhook_adapter_tests": 7,
+    "claude_hook_adapter_tests": 5,
+    "chatgpt_manual_export_tests": 6
   },
   "canonical_files": {
     "protocol": "docs/01_protocol.md",
@@ -47,6 +57,9 @@
     "hostile_fixture": "examples/security/hostile-run-bundle.json",
     "liveness_test": "examples/postgres/001_liveness_and_immutability.sql",
     "product_requirements": "docs/00_product_requirements.md",
-    "prd_index": "PRD.md"
+    "prd_index": "PRD.md",
+    "milestone_3_acceptance": "docs/m3/ACCEPTANCE.md",
+    "milestone_3_plan": "docs/13_milestone_3_mcp_sdks_adapters.md",
+    "milestone_3_gate": "scripts/run_m3_conformance.mjs"
   }
 }
