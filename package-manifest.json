@@ -3,7 +3,7 @@
   "version": "0.1.1",
   "protocol_version": "0.1",
   "research_cutoff": "2026-08-17",
-  "status": "milestone_5_local_accepted_hosted_supabase_pending",
+  "status": "milestone_5_integrated_and_github_ci_green_hosted_supabase_pending",
   "counts": {
     "json_schemas": 9,
     "example_run_bundles": 3,

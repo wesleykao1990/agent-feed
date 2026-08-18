@@ -180,7 +180,8 @@ are not claimed by this reference milestone. See
 Status: **M5A installability is accepted; the portability/operations reference
 and contract slices are implemented and the no-skip combined local gate is
 green, including live PostgreSQL and the PostgreSQL-compatible Supabase proof.
-Hosted Supabase proof remains an explicitly separate acceptance record.** See
+GitHub Actions run `32135239757` also passed the full M5 job. Hosted Supabase
+proof remains an explicitly separate acceptance record.** See
 `docs/16_milestone_5_portability_operations.md`.
 
 Implemented in the first independently gated slice:

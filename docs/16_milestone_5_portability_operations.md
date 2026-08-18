@@ -129,6 +129,12 @@ PostgreSQL database, including the Supabase-compatible roles/RLS/health/
 liveness/immutability proof. Hosted Supabase proof remains open even after
 that local gate is green.
 
+Hosted GitHub CI run `32135239757` passed the complete validation, Milestone 4
+regression, and expanded full Milestone 5 jobs on draft PR #7 for commit
+`817c28d37ec1512f9179d6b43f9484fb7d5b1b97`. That is reproducible hosted CI
+evidence for this repository state; it does not replace the separate hosted
+Supabase project evidence described above.
+
 Supporting records: `docs/15_milestone_5a_installability.md`,
 `docs/m5/ACCEPTANCE.md`, `docs/m5/DECISIONS.md`, `docs/m5/BUGS.md`,
 `docs/m5/LEARNINGS.md`, `docs/m5/REFACTOR_DEBT.md`, and the package-local

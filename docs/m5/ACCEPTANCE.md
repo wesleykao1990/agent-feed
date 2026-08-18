@@ -25,6 +25,11 @@ operations-postgres unit tests plus 1 live acceptance test, 7 dashboard tests,
 and the local PostgreSQL-compatible Supabase role/RLS/health/liveness/
 immutability proof.
 
+GitHub Actions run `32135239757` passed the complete validation job, Milestone
+4 regression, and expanded full Milestone 5 job on draft PR #7 at commit
+`817c28d37ec1512f9179d6b43f9484fb7d5b1b97`. Hosted Supabase deployment is
+still outside this acceptance receipt.
+
 Expected coverage:
 
 | Gate | Required result | Skips |

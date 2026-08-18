@@ -173,3 +173,9 @@ review and the rerun passed **7/7**. Hosted Supabase
 acceptance remains open and requires a user-owned project with migration,
 health, liveness/immutability, optional Edge, and rollback receipts. See
 `docs/16_milestone_5_portability_operations.md`.
+
+GitHub Actions CI run `32135239757` (run #29) passed on draft PR #7 at commit
+`817c28d37ec1512f9179d6b43f9484fb7d5b1b97`: the complete `validate` job,
+Milestone 4 regression job, and expanded full Milestone 5 PostgreSQL job all
+completed successfully. This is hosted GitHub CI evidence for the checked-in
+gate, not hosted Supabase deployment evidence.

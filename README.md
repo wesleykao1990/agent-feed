@@ -3,9 +3,9 @@
 Agent Feed is a standalone, reusable project for transmitting structured agent
 runs, findings, and submitted evidence to multiple consumer applications.
 
-Milestone 5 status: **M5A installability is accepted and the combined local
-portability/operations gate is green, including live PostgreSQL; hosted
-Supabase proof remains a separate production gate**. The operator CLI creates private
+Milestone 5 status: **M5A installability is accepted and the combined local and
+GitHub CI portability/operations gates are green, including live PostgreSQL;
+hosted Supabase proof remains a separate production gate**. The operator CLI creates private
 scoped runtime configuration, starts a localhost-only persistent PostgreSQL
 profile, diagnoses the local boundary, and generates a protocol-clean command
 for the existing MCP server. SQLite, Supabase, retention/audit, observability,
