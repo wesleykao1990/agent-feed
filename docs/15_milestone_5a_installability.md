@@ -1,7 +1,7 @@
 # Milestone 5A — GitHub installability and private local operations
 
-Status: local implementation and integrated regressions green; hosted
-pull-request acceptance evidence pending in `docs/m5/ACCEPTANCE.md`
+Status: local implementation, integrated regressions, and hosted pull-request
+gates green; evidence is recorded in `docs/m5/ACCEPTANCE.md`
 
 Milestone 5 is broader than installation. This first slice makes the accepted
 PostgreSQL/MCP implementation usable from a clean GitHub checkout without

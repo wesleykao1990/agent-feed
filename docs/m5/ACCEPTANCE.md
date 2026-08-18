@@ -1,8 +1,8 @@
 # Milestone 5A acceptance evidence
 
-Status: **local M0–M5A integrated gates green; hosted pull-request evidence pending**
+Status: **local M0–M5A integrated and hosted pull-request gates green**
 
-Revision: `agent/milestone-5-installability-operations`
+Revision: `b6d4a821894b8ef2d4403e04df908d73e469a93d` on draft PR #6
 
 Environment: macOS, Node 26.4.0 (minimum Node 22)
 
@@ -24,9 +24,10 @@ Expected coverage:
 | Root CLI help smoke | Passed | n/a |
 | Disposable setup and offline-doctor CLI smoke | Passed | n/a |
 
-The dedicated GitHub Actions job starts from a clean checkout, installs the MCP
-server's locked dependencies, and executes the same gate under Node 22. Hosted
-evidence is not claimed until that pull-request job succeeds.
+GitHub Actions run `32128149827` passed the dedicated clean-checkout M5A job in
+8 seconds, the M4 regression job in 13 seconds, and the complete live
+PostgreSQL `validate` job in 1 minute 22 seconds. All ran against the revision
+above with zero skipped acceptance tests.
 
 ## Live operator smoke
 

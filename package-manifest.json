@@ -3,7 +3,7 @@
   "version": "0.1.1",
   "protocol_version": "0.1",
   "research_cutoff": "2026-08-17",
-  "status": "milestone_5a_candidate",
+  "status": "milestone_5a_accepted",
   "counts": {
     "json_schemas": 9,
     "example_run_bundles": 3,

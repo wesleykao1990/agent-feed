@@ -177,8 +177,8 @@ are not claimed by this reference milestone. See
 
 ## Milestone 5 — Portability and operations
 
-Status: **Milestone 5A local and integrated gates green; hosted pull-request CI
-pending**.
+Status: **Milestone 5A local, integrated, and hosted gates green on draft PR
+#6**.
 
 Implemented in the first independently gated slice:
 

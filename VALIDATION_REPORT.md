@@ -4,8 +4,8 @@ Validated: **2026-08-18**
 
 ## Result
 
-**Milestone 5A GitHub installability local and integrated gates passed; hosted
-pull-request CI is pending. Milestones 0–4 remain green and Agent Feed's immutable
+**Milestone 5A GitHub installability local, integrated, and hosted gates passed
+on draft PR #6. Milestones 0–4 remain green and Agent Feed's immutable
 `schema-v0.1.1` release is published.**
 
 Milestone 3 GitHub Actions run `32089258429` passed on PR #4, which is merged
@@ -136,8 +136,9 @@ removed. The existing ChatGPT acceptance runtime was not modified.
 Integrated regressions passed: foundation validation, generated types and
 protocol compatibility, M0/M1 conformance **23/23**, prototype **29/29**, live
 M1 ingress **6/6**, complete live M2, complete M3 inside the declared Python
-requirements environment, and complete M4. Hosted M5A pull-request CI is still
-pending and is not claimed here. See `docs/15_milestone_5a_installability.md`
+requirements environment, and complete M4. GitHub Actions run `32128149827`
+passed the dedicated M5A, M4 regression, and complete live PostgreSQL validation
+jobs at source revision `b6d4a821894b8ef2d4403e04df908d73e469a93d`. See `docs/15_milestone_5a_installability.md`
 and `docs/m5/ACCEPTANCE.md`. The source-only integrity inventory passes
 **362/362** files; ignored runtime, dependency, build, virtual-environment, and
 release outputs are excluded.

@@ -20,14 +20,14 @@ are added as new numbered files; accepted decisions are not silently rewritten.
 | [0008](0008-m3-failure-preservation-and-capability-gating.md) | Preserve partial adapter work and gate automation by actual capability | Accepted and implemented; hosted CI green |
 | [0009](0009-m4-reference-consumer-trust-boundary.md) | Keep the generic consumer untrusted, scoped, portable, and separate from the Rewards app | Accepted and implemented; hosted CI green |
 | [0010](0010-chatgpt-scheduled-task-mcp-tunnel.md) | Reuse the stdio MCP server for ChatGPT Scheduled Tasks through Secure MCP Tunnel | Accepted; private live acceptance complete |
-| [0011](0011-m5a-operator-runtime-boundary.md) | Keep GitHub setup local, private, non-destructive, and separate from account operations | Accepted; local integrated gates green, hosted CI pending |
+| [0011](0011-m5a-operator-runtime-boundary.md) | Keep GitHub setup local, private, non-destructive, and separate from account operations | Accepted; local, integrated, and hosted gates green |
 
 Implementation status is tracked in `docs/12_milestone_2_delivery.md` and
 `docs/13_milestone_3_mcp_sdks_adapters.md`, and
 `docs/14_milestone_4_reference_consumer.md`, and
 `docs/15_milestone_5a_installability.md`. M2 is accepted, M3 and M4 are merged
-with hosted gates green, and M5A has local integrated evidence with hosted
-pull-request CI pending. Production deployment, observability export, and the
+with hosted gates green, and M5A has local, integrated, and hosted evidence.
+Production deployment, observability export, and the
 remaining Milestone 5 portability/retention/audit/dashboard slices stay
 separate follow-ups. Any implementation that conflicts with these records must
 add a new ADR or an explicit superseding decision; it must not silently change

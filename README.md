@@ -3,8 +3,8 @@
 Agent Feed is a standalone, reusable project for transmitting structured agent
 runs, findings, and submitted evidence to multiple consumer applications.
 
-Milestone 5A status: **local GitHub installability and integrated gates green;
-hosted pull-request CI pending**. A new
+Milestone 5A status: **local, integrated, and hosted GitHub installability gates
+green on draft PR #6**. A new
 operator CLI creates private scoped runtime configuration, starts a
 localhost-only persistent PostgreSQL profile, diagnoses the local boundary, and
 generates a protocol-clean command for the existing MCP server. It does not
