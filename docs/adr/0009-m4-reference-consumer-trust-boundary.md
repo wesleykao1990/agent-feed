@@ -1,6 +1,6 @@
 # ADR 0009 — Generic reference-consumer trust boundary
 
-Status: Accepted and implemented locally; hosted CI pending
+Status: Accepted and implemented; local and hosted CI green
 
 Date: 2026-08-18
 

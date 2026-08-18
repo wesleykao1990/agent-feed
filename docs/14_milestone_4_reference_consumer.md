@@ -1,6 +1,6 @@
 # Milestone 4 — Generic reference consumer
 
-Status: **local M0–M4 integrated gates green; hosted CI pending**
+Status: **local M0–M4 integrated and hosted gates green on draft PR #5**
 
 Started: 2026-08-18
 
@@ -76,7 +76,7 @@ production persistence, or review workflow exists.
 | M4-A08 | Lifecycle events do not synthesize observations. | Lifecycle conformance and focused test. | Passed |
 | M4-A09 | The implementation has no database/SQL, Agent Feed server, private source, or domain-promotion dependency. | Static checker and hostile architecture fixtures. | Passed |
 | M4-A10 | All prior Agent Feed gates remain green together. | Full local foundation/M1/M2/M3 regression. | Passed locally |
-| M4-A11 | Hosted M4 and repository CI remain green on the candidate commit. | GitHub Actions. | Pending |
+| M4-A11 | Hosted M4 and repository CI remain green on the candidate commit. | GitHub Actions run `32092602939`. | Passed |
 
 Local M4 command:
 

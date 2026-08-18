@@ -18,7 +18,7 @@ are added as new numbered files; accepted decisions are not silently rewritten.
 | [0006](0006-m3-shared-producer-service-boundary.md) | Share one producer application boundary across REST, MCP, and producer adapters | Accepted and implemented; hosted CI green |
 | [0007](0007-m3-sdk-transport-and-version-boundary.md) | Keep SDKs transport-injected and protocol-version pinned | Accepted and implemented; hosted CI green |
 | [0008](0008-m3-failure-preservation-and-capability-gating.md) | Preserve partial adapter work and gate automation by actual capability | Accepted and implemented; hosted CI green |
-| [0009](0009-m4-reference-consumer-trust-boundary.md) | Keep the generic consumer untrusted, scoped, portable, and separate from the Rewards app | Accepted and implemented locally; hosted CI pending |
+| [0009](0009-m4-reference-consumer-trust-boundary.md) | Keep the generic consumer untrusted, scoped, portable, and separate from the Rewards app | Accepted and implemented; hosted CI green |
 
 Implementation status is tracked in `docs/12_milestone_2_delivery.md` and
 `docs/13_milestone_3_mcp_sdks_adapters.md`, and

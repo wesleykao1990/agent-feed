@@ -1,6 +1,6 @@
 # Milestone 4 acceptance evidence
 
-Status: **local M0–M4 integrated gates green; hosted CI pending**
+Status: **local M0–M4 integrated and hosted gates green**
 
 Revision: working tree on `agent/milestone-4-reference-consumer`
 
@@ -29,7 +29,7 @@ independent of user-global npm cache ownership.
 The first hosted run (`32092456477`) caught a missing clean-build ordering
 step: the local SDK was installed but its public `dist` export was absent. The
 runner now validates and builds the SDK before compiling/importing the
-reference. A replacement hosted run is pending.
+reference. Replacement run `32092602939` passed.
 
 ## Remaining acceptance evidence
 
@@ -39,8 +39,8 @@ reference. A replacement hosted run is pending.
 | Live PostgreSQL M1 ingress | Passed; 5/5 tests |
 | Complete M2 gate with live PostgreSQL | Passed; all configured gates, zero skips |
 | Complete M3 gate | Passed; architecture, behavioral, all packages, external npm/wheel smoke tests |
-| GitHub Actions `validate` job | Pending |
-| GitHub Actions Node-only `milestone-4-reference` job | Pending |
+| GitHub Actions `validate` job | Passed in run `32092602939` (1m16s) |
+| GitHub Actions Node-only `milestone-4-reference` job | Passed in run `32092602939` (9s) |
 
 This ledger covers only the Agent Feed generic reference consumer. Production
 durability, signed ingress, acknowledgement, and Rewards Optimizer domain

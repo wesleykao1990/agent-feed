@@ -4,8 +4,8 @@ Validated: **2026-08-18**
 
 ## Result
 
-**Milestone 4 generic reference-consumer local gates passed; hosted CI is
-pending. Milestones 0–3 remain green and Agent Feed's immutable
+**Milestone 4 generic reference-consumer local and hosted gates passed.
+Milestones 0–3 remain green and Agent Feed's immutable
 `schema-v0.1.1` release is published.**
 
 Milestone 3 GitHub Actions run `32089258429` passed on PR #4, which is merged
@@ -90,7 +90,7 @@ The Milestone 3 candidate source-integrity inventory passes **318/318** files;
 ignored dependency, build, and release outputs are excluded.
 See `docs/m3/ACCEPTANCE.md`.
 
-## Milestone 4 candidate evidence
+## Milestone 4 evidence
 
 The Agent Feed–owned deliverable is the runnable generic reference package in
 `examples/rewards-optimizer/`; it is not the separate Rewards Optimizer app.
@@ -111,4 +111,6 @@ tests. Hosted M4 CI remains pending.
 See `docs/14_milestone_4_reference_consumer.md` and `docs/m4/ACCEPTANCE.md`.
 
 The candidate source-integrity inventory passes **339/339** files; ignored
-dependency/build/package outputs are excluded. Hosted M4 CI remains pending.
+dependency/build/package outputs are excluded. GitHub Actions run
+`32092602939` passed the dedicated M4 job and the complete `validate` job on
+source commit `1f594d868648c8533dc4040236ea2af20ac6db76`.

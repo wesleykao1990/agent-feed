@@ -136,7 +136,7 @@ Gate:
 
 ## Milestone 4 — Rewards Optimizer reference consumer
 
-Status: **local gate green; hosted CI and full regression pending**.
+Status: **local and hosted gates green on draft PR #5**.
 
 Deliver only the generic reference integration in
 `examples/rewards-optimizer/`. The actual Rewards Optimizer application,
