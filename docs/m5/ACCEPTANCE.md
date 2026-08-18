@@ -8,11 +8,22 @@ Environment: macOS, Node 26.4.0 (minimum Node 22)
 
 ## Local M5A evidence
 
-The required command is:
+The M5A-only command is:
 
 ```sh
-npm run m5:conformance
+npm run m5a:conformance
 ```
+
+The broader no-skip portability and operations command is
+`npm run m5:conformance`; it requires an explicit PostgreSQL URL and is
+recorded separately in `docs/16_milestone_5_portability_operations.md`.
+
+On 2026-08-18 that combined command passed against a disposable PostgreSQL 16
+database with no live-test skip: 14 SQLite tests plus demo, 12 Supabase static
+boundaries, 13 operations-core tests, 9 observability tests, 8
+operations-postgres unit tests plus 1 live acceptance test, 7 dashboard tests,
+and the local PostgreSQL-compatible Supabase role/RLS/health/liveness/
+immutability proof.
 
 Expected coverage:
 
@@ -66,9 +77,11 @@ the test.
 The source-only integrity inventory passes **362/362** files. Ignored runtime,
 dependency, build, virtual-environment, and release outputs are excluded.
 
-## Claims this gate does not make
+## Claims this M5A gate does not make
 
 M5A does not accept production hosting, Supabase, SQLite, retention/deletion,
 audit export, observability exporters, a dashboard, or any OpenAI account-side
-configuration. Existing live PostgreSQL and ChatGPT acceptance records remain
-separate evidence.
+configuration. The remaining M5 reference/contract slices now have their own
+local evidence, but a local PostgreSQL-compatible Supabase proof is not hosted
+production proof. Existing live PostgreSQL and ChatGPT acceptance records
+remain separate evidence.

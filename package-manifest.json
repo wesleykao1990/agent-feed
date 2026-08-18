@@ -3,7 +3,7 @@
   "version": "0.1.1",
   "protocol_version": "0.1",
   "research_cutoff": "2026-08-17",
-  "status": "milestone_5a_accepted",
+  "status": "milestone_5_local_accepted_hosted_supabase_pending",
   "counts": {
     "json_schemas": 9,
     "example_run_bundles": 3,
@@ -29,7 +29,14 @@
     "m4_behavioral_tests": 10,
     "m4_reference_package_tests": 9,
     "m5_architecture_tests": 6,
-    "m5_operator_tests": 10
+    "m5_operator_tests": 10,
+    "m5_operations_architecture_tests": 5,
+    "m5_sqlite_tests": 14,
+    "m5_operations_core_tests": 13,
+    "m5_operations_observability_tests": 9,
+    "m5_operations_postgres_tests": 9,
+    "m5_admin_dashboard_tests": 7,
+    "m5_supabase_static_boundaries": 12
   },
   "canonical_files": {
     "protocol": "docs/01_protocol.md",
@@ -73,6 +80,15 @@
     "milestone_5a_acceptance": "docs/m5/ACCEPTANCE.md",
     "milestone_5a_plan": "docs/15_milestone_5a_installability.md",
     "milestone_5a_gate": "scripts/run_m5_conformance.mjs",
+    "milestone_5_plan": "docs/16_milestone_5_portability_operations.md",
+    "milestone_5_gate": "scripts/run_m5_conformance.mjs",
+    "milestone_5_operations_architecture": "scripts/check_m5_operations_architecture.mjs",
+    "sqlite_reference": "examples/sqlite/README.md",
+    "supabase_deployment_reference": "examples/supabase/README.md",
+    "operations_core": "packages/operations-core/README.md",
+    "operations_postgres": "packages/operations-postgres/README.md",
+    "operations_observability": "packages/operations-observability/README.md",
+    "admin_dashboard": "apps/admin-dashboard/README.md",
     "github_installation": "docs/operations/github-installation.md",
     "operator_config": "apps/operator-cli/src/config.mjs",
     "operator_cli": "apps/operator-cli/src/operator.mjs"

@@ -1,6 +1,31 @@
 # Changelog
 
-## Unreleased — Milestone 5A
+## Unreleased — Milestone 5 portability and operations
+
+- Added a dependency-free SQLite lifecycle/liveness portability reference with
+  tenant-required reads and explicit limits (no auth, outbox, delivery worker,
+  distributed scheduler, or Realtime claim).
+- Added a Supabase migration/security/optional Edge-relay reference that keeps
+  the canonical API as the producer policy boundary and detects migration
+  drift.
+- Added pure retention planning and metadata-only deterministic audit export,
+  an additive PostgreSQL operations adapter for managed external artifacts and
+  bounded audit sources, fixed-family observability/Prometheus rendering, and
+  an optional sanitized read-only admin dashboard.
+- Added a full M5 proof ladder that distinguishes static checks, local
+  PostgreSQL-compatible Supabase evidence, and hosted Supabase acceptance.
+- Hardened concurrent retention claims so a non-claiming worker cannot
+  prematurely finalize a job, validated every additive tenant constraint, and
+  bounded both request and upstream response bodies in the Supabase relay.
+- Recorded package dependency boundaries, no-refactor review, decisions,
+  learnings, and open deployment gaps in `docs/16_milestone_5_portability_operations.md`
+  and `docs/m5/`.
+- Hosted Supabase project evidence, tenant-scoped liveness deployment, real
+  metrics sample providers/caching, production dashboard auth/deployment,
+  provider-specific artifact cleanup, and SQLite multi-process/backup proof
+  remain open acceptance work.
+
+## Milestone 5A installability
 
 - Added a GitHub-oriented operator CLI for private setup, diagnostics,
   non-destructive PostgreSQL lifecycle, and protocol-clean MCP launch.

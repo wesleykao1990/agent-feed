@@ -1,0 +1,12 @@
+# Local Supabase CLI configuration for the Agent Feed reference.
+# Replace project_id with the target project ref before `supabase link`.
+project_id = "agent-feed"
+
+[db]
+major_version = 15
+
+# The function deliberately verifies the Agent Feed bearer credential at the
+# canonical ingress service. Supabase's generic JWT verifier is disabled so it
+# cannot replace the protocol's producer/tenant/stream scope checks.
+[functions.producer-ingress]
+verify_jwt = false

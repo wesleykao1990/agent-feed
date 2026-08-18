@@ -184,7 +184,22 @@ jobs:
 
   milestone-5-installability:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: agent_feed_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d agent_feed_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
 
     steps:
       - uses: actions/checkout@v7
@@ -193,8 +208,20 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install locked MCP runtime dependencies
-        run: npm --prefix apps/mcp-server ci
+      - name: Install locked Milestone 5 dependencies
+        run: |
+          npm --prefix apps/mcp-server ci
+          npm --prefix packages/protocol-runtime ci
+          npm --prefix packages/delivery-core ci
+          npm --prefix packages/delivery-consumer ci
+          npm --prefix packages/persistence-postgres ci
+          npm --prefix packages/operations-core ci
+          npm --prefix packages/operations-observability ci
+          npm --prefix packages/operations-postgres ci
+          npm --prefix apps/admin-dashboard ci
 
-      - name: Run Milestone 5A GitHub installability gate
+      - name: Run full Milestone 5 portability and operations gate
         run: npm run m5:conformance
+        env:
+          AGENT_FEED_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_feed_test
+          AGENT_FEED_OPERATIONS_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_feed_test

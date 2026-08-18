@@ -146,3 +146,30 @@ release outputs are excluded.
 Replacement run `32128438231` then passed the same three jobs after the
 repository's official GitHub actions were updated to v7, clearing the prior
 Node 20 action-runtime deprecation annotation.
+
+## Milestone 5 portability and operations evidence
+
+The new reference/contract slices were audited on 2026-08-18. The following
+local checks passed:
+
+- installability architecture guard: 8/8 boundaries;
+- SQLite `npm --prefix examples/sqlite run verify`: **14/14** tests plus demo;
+- Supabase static verifier: **12** boundaries;
+- operations-core: type-check plus **13/13** tests;
+- operations-observability: type-check plus **9/9** tests;
+- operations-postgres: type-check plus **8/8** unit tests; and
+- admin-dashboard: type-check plus **7/7** tests.
+
+The no-skip `npm run m5:conformance` gate then passed against a disposable
+local PostgreSQL database using `AGENT_FEED_OPERATIONS_DATABASE_URL`. It
+applied the explicit `0001 → 0002 → 0003 → 0004_operations` chain, ran the
+live operations acceptance, and ran the Supabase PostgreSQL-compatible
+fixture. This checks SQL, role/RLS, health, liveness, and immutability on a
+local compatible engine, not on a hosted Supabase project.
+
+The operations architecture guard initially reported three implementation
+marker mismatches; the checker/implementation names were aligned during this
+review and the rerun passed **7/7**. Hosted Supabase
+acceptance remains open and requires a user-owned project with migration,
+health, liveness/immutability, optional Edge, and rollback receipts. See
+`docs/16_milestone_5_portability_operations.md`.
