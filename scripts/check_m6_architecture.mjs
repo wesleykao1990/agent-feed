@@ -34,6 +34,7 @@ export function checkM6Texts(input) {
   }
   if (/authorization|secret|token/iu.test(input.tools)) failures.push("published MCP tool schemas must not gain credential fields");
   if (!input.rootPackage.scripts?.["m6:conformance"]) failures.push("root package missing m6:conformance");
+  requireText(input.runner, 'packages/schema", "run", "build', "M6 runner");
   for (const marker of [
     "packages/schema ci",
     "packages/producer-service ci",
@@ -59,6 +60,7 @@ export function checkM6Architecture() {
     packageJson: JSON.parse(read("apps/mcp-http/package.json")),
     rootPackage: JSON.parse(read("package.json")),
     workflow: read(".github/workflows/ci.yml"),
+    runner: read("scripts/run_m6_conformance.mjs"),
     milestone: read("docs/17_milestone_6_universal_remote_mcp.md"),
   });
   if (failures.length > 0) throw new Error(`M6 remote MCP architecture failed:\n- ${failures.join("\n- ")}`);

@@ -21,6 +21,7 @@ function run(label, command, args, options = {}) {
 }
 
 run("remote MCP architecture guard", NODE, ["scripts/check_m6_architecture.mjs"]);
+run("generated schema dependency build", NPM, ["--prefix", "packages/schema", "run", "build"]);
 run("remote MCP build", NPM, ["--prefix", "apps/mcp-http", "run", "build"]);
 run("remote MCP unit and adversarial tests", NPM, ["--prefix", "apps/mcp-http", "test"], databaseUrl ? {
   env: { AGENT_FEED_MCP_DATABASE_URL: databaseUrl },

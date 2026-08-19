@@ -59,3 +59,10 @@ Installing an application that links another workspace directory does not
 guarantee that the linked directory can resolve its own local dependencies on
 a clean GitHub runner. A milestone CI job must install the complete source-link
 chain explicitly, and its architecture guard should fail when that list drifts.
+
+## M6-L010 — Generated dependencies belong in the milestone runner
+
+A clean install proves dependency resolution but does not create generated
+package exports. When a required package intentionally excludes `dist/` from
+source control, the milestone runner must build that dependency before testing
+its consumers so local and hosted entrypoints exercise the same prerequisite.
