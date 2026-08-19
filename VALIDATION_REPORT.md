@@ -4,8 +4,8 @@ Validated: **2026-08-18**
 
 ## Result
 
-**Milestone 4 generic reference-consumer local and hosted gates passed.
-Milestones 0–3 remain green and Agent Feed's immutable
+**Milestone 5A GitHub installability local, integrated, and hosted gates passed
+on draft PR #6. Milestones 0–4 remain green and Agent Feed's immutable
 `schema-v0.1.1` release is published.**
 
 Milestone 3 GitHub Actions run `32089258429` passed on PR #4, which is merged
@@ -33,7 +33,8 @@ Current green evidence:
 - producer application service: **9/9**;
 - producer API: **2/2**;
 - durable local-file adapter: **6/6**;
-- live PostgreSQL producer ingress: **5/5**, including API restart;
+- live PostgreSQL producer ingress: **6/6**, including API restart and durable
+  ChatGPT exact replay;
 - direct PostgreSQL persistence: **11/11**;
 - full M2 conformance: architecture 4, pure 6, live PostgreSQL 3,
   protocol-runtime 5, delivery-core 18, delivery-consumer 10, persistence 11,
@@ -79,7 +80,7 @@ See `docs/m1-hardening/ACCEPTANCE.md`.
 ## Milestone 3 evidence
 
 The integrated no-skip M3 gate passed locally: architecture 4,
-cross-boundary conformance 12, producer service 9, API 2, MCP 10, TypeScript
+cross-boundary conformance 12, producer service 9, API 2, MCP 11, TypeScript
 SDK 5 including packed external import, Python SDK 10 plus an isolated
 wheel/install/import, REST 4, local-file 10, generic webhook 7, Claude hook 5,
 and ChatGPT manual export 6. Full foundation,
@@ -105,12 +106,43 @@ The no-skip `npm run m4:conformance` gate passed locally:
 
 The same candidate also passed the foundation validator, generated-type and
 protocol compatibility checks, M0/M1 conformance **23/23**, live PostgreSQL M1
-ingress **5/5**, the complete live PostgreSQL M2 gate, and the complete M3 gate
+ingress **6/6**, the complete live PostgreSQL M2 gate, and the complete M3 gate
 including external TypeScript package and Python wheel install/import smoke
-tests. Hosted M4 CI remains pending.
+tests. Hosted M4 CI passed in GitHub Actions run `32096064685`, and PR #5 is
+merged to `main` as `16e84f0eb545a55b5035bc11212ef46043a3aa30`.
 See `docs/14_milestone_4_reference_consumer.md` and `docs/m4/ACCEPTANCE.md`.
 
 The candidate source-integrity inventory passes **339/339** files; ignored
 dependency/build/package outputs are excluded. GitHub Actions run
 `32092602939` passed the dedicated M4 job and the complete `validate` job on
 source commit `1f594d868648c8533dc4040236ea2af20ac6db76`.
+
+## Milestone 5A evidence
+
+The local no-skip `npm run m5:conformance` gate passed with:
+
+- static installability guard: 8 boundaries;
+- adversarial architecture tests: **6/6**;
+- operator/security tests: **10/10**;
+- root help, disposable setup, and offline-doctor CLI smokes: passed; and
+- clean locked MCP dependency installation: passed.
+
+A disposable live PostgreSQL test also proved the generated private runtime and
+credential-free wrapper. `doctor` passed all five checks. The wrapper emitted
+no banner, negotiated MCP `2025-06-18`, and listed exactly `begin_run`,
+`submit_batch`, and `complete_run`; the temporary cluster was then stopped and
+removed. The existing ChatGPT acceptance runtime was not modified.
+
+Integrated regressions passed: foundation validation, generated types and
+protocol compatibility, M0/M1 conformance **23/23**, prototype **29/29**, live
+M1 ingress **6/6**, complete live M2, complete M3 inside the declared Python
+requirements environment, and complete M4. GitHub Actions run `32128149827`
+passed the dedicated M5A, M4 regression, and complete live PostgreSQL validation
+jobs at source revision `b6d4a821894b8ef2d4403e04df908d73e469a93d`. See `docs/15_milestone_5a_installability.md`
+and `docs/m5/ACCEPTANCE.md`. The source-only integrity inventory passes
+**362/362** files; ignored runtime, dependency, build, virtual-environment, and
+release outputs are excluded.
+
+Replacement run `32128438231` then passed the same three jobs after the
+repository's official GitHub actions were updated to v7, clearing the prior
+Node 20 action-runtime deprecation annotation.

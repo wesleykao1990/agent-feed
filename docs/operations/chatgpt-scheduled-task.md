@@ -53,22 +53,25 @@ account mutations and require operator approval.
 
 ## Local service configuration
 
-Run PostgreSQL durably and configure one scoped producer. Replace placeholders
-locally; do not commit the resulting values.
+Use the supported GitHub installer to run PostgreSQL durably and configure one
+scoped producer. It writes generated credentials only to ignored owner-readable
+runtime files and never prints them:
 
 ```sh
-export AGENT_FEED_DATABASE_URL='postgresql://...'
-export AGENT_FEED_PRODUCER_CREDENTIALS='[{"tenant_id":"tenant_monitoring","producer_id":"chatgpt-scheduled-task","secret":"replace-locally","allowed_stream_ids":["monitoring.pokemon-merchandise"]}]'
-export AGENT_FEED_MCP_PRODUCER_SECRET='replace-with-the-same-local-producer-secret'
-export CONTROL_PLANE_API_KEY='replace-with-local-tunnel-runtime-key'
-
 cd /absolute/path/to/agent-feed
-npm --prefix apps/mcp-server install
-npm --prefix apps/mcp-server run build
+bin/agent-feed setup \
+  --tenant tenant_monitoring \
+  --producer chatgpt-scheduled-task \
+  --stream monitoring.pokemon-merchandise
+bin/agent-feed postgres up
+bin/agent-feed doctor
 ```
 
-The environment must be present in the process that runs `tunnel-client`; its
-MCP subprocess inherits it.
+For an existing database, follow
+`docs/operations/github-installation.md` and use an owner-only database URL
+file. The tunnel control-plane key remains in the local environment of
+`tunnel-client`; it is not owned by Agent Feed setup or inherited by the MCP
+wrapper as Agent Feed configuration.
 
 The stdio target must never print startup text to stdout. In particular, do
 not use `npm start` as the tunnel target: npm writes a lifecycle banner before
@@ -85,7 +88,7 @@ tunnel-client init \
   --sample sample_mcp_stdio_local \
   --profile agent-feed-chatgpt \
   --tunnel-id tunnel_replace_with_actual_id \
-  --mcp-command /absolute/path/to/agent-feed/apps/mcp-server/bin/agent-feed-mcp-stdio
+  --mcp-command /absolute/path/to/agent-feed/.runtime/operator/bin/agent-feed-mcp
 
 tunnel-client doctor --profile agent-feed-chatgpt --explain
 tunnel-client run --profile agent-feed-chatgpt
@@ -101,6 +104,11 @@ workspace are associated. Organization association alone does not make the
 tunnel visible to a workspace. If discovery fails while the subprocess stays
 alive, inspect the first stdout bytes; any package-manager banner is a protocol
 failure, not a healthy MCP response.
+
+The low-level `apps/mcp-server/bin/agent-feed-mcp-stdio` launcher remains
+available for advanced manually managed environments. New GitHub installations
+should use the generated wrapper so the exact scoped configuration is loaded
+without command-line secrets or ambient credential collisions.
 
 ## Create and test the ChatGPT plugin
 

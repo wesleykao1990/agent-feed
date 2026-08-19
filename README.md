@@ -3,7 +3,15 @@
 Agent Feed is a standalone, reusable project for transmitting structured agent
 runs, findings, and submitted evidence to multiple consumer applications.
 
-Milestone 4 status: **generic reference-consumer local and hosted gates green**.
+Milestone 5A status: **local, integrated, and hosted GitHub installability gates
+green on draft PR #6**. A new
+operator CLI creates private scoped runtime configuration, starts a
+localhost-only persistent PostgreSQL profile, diagnoses the local boundary, and
+generates a protocol-clean command for the existing MCP server. It does not
+mutate OpenAI account settings or claim completion of the remaining Milestone 5
+portability, retention, audit, metrics, or dashboard work.
+
+Milestone 4 status: **merged with generic reference-consumer local and hosted gates green**.
 GitHub Actions run `32096064685` passed both the dedicated Node-only M4 job and
 the full repository validation on PR #5. The buildable example maps protocol
 `0.1` findings to scoped,
@@ -74,6 +82,31 @@ A `Finding` means “a producer submitted this claim,” not “this is true.”
 
 `prototype/` implements the thin run lifecycle, idempotency, terminal immutability, signed events, expected-cadence liveness, and hostile-finding preservation without external dependencies. Run `cd prototype && npm test`.
 
+## Install from GitHub
+
+With Node.js 22+, Git, and Docker Compose installed:
+
+```sh
+git clone https://github.com/wesleykao1990/agent-feed.git
+cd agent-feed
+bin/agent-feed setup --stream monitoring.example
+bin/agent-feed postgres up
+bin/agent-feed doctor
+```
+
+Setup generates owner-only credentials under ignored `.runtime/`, never prints
+secrets, binds PostgreSQL only to localhost, and preserves its named volume on
+stop and upgrade. Existing PostgreSQL deployments can use an owner-only URL
+file. See [the GitHub installation runbook](docs/operations/github-installation.md)
+for external database, upgrade, and Secure MCP Tunnel handoff instructions.
+
+The focused clean-install gate is:
+
+```sh
+npm --prefix apps/mcp-server ci
+npm run m5:conformance
+```
+
 The foundation validator needs the Python packages declared in
 `requirements-dev.txt`. A one-command managed invocation is:
 
@@ -143,7 +176,7 @@ scope. Milestone 4 maintenance uses
 
 Read the relevant milestone record, the ADR index, and the operational runbook
 before adding code. Milestone decisions, bugs, learnings, and refactor-debt
-reviews are append-only in `docs/m3/` and `docs/m4/`.
+reviews are append-only in `docs/m3/`, `docs/m4/`, and `docs/m5/`.
 
 ## ChatGPT monitoring
 
