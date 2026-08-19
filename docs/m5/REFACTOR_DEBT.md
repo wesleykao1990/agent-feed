@@ -1,4 +1,4 @@
-# Milestone 5A modularity and refactor-debt audit
+# Milestone 5 modularity and refactor-debt audit
 
 Reviewed: 2026-08-18
 
@@ -37,3 +37,45 @@ migration ledger, and run a reversible lifecycle probe, but it must use a
 dedicated diagnostic identity and avoid mutating production streams. Neither
 justifies splitting the current small operator module before those requirements
 exist.
+
+## Portability and operations boundary review
+
+The remaining Milestone 5 modules were reviewed as independent contracts. The
+dependency direction is intentionally one-way: adapters produce bounded
+metadata/snapshots, pure packages validate policy and exposition, and the
+dashboard renders a smaller read-only aggregate.
+
+| Module | Owns | Allowed dependency | Must not own |
+|---|---|---|---|
+| `examples/sqlite` | Copyable lifecycle/liveness reference and local schema | Node built-ins and local example files | PostgreSQL/HTTP/delivery internals, credentials, Realtime, or a production durability claim |
+| `examples/supabase` | Migration-parity/security reference and optional narrow relay | Supabase/Deno runtime and the canonical API HTTPS URL | A second producer policy, direct browser database access, or Realtime queueing |
+| `packages/operations-core` | Pure retention plans and metadata-only canonical audit export | Node `crypto` and package-local contracts | SQL, `pg`, HTTP, queues, provider credentials, or consumer state |
+| `packages/operations-postgres` | Additive PostgreSQL operations migration, artifact jobs, audit sources, and bounded snapshots | Node built-ins and `pg`; injected external-artifact adapter | Protocol/delivery row deletion, provider I/O inside a transaction, or false tenant-liveness isolation |
+| `packages/operations-observability` | Fixed metric families, bounded collection, and Prometheus rendering | Package-local types and fixed enum vocabularies | Database connections, HTTP serving, arbitrary labels, raw errors, or Realtime as truth |
+| `apps/admin-dashboard` | Sanitized read-only HTML/API view and snapshot mapping | Node HTTP/filesystem and the observability package's public snapshot | SQL, queue mutation, browser credentials, source payloads, or mandatory Realtime |
+| M5 root runner | Explicit static, package, and live-proof orchestration | Existing package commands and an explicitly supplied database URL | Hidden migration discovery, silent live-test skips, or runtime ownership of any module |
+
+### No-refactor review result
+
+- [x] The pure operations contract is independently testable and has no
+  runtime database dependency.
+- [x] The PostgreSQL adapter owns SQL and transaction ordering without making
+  the pure package or dashboard import database internals.
+- [x] The observability package exposes fixed families and bounded labels;
+  dashboard mapping validates the complete snapshot before selecting cards.
+- [x] SQLite and Supabase remain examples/references rather than alternate
+  production ingress implementations.
+- [x] The dashboard has no mutation route and does not become a queue or
+  Realtime source of truth.
+- [x] No package extraction, merge, or shared “utility” refactor is justified
+  by the current surface; future work can add an adapter only when a real
+  deployment needs it.
+
+The following are deferred deployment/acceptance work, not reasons to collapse
+the boundaries above: tenant-scoped liveness schema and provider, a real
+metrics sample provider with last-good caching, production dashboard
+authentication/TLS/deployment, provider-specific managed-artifact cleanup,
+SQLite multi-process/backup testing, and hosted Supabase receipts. The initial
+operations architecture marker mismatch is tracked as resolved in
+`docs/m5/BUGS.md`; the no-skip full gate passed using a disposable database,
+and the hosted Supabase boundary remains open.

@@ -1,0 +1,37 @@
+{
+  "name": "@agent-feed/operations-postgres",
+  "version": "0.1.1",
+  "description": "Tenant-scoped retention, audit, and operational snapshots for Agent Feed PostgreSQL deployments.",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "migrations",
+    "README.md",
+    "DECISIONS.md",
+    "BUGS.md",
+    "LEARNINGS.md",
+    "package.json"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test --test-concurrency=1 test/*.test.ts"
+  },
+  "dependencies": {
+    "pg": "8.16.3"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.1",
+    "@types/pg": "8.15.5",
+    "typescript": "7.0.2"
+  }
+}

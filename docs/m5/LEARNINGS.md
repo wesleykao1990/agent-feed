@@ -60,3 +60,48 @@ Command parsers commonly materialize optional fields with `undefined`. A
 configuration upgrade must remove those absent entries before layering explicit
 operator choices over preserved state, or safe defaults can silently replace a
 working custom identity.
+
+## M5-L011 — A portability reference must state what it does not implement
+
+The SQLite example is valuable because it proves lifecycle, tenant, liveness,
+and restart invariants without a server, but that same independence means it
+does not prove authentication, outbox delivery, worker coordination, or
+multi-process durability. The example README and the completion record must
+keep those omissions visible.
+
+## M5-L012 — Local PostgreSQL compatibility is not hosted Supabase acceptance
+
+Running the checked-in migrations and security fixture against PostgreSQL can
+prove SQL, RLS, role, health-RPC, liveness, and immutability assumptions. It
+cannot prove a hosted project, Supabase-managed secrets, Edge deployment,
+network policy, backups, or a reviewed rollback. Those receipts require a
+user-owned project and must be recorded separately.
+
+## M5-L013 — Pure contracts make deployment choices reviewable
+
+Retention planning and audit export can be tested without SQL, while the
+PostgreSQL adapter can own transactions and external-artifact claims, and the
+dashboard can consume a versioned aggregate without knowing storage tables.
+Keeping those directions explicit avoids a refactor that would silently make
+the UI or a portability example a second source of truth.
+
+## M5-L014 — Static architecture guards are part of the contract
+
+The first operations validation run found source-marker wording drift between
+the checker and implementation. The names were aligned and the guard then
+passed 7/7. A complete M5 record must report the initial mismatch and its
+regression result instead of converting a failed guard into a prose-only pass.
+
+## M5-L015 — Claim ownership and job finalization are different decisions
+
+A worker that cannot claim an item because another valid claim exists must not
+convert that observation into failure. Item claims serialize provider work;
+job finalization must wait until there are no `in_progress` items. The live
+two-client test caught this integration behavior beyond the isolated SQL fake.
+
+## M5-L016 — Migration completion must mean constraints are validated
+
+`NOT VALID` is useful while adding constraints during an upgrade, but recording
+the migration as complete without `VALIDATE CONSTRAINT` leaves historical rows
+outside the promised tenant boundary. The migration now validates before its
+ledger entry.

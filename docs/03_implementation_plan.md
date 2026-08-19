@@ -177,8 +177,12 @@ are not claimed by this reference milestone. See
 
 ## Milestone 5 — Portability and operations
 
-Status: **Milestone 5A local, integrated, and hosted gates green on draft PR
-#6**.
+Status: **M5A installability is accepted; the portability/operations reference
+and contract slices are implemented and the no-skip combined local gate is
+green, including live PostgreSQL and the PostgreSQL-compatible Supabase proof.
+GitHub Actions run `32135239757` also passed the full M5 job. Hosted Supabase
+proof remains an explicitly separate acceptance record.** See
+`docs/16_milestone_5_portability_operations.md`.
 
 Implemented in the first independently gated slice:
 
@@ -189,10 +193,30 @@ Implemented in the first independently gated slice:
 - setup, doctor, and non-destructive PostgreSQL lifecycle commands;
 - clean-checkout CI, adversarial guards, installation/upgrade documentation,
   and an explicit account-side handoff for ChatGPT Secure MCP Tunnel.
+- a dependency-free SQLite lifecycle/liveness portability reference;
+- a Supabase migration/security/Edge-relay reference whose canonical policy
+  remains the Agent Feed API;
+- pure retention planning and metadata-only deterministic audit export;
+- an additive PostgreSQL operations adapter for managed external artifacts,
+  bounded audit sources, and operational snapshots;
+- bounded fixed-family observability/Prometheus rendering; and
+- an optional read-only admin dashboard over a sanitized aggregate.
 
-Milestone 5A does not complete the full milestone. Its evidence is tracked in
-`docs/15_milestone_5a_installability.md` and `docs/m5/`.
+The local PostgreSQL-compatible proof applies the explicit
+`0001 → 0002 → 0003 → 0004_operations` chain and runs the Supabase security,
+RLS, health, liveness, and terminal-immutability fixture against a compatible
+PostgreSQL engine. It proves checked-in SQL and role assumptions only; it does
+not prove a hosted Supabase project, managed secrets, Edge deployment,
+networking, backups, or rollback.
 
-Deliver Postgres, Supabase, and SQLite examples; retention and deletion; audit export; cost and backlog metrics; and an optional admin dashboard.
+The full runner is `npm run m5:conformance` and requires
+`AGENT_FEED_OPERATIONS_DATABASE_URL` (or `AGENT_FEED_DATABASE_URL`); it has no
+live-database skip. The installability-only runner is
+`npm run m5a:conformance`. Current package, live, and architecture counts are
+recorded in the M5 completion document.
 
-Realtime may update the dashboard, but the protocol and delivery remain fully functional without it.
+Retention candidates are limited to managed external artifacts; protocol and
+delivery history remain protected. Metrics use fixed labels and durable state,
+and Realtime may update a dashboard but is never the queue, lease,
+acknowledgement, or recovery source of truth. Hosted Supabase receipts and
+production deployment adapters are future acceptance work.

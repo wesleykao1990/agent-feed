@@ -3,13 +3,16 @@
 Agent Feed is a standalone, reusable project for transmitting structured agent
 runs, findings, and submitted evidence to multiple consumer applications.
 
-Milestone 5A status: **local, integrated, and hosted GitHub installability gates
-green on draft PR #6**. A new
-operator CLI creates private scoped runtime configuration, starts a
-localhost-only persistent PostgreSQL profile, diagnoses the local boundary, and
-generates a protocol-clean command for the existing MCP server. It does not
-mutate OpenAI account settings or claim completion of the remaining Milestone 5
-portability, retention, audit, metrics, or dashboard work.
+Milestone 5 status: **M5A installability is accepted and the combined local and
+GitHub CI portability/operations gates are green, including live PostgreSQL;
+hosted Supabase proof remains a separate production gate**. The operator CLI creates private
+scoped runtime configuration, starts a localhost-only persistent PostgreSQL
+profile, diagnoses the local boundary, and generates a protocol-clean command
+for the existing MCP server. SQLite, Supabase, retention/audit, observability,
+and dashboard boundaries are documented in
+`docs/16_milestone_5_portability_operations.md`. A local PostgreSQL-compatible
+Supabase run is not hosted production acceptance, and no command mutates OpenAI
+account settings.
 
 Milestone 4 status: **merged with generic reference-consumer local and hosted gates green**.
 GitHub Actions run `32096064685` passed both the dedicated Node-only M4 job and
@@ -62,8 +65,13 @@ apps/mcp-server
 apps/api
 apps/delivery-api (transport-neutral handlers; no HTTP server)
 apps/delivery-worker (composition foundation; no production entrypoint yet)
+packages/operations-core (pure retention/audit contracts)
+packages/operations-observability (bounded metrics/Prometheus contract)
+packages/operations-postgres (PostgreSQL operations adapter)
+apps/admin-dashboard (optional read-only aggregate view)
 docs/adr
 docs/m2
+docs/m5
 docs/operations
 skills/chatgpt
 skills/claude
@@ -100,12 +108,26 @@ stop and upgrade. Existing PostgreSQL deployments can use an owner-only URL
 file. See [the GitHub installation runbook](docs/operations/github-installation.md)
 for external database, upgrade, and Secure MCP Tunnel handoff instructions.
 
-The focused clean-install gate is:
+The M5A focused clean-install gate is:
 
 ```sh
 npm --prefix apps/mcp-server ci
+npm run m5a:conformance
+```
+
+The full portability and operations gate is deliberately no-skip and requires
+a disposable PostgreSQL URL:
+
+```sh
 npm run m5:conformance
 ```
+
+It verifies the SQLite reference, Supabase static reference, operations-core,
+operations-observability, operations-postgres, and admin-dashboard, then runs
+the explicit PostgreSQL-compatible migration/Supabase proof when
+`AGENT_FEED_OPERATIONS_DATABASE_URL` (or `AGENT_FEED_DATABASE_URL`) is set. See
+the [Milestone 5 completion record](docs/16_milestone_5_portability_operations.md)
+for the evidence ladder and remaining hosted gaps.
 
 The foundation validator needs the Python packages declared in
 `requirements-dev.txt`. A one-command managed invocation is:
@@ -168,6 +190,19 @@ bundles through the same service boundary. See
 immutable schema artifact. The Rewards Optimizer pin is owned by its separate
 repository.
 
+## Portability and operations
+
+The SQLite directory is a dependency-free lifecycle/liveness reference, not a
+replacement for PostgreSQL delivery. The Supabase directory copies canonical
+migrations, adds private-schema/RLS/security checks, and provides an optional
+Edge relay to the canonical API; it does not create or verify a hosted project.
+Retention and audit are tenant-scoped and metadata-first, with immutable
+protocol/delivery history protected. Metrics use fixed labels and durable
+state. The dashboard is read-only, sanitized, and loopback-bound by default;
+Realtime remains optional observation plumbing rather than a queue. The
+package boundaries and no-refactor review are recorded alongside the exact
+local-vs-hosted proof distinction in the completion record.
+
 ## Start implementation
 
 Use `prompts/CODEX_INITIATING_PROMPT.md`, then the prompt for the milestone in
@@ -190,4 +225,10 @@ See `docs/operations/chatgpt-scheduled-task.md`.
 
 ## Supabase
 
-Recommended production deployment uses a separate Supabase project with Postgres, Edge Functions, Queues, scoped auth/RLS, optional Storage, and secrets. Realtime is optional for live dashboards and is never the delivery queue.
+Recommended production deployment uses a separate Supabase project with
+Postgres, Edge Functions, Queues, scoped auth/RLS, optional Storage, and
+secrets. `node examples/supabase/tests/verify.mjs` is static only; the optional
+PostgreSQL-compatible proof uses a local/disposable database and is not hosted
+acceptance. Hosted claims require project-specific migration, health,
+liveness, Edge, and rollback receipts. Realtime is optional for live
+dashboards and is never the delivery queue.

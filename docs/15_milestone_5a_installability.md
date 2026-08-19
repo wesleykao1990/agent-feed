@@ -1,7 +1,9 @@
 # Milestone 5A — GitHub installability and private local operations
 
-Status: local implementation, integrated regressions, and hosted pull-request
-gates green; evidence is recorded in `docs/m5/ACCEPTANCE.md`
+Status: the M5A installability slice has local, integrated, and hosted
+pull-request evidence; its record is in `docs/m5/ACCEPTANCE.md`. The broader
+Milestone 5 portability/operations continuation is recorded in
+`docs/16_milestone_5_portability_operations.md`.
 
 Milestone 5 is broader than installation. This first slice makes the accepted
 PostgreSQL/MCP implementation usable from a clean GitHub checkout without
@@ -36,21 +38,27 @@ durability proof.
 
 ```sh
 npm --prefix apps/mcp-server ci
-npm run m5:conformance
+npm run m5a:conformance
 ```
 
-The M5A runner has no PostgreSQL skip because it is a clean-install/static and
-local-operator boundary. Live PostgreSQL behavior continues to run in the
-repository's existing integrated validation job.
+The M5A runner has no PostgreSQL dependency because it is the clean-install,
+static, and local-operator boundary. The full continuation uses
+`npm run m5:conformance`, requires an explicit PostgreSQL URL, and has no live
+database skip; see the M5 completion record for its proof ladder.
 
-## Remaining Milestone 5 roadmap
+## Remaining Milestone 5 roadmap (M5A boundary and full-slice follow-ups)
 
-- production Supabase deployment example and operational proof;
-- SQLite portability example;
-- retention/deletion policy and jobs;
-- audit export;
-- cost, backlog, and liveness metrics/exporters; and
-- optional admin dashboard with Realtime remaining optional.
+The following reference/contract slices now exist and have their own local
+evidence: SQLite lifecycle portability, Supabase migration/security reference,
+pure retention and metadata-only audit export, PostgreSQL operations adapter,
+bounded observability exporter, and optional read-only admin dashboard.
 
-These are separate acceptance slices. M5A must not be cited as evidence that
-they exist.
+M5A must not be cited as evidence that those slices are hosted or production
+operational. In particular, a local PostgreSQL-compatible Supabase proof is
+not a hosted Supabase acceptance record. Hosted project receipts, tenant-scoped
+liveness deployment, production artifact providers, metric sample providers,
+dashboard authentication/deployment, SQLite multi-process/backup evidence, and
+hosted Supabase receipts remain separate gaps.
+
+See `docs/16_milestone_5_portability_operations.md` for the implementation
+matrix, exact commands, modular dependency review, and current validation gaps.

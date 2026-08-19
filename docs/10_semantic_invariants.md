@@ -63,3 +63,32 @@ with clean installs and builds passing. The transport-neutral API still has no
 deployable HTTP server, the worker still has no production process/CLI
 entrypoint, and observability exporter/deployment remains future operational
 work. See `docs/12_milestone_2_delivery.md` for the accepted gate and caveats.
+
+## Portability and operations invariants (Milestone 5)
+
+- The SQLite reference preserves lifecycle, tenant, evidence-link, terminal,
+  and stream-liveness invariants locally, but does not imply authentication,
+  outbox delivery, worker coordination, distributed scheduling, or Realtime.
+- Supabase migrations `0001`–`0003` remain byte-for-byte copies of the
+  canonical PostgreSQL history. The optional Edge Function is only a bounded
+  HTTPS relay; the canonical Agent Feed API remains the producer policy and
+  persistence boundary.
+- A PostgreSQL-compatible Supabase fixture can prove SQL, role/RLS, health,
+  liveness, and terminal immutability assumptions on a local database. It is
+  not hosted Supabase acceptance: hosted claims require a user-owned project
+  and deployment receipts.
+- Retention plans are tenant-scoped, bounded, and dry-run by default. Only
+  explicitly managed external artifacts are deletion candidates; protocol,
+  delivery, and liveness history remains protected. External deletion is an
+  injected, idempotent side effect and never runs while holding a database
+  transaction.
+- Audit exports accept metadata only, use deterministic bounded NDJSON, and
+  reject sensitive keys and credential-shaped values. They are not a raw
+  finding/evidence export.
+- Operational metrics are derived from durable state, expose fixed family and
+  enum-label sets, and keep tenant/source/error text out of labels. Realtime
+  can refresh a view but cannot become queue, lease, acknowledgement, or
+  recovery state.
+- The admin dashboard consumes a versioned sanitized aggregate, is read-only,
+  escapes dynamic values, distinguishes empty/error/stale state, and requires
+  deployment-owned authentication when moved off loopback.

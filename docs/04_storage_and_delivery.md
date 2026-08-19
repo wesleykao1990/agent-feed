@@ -53,7 +53,10 @@ consumer 10, persistence 11, webhook 8, worker 6, and API 5. The corrected
 serialized live gate and all seven clean package installs/builds/tests pass.
 Hosted GitHub Actions CI run #5 passed on draft PR #2 for commit `ad4ea3a`. A
 deployable worker process, HTTP server, and production
-observability exporter remain future operational work. Migration loading is
+observability deployment remain future operational work. Milestone 5 now adds
+bounded operations-observability and read-only dashboard reference packages;
+they do not replace the durable delivery source of truth or claim a production
+scrape/deployment. Migration loading is
 intentionally explicit `0001`, `0002`, then `0003`; arbitrary directory
 discovery/gap checking is outside this implementation gate.
 
