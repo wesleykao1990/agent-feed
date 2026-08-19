@@ -254,6 +254,12 @@ jobs:
 
       - name: Install locked remote MCP dependencies
         run: |
+          npm --prefix packages/schema ci
+          npm --prefix packages/producer-service ci
+          npm --prefix packages/protocol-runtime ci
+          npm --prefix packages/delivery-core ci
+          npm --prefix packages/delivery-consumer ci
+          npm --prefix packages/persistence-postgres ci
           npm --prefix apps/mcp-server ci
           npm --prefix apps/mcp-http ci
 

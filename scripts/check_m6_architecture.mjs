@@ -34,7 +34,17 @@ export function checkM6Texts(input) {
   }
   if (/authorization|secret|token/iu.test(input.tools)) failures.push("published MCP tool schemas must not gain credential fields");
   if (!input.rootPackage.scripts?.["m6:conformance"]) failures.push("root package missing m6:conformance");
-  for (const marker of ["apps/mcp-http ci", "npm run m6:conformance"]) requireText(input.workflow, marker, "CI workflow");
+  for (const marker of [
+    "packages/schema ci",
+    "packages/producer-service ci",
+    "packages/protocol-runtime ci",
+    "packages/delivery-core ci",
+    "packages/delivery-consumer ci",
+    "packages/persistence-postgres ci",
+    "apps/mcp-server ci",
+    "apps/mcp-http ci",
+    "npm run m6:conformance",
+  ]) requireText(input.workflow, marker, "CI workflow");
   for (const marker of ["single-process pilot", "durable OAuth", "not production acceptance"]) requireText(input.milestone, marker, "M6 record");
   return failures;
 }

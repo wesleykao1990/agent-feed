@@ -52,3 +52,10 @@ visible to a different system Python. Likewise, a sandbox-denied localhost
 socket is not evidence that an API or PostgreSQL contract failed. Combined
 acceptance receipts should record the interpreter/environment and distinguish
 an execution-environment failure from a product assertion failure.
+
+## M6-L009 — File-linked packages require clean installs at each source root
+
+Installing an application that links another workspace directory does not
+guarantee that the linked directory can resolve its own local dependencies on
+a clean GitHub runner. A milestone CI job must install the complete source-link
+chain explicitly, and its architecture guard should fail when that list drifts.
