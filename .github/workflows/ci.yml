@@ -225,3 +225,45 @@ jobs:
         env:
           AGENT_FEED_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_feed_test
           AGENT_FEED_OPERATIONS_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_feed_test
+
+  milestone-6-remote-mcp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: agent_feed_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d agent_feed_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install locked remote MCP dependencies
+        run: |
+          npm --prefix packages/schema ci
+          npm --prefix packages/producer-service ci
+          npm --prefix packages/protocol-runtime ci
+          npm --prefix packages/delivery-core ci
+          npm --prefix packages/delivery-consumer ci
+          npm --prefix packages/persistence-postgres ci
+          npm --prefix apps/mcp-server ci
+          npm --prefix apps/mcp-http ci
+
+      - name: Run Milestone 6 remote MCP gate
+        run: npm run m6:conformance
+        env:
+          AGENT_FEED_MCP_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_feed_test

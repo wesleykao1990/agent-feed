@@ -3,6 +3,20 @@
 Agent Feed is a standalone, reusable project for transmitting structured agent
 runs, findings, and submitted evidence to multiple consumer applications.
 
+Milestone 6 status: **authenticated Streamable HTTP, OAuth, live PostgreSQL,
+and hosted CI acceptance are green; the Claude account receipt is waiting for
+Owner or individual Pro/Max access**. The new
+`apps/mcp-http` edge reuses the existing official MCP server factory and
+therefore exposes exactly the same three lifecycle tools without copying
+policy. Its embedded OAuth provider is a memory-only acceptance pilot, not a
+production identity service. See
+`docs/17_milestone_6_universal_remote_mcp.md`.
+
+The approved post-Milestone 6 roadmap starts with schedule-occurrence and
+liveness correctness, then layers independent job proof, portable definitions,
+production operations, provider conformance, and utility feedback without
+turning Agent Feed into a scheduler. See `docs/18_post_m6_roadmap.md`.
+
 Milestone 5 status: **M5A installability is accepted and the combined local and
 GitHub CI portability/operations gates are green, including live PostgreSQL;
 hosted Supabase proof remains a separate production gate**. The operator CLI creates private
@@ -62,6 +76,7 @@ packages/sdk/typescript
 packages/sdk/python
 packages/adapters
 apps/mcp-server
+apps/mcp-http (authenticated Streamable HTTP and optional OAuth PKCE pilot)
 apps/api
 apps/delivery-api (transport-neutral handlers; no HTTP server)
 apps/delivery-worker (composition foundation; no production entrypoint yet)
