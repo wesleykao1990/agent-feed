@@ -86,6 +86,7 @@ jobs:
           npm --prefix packages/protocol-runtime ci
           npm --prefix packages/delivery-core ci
           npm --prefix packages/delivery-consumer ci
+          npm --prefix packages/occurrence-core ci
           npm --prefix packages/persistence-postgres ci
           npm --prefix apps/api ci
 
@@ -214,6 +215,7 @@ jobs:
           npm --prefix packages/protocol-runtime ci
           npm --prefix packages/delivery-core ci
           npm --prefix packages/delivery-consumer ci
+          npm --prefix packages/occurrence-core ci
           npm --prefix packages/persistence-postgres ci
           npm --prefix packages/operations-core ci
           npm --prefix packages/operations-observability ci
@@ -259,6 +261,7 @@ jobs:
           npm --prefix packages/protocol-runtime ci
           npm --prefix packages/delivery-core ci
           npm --prefix packages/delivery-consumer ci
+          npm --prefix packages/occurrence-core ci
           npm --prefix packages/persistence-postgres ci
           npm --prefix apps/mcp-server ci
           npm --prefix apps/mcp-http ci

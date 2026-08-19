@@ -143,12 +143,13 @@ test("live PostgreSQL persistence regression suite", { skip: databaseUrl ? false
     const migrations = await pool.query<{ version: string }>(
       "select version from agent_feed.schema_migrations order by version",
     );
-    assert.deepEqual(migrations.rows.map((row) => row.version), [
+    const appliedMigrations = new Set(migrations.rows.map((row) => row.version));
+    for (const requiredMigration of [
       "0001_agent_feed",
       "0002_durable_delivery",
       "0003_wire_run_id",
       "0004_occurrence_ledger",
-    ]);
+    ]) assert.equal(appliedMigrations.has(requiredMigration), true, `${requiredMigration} is applied`);
     const store = new PostgresAgentFeedPersistence(pool);
 
     const wireBegin = beginInput();

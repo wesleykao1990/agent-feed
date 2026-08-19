@@ -40,3 +40,17 @@ A loopback bind denied by the execution sandbox is not equivalent to a failed
 HTTP contract. Preserve the failed receipt, rerun the unchanged test with the
 minimum required local capability, and claim success only from that passing
 run.
+
+## M7-L008 — Local file dependencies are CI graph edges
+
+Adding a package to persistence changes every clean-checkout job that installs
+or builds persistence, even when the job predates that package. Each isolated
+job must install the complete local dependency graph in dependency order; a
+later dedicated job cannot supply modules to an earlier or parallel runner.
+
+## M7-L009 — Additive sidecars must coexist in acceptance databases
+
+A package should prove that its own migration chain is complete, not assert
+exclusive ownership of the shared migration ledger. Exact whole-ledger
+equality makes independently versioned sidecars appear incompatible even when
+their schema changes are intentionally additive.

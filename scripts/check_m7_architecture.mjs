@@ -69,6 +69,12 @@ export function checkM7Texts(input) {
     "packages/persistence-postgres ci",
     "npm run m7:conformance",
   ]) requireText(input.workflow, marker, "CI workflow");
+  const occurrenceInstalls = [...input.workflow.matchAll(/npm --prefix packages\/occurrence-core ci/gu)].map((match) => match.index);
+  const persistenceInstalls = [...input.workflow.matchAll(/npm --prefix packages\/persistence-postgres ci/gu)].map((match) => match.index);
+  if (occurrenceInstalls.length !== persistenceInstalls.length
+    || persistenceInstalls.some((position, index) => occurrenceInstalls[index] === undefined || occurrenceInstalls[index] > position)) {
+    failures.push("every CI job that installs persistence must first install occurrence-core");
+  }
   for (const marker of [
     'packages/occurrence-core", "run", "build',
     'packages/occurrence-core", "test',
