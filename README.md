@@ -3,9 +3,9 @@
 Agent Feed is a standalone, reusable project for transmitting structured agent
 runs, findings, and submitted evidence to multiple consumer applications.
 
-Milestone 6 status: **authenticated Streamable HTTP, OAuth, and live PostgreSQL
-acceptance are green; the Claude account receipt is waiting for Owner or
-individual Pro/Max access**. The new
+Milestone 6 status: **authenticated Streamable HTTP, OAuth, live PostgreSQL,
+and hosted CI acceptance are green; the Claude account receipt is waiting for
+Owner or individual Pro/Max access**. The new
 `apps/mcp-http` edge reuses the existing official MCP server factory and
 therefore exposes exactly the same three lifecycle tools without copying
 policy. Its embedded OAuth provider is a memory-only acceptance pilot, not a

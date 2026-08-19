@@ -1,7 +1,8 @@
 # Milestone 6 — universal remote MCP gateway
 
-Status: **implementation and live PostgreSQL acceptance green; Claude account
-acceptance waiting for an Owner or individual Pro/Max session**
+Status: **implementation, live PostgreSQL, full regression, and hosted CI
+acceptance green; Claude account acceptance waiting for an Owner or individual
+Pro/Max session**
 
 Milestone 6 adds a public Streamable HTTP composition for clients such as
 Claude while preserving the existing stdio path used by ChatGPT Secure MCP
@@ -48,6 +49,12 @@ metadata were also verified through a temporary acceptance tunnel. The active
 Claude session is a Team/Enterprise member workspace; Anthropic exposes custom
 connector registration there only to an Owner or Primary Owner, so step 4 is
 waiting for an eligible account session rather than being recorded as failed.
+
+The pre-Milestone 7 combined local gate passed on 2026-08-20. GitHub Actions
+run `32299808263` then passed the complete validation, Milestone 4, Milestone
+5, and Milestone 6 jobs at source commit `41d9b1e`. The M6 hosted job used a
+clean checkout, rebuilt the generated schema dependency, and ran the live
+PostgreSQL HTTP/OAuth and stdio regression gate.
 
 ## Explicit non-claims
 

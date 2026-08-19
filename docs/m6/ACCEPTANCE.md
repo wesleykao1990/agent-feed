@@ -1,7 +1,8 @@
 # Milestone 6 acceptance evidence
 
-Status: **local unit/architecture, live PostgreSQL, and full prior-milestone
-regression green; Claude account receipt waiting for eligible account access**
+Status: **local unit/architecture, live PostgreSQL, full prior-milestone
+regression, and hosted CI green; Claude account receipt waiting for eligible
+account access**
 
 The local focused gate covers official MCP HTTP dispatch, exact tool
 discovery, trusted-principal injection, hostile credential arguments, OAuth
@@ -46,5 +47,10 @@ the Milestone 6 branch was fast-forwarded to integrated `main` commit
 Each live milestone used a separate explicitly named disposable database. The
 first sandboxed attempts that could not open localhost sockets were environment
 failures and were rerun successfully with localhost access; they are not
-counted as product regressions. Hosted pull-request CI is recorded separately
-after the branch is published.
+counted as product regressions.
+
+GitHub Actions run `32299808263` passed all four PR #8 jobs at source commit
+`41d9b1e`: complete validation, Milestone 4 reference consumer, Milestone 5
+portability/operations, and Milestone 6 remote MCP. The hosted M6 job performed
+the complete source-link clean install, rebuilt the generated schema package,
+and passed the live PostgreSQL HTTP/OAuth plus stdio gate.

@@ -223,8 +223,9 @@ production deployment adapters are future acceptance work.
 
 ## Milestone 6 — Universal remote MCP
 
-Status: **implementation and live PostgreSQL acceptance green; Claude account
-receipt waiting for eligible Owner or individual Pro/Max access**. See
+Status: **implementation, live PostgreSQL, full regression, and hosted CI
+acceptance green; Claude account receipt waiting for eligible Owner or
+individual Pro/Max access**. See
 `docs/17_milestone_6_universal_remote_mcp.md` and `docs/m6/`.
 
 Deliver:
