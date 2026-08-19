@@ -210,5 +210,231 @@ export interface LivenessResult {
   expected_by: string | null;
 }
 
+/** M7 occurrence sidecar types.  These are deliberately separate from the
+ * protocol 0.1 run envelope and therefore can evolve without changing wire
+ * compatibility. */
+export type ScheduleKind = "interval" | "cron";
+export type OccurrenceMatchingMode = "explicit" | "windowed" | "legacy";
+export type MisfirePolicy = "mark_missed" | "fire_latest" | "catch_up";
+export type OverlapPolicy = "allow" | "skip" | "fail_closed";
+export type OccurrenceTriggerKind =
+  | "scheduled"
+  | "legacy"
+  | "manual"
+  | "test"
+  | "retry"
+  | "replay"
+  | "backfill"
+  | "event"
+  | "unknown";
+
+export interface ScheduleExpectedScope {
+  source_ids: string[];
+  subjects: string[];
+  queries?: string[];
+  metadata?: JsonObject;
+}
+
+export interface ScheduleExpectationVersionInput {
+  tenant_id?: string;
+  schedule_key: string;
+  /** Stream identity is immutable and must match every linked run. */
+  stream_id: string;
+  version?: number;
+  schedule_kind: ScheduleKind;
+  interval_seconds?: number | null;
+  cron_expression?: string | null;
+  timezone: string;
+  /** Immutable UTC anchor used by an external calculator; this repository does not drift it from run completion. */
+  anchor_at: string;
+  matching_mode: OccurrenceMatchingMode;
+  misfire_policy: MisfirePolicy;
+  overlap_policy: OverlapPolicy;
+  grace_seconds: number;
+  enabled?: boolean;
+  expected_scope: ScheduleExpectedScope | JsonObject;
+  owner: string;
+  notes?: string;
+  calculator_version?: string;
+  tzdata_version?: string;
+  calculator_provenance?: JsonObject;
+  tzdata_provenance?: JsonObject;
+  baseline_next_due_at?: string | null;
+}
+
+export interface ScheduleExpectationVersion extends Omit<ScheduleExpectationVersionInput, "tenant_id" | "version" | "enabled" | "notes" | "calculator_version" | "tzdata_version" | "calculator_provenance" | "tzdata_provenance" | "baseline_next_due_at"> {
+  id: string;
+  tenant_id: string;
+  stream_id: string;
+  version: number;
+  enabled: boolean;
+  notes: string;
+  calculator_version: string;
+  tzdata_version: string;
+  calculator_provenance: JsonObject;
+  tzdata_provenance: JsonObject;
+  baseline_next_due_at: string | null;
+  created_at: string;
+}
+
+export interface ExpectedOccurrenceInput {
+  tenant_id?: string;
+  schedule_version_id?: string;
+  schedule_key?: string;
+  version?: number;
+  occurrence_key: string;
+  ordinal: number;
+  expected_at: string;
+  window_start: string;
+  window_end: string;
+  metadata?: JsonObject;
+}
+
+export interface ExpectedOccurrence extends Omit<ExpectedOccurrenceInput, "tenant_id" | "schedule_version_id" | "schedule_key" | "version" | "metadata"> {
+  id: string;
+  tenant_id: string;
+  schedule_version_id: string;
+  schedule_key: string;
+  version: number;
+  metadata: JsonObject;
+  created_at: string;
+}
+
+export interface RunOccurrenceLinkInput {
+  tenant_id?: string;
+  run_id: string;
+  schedule_version_id?: string;
+  schedule_key?: string;
+  version?: number;
+  occurrence_id?: string;
+  occurrence_key?: string;
+  matched_at?: string;
+  metadata?: JsonObject;
+}
+
+export interface TrustedRunTriggerContextInput {
+  tenant_id?: string;
+  /** Public producer-visible wire run ID; repository resolves it tenant-safely. */
+  run_id: string;
+  trigger_kind: OccurrenceTriggerKind;
+  schedule_version_id?: string;
+  schedule_key?: string;
+  version?: number;
+  trusted_source: string;
+  metadata?: JsonObject;
+}
+
+export interface TrustedRunTriggerContext {
+  id: string;
+  tenant_id: string;
+  run_id: string;
+  trigger_kind: OccurrenceTriggerKind;
+  schedule_version_id: string | null;
+  schedule_key: string | null;
+  version: number | null;
+  trusted_source: string;
+  metadata: JsonObject;
+  created_at: string;
+}
+
+export interface RunOccurrenceLink {
+  id: string;
+  tenant_id: string;
+  schedule_version_id: string;
+  schedule_key: string;
+  version: number;
+  occurrence_id: string;
+  occurrence_key: string;
+  /** Producer-visible wire run ID.  The database stores and constrains the internal UUID alongside it. */
+  run_id: string;
+  trigger_kind: OccurrenceTriggerKind;
+  matching_mode: OccurrenceMatchingMode;
+  matched_at: string;
+  metadata: JsonObject;
+  created_at: string;
+}
+
+export type OccurrenceLivenessStatus =
+  | "upcoming"
+  | "due"
+  | "absent"
+  | "invoked_running"
+  | "satisfied"
+  | "invoked_partial"
+  | "invoked_failed"
+  | "invoked_cancelled"
+  | "disabled"
+  | "suppressed";
+
+export interface OccurrenceLiveness {
+  tenant_id: string;
+  schedule_version_id: string;
+  schedule_key: string;
+  version: number;
+  schedule_enabled: boolean;
+  occurrence_id: string;
+  occurrence_key: string;
+  ordinal: number;
+  expected_at: string;
+  window_start: string;
+  window_end: string;
+  status: OccurrenceLivenessStatus;
+  run_id: string | null;
+  run_status: RunStatus | null;
+  trigger_kind: OccurrenceTriggerKind | null;
+  matching_mode: OccurrenceMatchingMode | null;
+  matched_at: string | null;
+  metadata: JsonObject;
+}
+
+export interface OccurrenceLivenessOptions {
+  tenant_id: string;
+  schedule_version_id?: string;
+  schedule_key?: string;
+  version?: number;
+  now?: string | Date;
+  include_disabled?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+export interface MaterializeScheduleOccurrencesInput {
+  tenant_id?: string;
+  schedule_version_id?: string;
+  schedule_key?: string;
+  version?: number;
+  from: string;
+  to: string;
+  limit?: number;
+}
+
+export interface ScheduleExpectationListOptions {
+  tenant_id: string;
+  schedule_key?: string;
+  enabled?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+export interface ExpectedOccurrenceListOptions {
+  tenant_id: string;
+  schedule_version_id?: string;
+  schedule_key?: string;
+  version?: number;
+  from?: string | Date;
+  to?: string | Date;
+  limit?: number;
+  offset?: number;
+}
+
+export interface MigrationQuarantineRecord {
+  id: string;
+  tenant_id: string;
+  stream_id: string;
+  reason: string;
+  details: JsonObject;
+  detected_at: string;
+}
+
 export type PgPool = Pool;
 export type PgTransactionClient = PoolClient;

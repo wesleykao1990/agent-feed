@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import test from "node:test";
 import {
   PersistenceError,
+  OCCURRENCE_LEDGER_MIGRATION_SQL_URL,
   PostgresAgentFeedPersistence,
   WIRE_RUN_ID_MIGRATION_SQL_URL,
   createAgentFeedPool,
@@ -56,6 +57,25 @@ test("wire run-ID migration preserves arbitrary protocol IDs while retaining UUI
   assert.match(sql, /references agent_feed\.runs \(tenant_id, wire_run_id\)/i);
   assert.match(sql, /foreign key \(tenant_id, wire_run_id\)/i);
   assert.match(sql, /wire_run_id = run\.wire_run_id/i);
+});
+
+test("occurrence ledger migration is additive, immutable, tenant-scoped, and legacy-safe", async () => {
+  const sql = await readFile(OCCURRENCE_LEDGER_MIGRATION_SQL_URL, "utf8");
+  for (const marker of [
+    "schedule_expectation_versions",
+    "expected_occurrences",
+    "run_occurrence_links",
+    "schedule_expectation_migration_quarantine",
+    "runs_tenant_id_id_key",
+    "protect_occurrence_ledger_row",
+    "run_occurrence_links_validate",
+    "legacy_stream_has_non_default_tenant_activity",
+    "baseline_next_due_at",
+    "0004_occurrence_ledger",
+  ]) assert.match(sql, new RegExp(marker.replaceAll(".", "\\."), "i"));
+  assert.match(sql, /foreign key \(tenant_id, run_id\)\s+references agent_feed\.runs \(tenant_id, id\)/i);
+  assert.match(sql, /unique \(tenant_id, occurrence_id\)/i);
+  assert.match(sql, /unique \(tenant_id, run_id\)/i);
 });
 
 function beginInput(streamId = `test.${randomUUID()}`): BeginRunRequest {
@@ -127,6 +147,7 @@ test("live PostgreSQL persistence regression suite", { skip: databaseUrl ? false
       "0001_agent_feed",
       "0002_durable_delivery",
       "0003_wire_run_id",
+      "0004_occurrence_ledger",
     ]);
     const store = new PostgresAgentFeedPersistence(pool);
 

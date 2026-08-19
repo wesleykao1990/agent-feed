@@ -25,6 +25,7 @@
   "dependencies": {
     "@agent-feed/delivery-consumer": "file:../delivery-consumer",
     "@agent-feed/delivery-core": "file:../delivery-core",
+    "@agent-feed/occurrence-core": "file:../occurrence-core",
     "@agent-feed/protocol-runtime": "file:../protocol-runtime",
     "pg": "8.16.3"
   },

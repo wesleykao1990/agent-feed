@@ -267,3 +267,51 @@ jobs:
         run: npm run m6:conformance
         env:
           AGENT_FEED_MCP_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_feed_test
+
+  milestone-7-occurrence-ledger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: agent_feed_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d agent_feed_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install protocol validation dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Install locked occurrence dependencies
+        run: |
+          npm --prefix packages/protocol-runtime ci
+          npm --prefix packages/delivery-core ci
+          npm --prefix packages/delivery-consumer ci
+          npm --prefix packages/occurrence-core ci
+          npm --prefix packages/persistence-postgres ci
+
+      - name: Run Milestone 7 occurrence ledger gate
+        run: npm run m7:conformance
+        env:
+          AGENT_FEED_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_feed_test

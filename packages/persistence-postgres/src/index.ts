@@ -1,12 +1,15 @@
 export {
   DELIVERY_MIGRATION_SQL_URL,
   MIGRATION_SQL_URL,
+  OCCURRENCE_MIGRATION_SQL_URL,
+  OCCURRENCE_LEDGER_MIGRATION_SQL_URL,
   WIRE_RUN_ID_MIGRATION_SQL_URL,
   PostgresAgentFeedPersistence,
   PostgresAgentFeedService,
   createAgentFeedPool,
   migrateAgentFeed,
 } from "./postgres-store.ts";
+export { PostgresOccurrenceRepository } from "./occurrence-store.ts";
 export { PostgresDeliveryRepository, appendOutboxEventInTransaction } from "./delivery-store.ts";
 export { PostgresDeliveryConsumerRepository } from "./delivery-consumer-store.ts";
 export type {
@@ -57,4 +60,25 @@ export type {
   SubmitBatchRequest,
   Task,
   TerminalRunStatus,
+  ExpectedOccurrence,
+  ExpectedOccurrenceInput,
+  ExpectedOccurrenceListOptions,
+  MaterializeScheduleOccurrencesInput,
+  MigrationQuarantineRecord,
+  MisfirePolicy,
+  OccurrenceLiveness,
+  OccurrenceLivenessOptions,
+  OccurrenceLivenessStatus,
+  OccurrenceMatchingMode,
+  OccurrenceTriggerKind,
+  OverlapPolicy,
+  RunOccurrenceLink,
+  RunOccurrenceLinkInput,
+  ScheduleExpectationListOptions,
+  ScheduleExpectationVersion,
+  ScheduleExpectationVersionInput,
+  ScheduleExpectedScope,
+  ScheduleKind,
+  TrustedRunTriggerContext,
+  TrustedRunTriggerContextInput,
 } from "./types.ts";

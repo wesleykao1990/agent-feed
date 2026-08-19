@@ -258,3 +258,33 @@ portable job definitions, a production control plane, provider conformance,
 consumer utility feedback, and only then an evidence-based protocol `0.2`
 decision. These capabilities are additive sidecars while protocol `0.1`
 remains pinned.
+
+### Milestone 7 — Occurrence ledger and liveness correctness
+
+Status: **local implementation, live PostgreSQL, independent re-review, and
+the full M0–M6 local regression green; hosted verification pending**. See
+`docs/19_milestone_7_occurrence_ledger.md` and
+`docs/m7/`.
+
+Deliver:
+
+- pure, deterministic interval and bounded five-field cron/timezone occurrence
+  materialization;
+- immutable, tenant-scoped schedule versions and expected occurrences;
+- durable trusted trigger context outside protocol `0.1`;
+- one-run/one-occurrence explicit, windowed, and legacy matching;
+- separate absence, running, completed-zero, partial, failed, and cancelled
+  liveness outcomes;
+- bounded misfire and overlap decisions; and
+- safe legacy-baseline migration with ambiguity quarantine.
+
+Gate:
+
+- nominal timestamps stay anchored when execution is delayed;
+- only a trusted scheduled invocation can satisfy a normal occurrence;
+- manual, test, replay, retry, backfill, event, and unknown invocations cannot
+  move scheduled state;
+- ambiguous or duplicate matches fail closed under concurrency;
+- timezone/DST, misfire, and overlap fixtures pass with persisted occurrences;
+- protocol `0.1` schemas and lifecycle tools remain unchanged; and
+- the full prior milestone CI matrix remains green.
