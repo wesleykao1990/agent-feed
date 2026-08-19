@@ -261,8 +261,8 @@ remains pinned.
 
 ### Milestone 7 — Occurrence ledger and liveness correctness
 
-Status: **local implementation, live PostgreSQL, independent re-review, and
-the full M0–M6 local regression green; hosted verification pending**. See
+Status: **local implementation, live PostgreSQL, independent re-review, the
+full M0–M6 local regression, and hosted CI green on draft PR #9**. See
 `docs/19_milestone_7_occurrence_ledger.md` and
 `docs/m7/`.
 

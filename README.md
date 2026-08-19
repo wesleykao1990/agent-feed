@@ -4,8 +4,8 @@ Agent Feed is a standalone, reusable project for transmitting structured agent
 runs, findings, and submitted evidence to multiple consumer applications.
 
 Milestone 7 status: **local implementation, live PostgreSQL acceptance,
-independent re-review, and the full M0–M6 local regression are green; hosted CI
-is pending**. The additive occurrence sidecar records immutable schedule
+independent re-review, the full M0–M6 local regression, and hosted CI are
+green on draft PR #9**. The additive occurrence sidecar records immutable schedule
 versions, expected nominal invocations, trusted trigger context, run links,
 and outcome-aware liveness without changing protocol `0.1` or turning Agent
 Feed into a scheduler. See `docs/19_milestone_7_occurrence_ledger.md`.

@@ -1,7 +1,7 @@
 # Milestone 7 acceptance record
 
-Status: **local implementation/live PostgreSQL evidence, independent
-re-review, and complete M0–M6 local regression green; hosted evidence pending**
+Status: **accepted locally and independently; complete M0–M7 hosted matrix
+green on draft PR #9**
 
 Required evidence:
 
@@ -44,5 +44,16 @@ after its loopback HTTP test server was granted local bind access; the initial
 `EPERM` was a sandbox restriction, not a product failure. M4 and all remaining
 offline architecture, build, package, SDK, adapter, and protocol gates passed.
 
-Checksum refresh and clean-checkout hosted CI remain required before final
-acceptance.
+## Hosted receipt — 2026-08-20
+
+GitHub Actions run
+[32307120427](https://github.com/wesleykao1990/agent-feed/actions/runs/32307120427)
+passed from a clean pull-request checkout after the local-dependency graph fix:
+
+- combined `validate` job: M0–M3 and live PostgreSQL ingress green;
+- Milestone 4 generic reference-consumer job green;
+- Milestone 5 portability/operations job green;
+- Milestone 6 remote MCP job green; and
+- Milestone 7 occurrence-ledger job green with live PostgreSQL.
+
+The pull request remains draft and unmerged by design.

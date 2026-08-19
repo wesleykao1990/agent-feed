@@ -1,7 +1,8 @@
 # Milestone 7 — occurrence ledger and liveness correctness
 
 Status: **local implementation, live PostgreSQL acceptance, independent
-re-review, and the full M0–M6 local regression green; hosted CI pending**
+re-review, the full M0–M6 local regression, and hosted CI green on draft PR
+#9**
 
 Milestone 7 makes recurring-run liveness derive from immutable nominal
 occurrences instead of terminal completion time. Agent Feed remains a proof
@@ -73,8 +74,10 @@ PostgreSQL database with 9 architecture boundaries, 11 pure-core tests, 14
 persistence tests with zero skips, and protocol `0.1` compatibility green.
 An independent verifier reran that live gate, found no blocker or high-severity
 finding, and recommended acceptance. The full M0–M6 local regression also
-passed, including all required live PostgreSQL suites. This evidence does not
-replace the pending clean-checkout GitHub Actions receipt.
+passed, including all required live PostgreSQL suites. Clean-checkout GitHub
+Actions run
+[32307120427](https://github.com/wesleykao1990/agent-feed/actions/runs/32307120427)
+then passed the complete five-job M0–M7 matrix on draft PR #9.
 
 ## Explicit non-claims
 
