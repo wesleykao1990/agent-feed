@@ -12,3 +12,4 @@
 | M7-OC-D008 | Reject window ambiguity and duplicate links rather than selecting a winner. | A run cannot prove multiple nominal occurrences, and fail-closed ambiguity is safer than silently moving liveness. |
 | M7-OC-D009 | Keep zero findings distinct from absence. | A completed invocation with no findings is successful execution; no invocation is an absence/liveness condition. |
 | M7-OC-D010 | Represent overlap skip as suppression, not misfire. | The scheduler intentionally declined an overlapping invocation; it did not observe a missed occurrence. |
+| M7-OC-D011 | Evaluate active prior invocations before applying `skip` or `fail_closed`; no active prior makes either policy eligible. | A configured overlap policy only changes a genuinely overlapping occurrence. This correction prevents false suppression/conflict on ordinary non-overlapping runs. |

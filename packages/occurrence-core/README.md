@@ -75,9 +75,9 @@ overdue occurrences missed and makes only the newest eligible; `catch_up`
 makes the oldest caller-selected N eligible (N <= 100) and explicitly defers
 the remainder. Linked and not-yet-overdue occurrences are returned separately.
 
-`decideOverlap` is pure: `allow` is eligible, `skip` is suppressed (never
-missed), and `fail_closed` is conflict while any prior invocation is still
-invoked/running; otherwise it is eligible.
+`decideOverlap` is pure: `allow` is always eligible. With no active prior
+invocation, both `skip` and `fail_closed` are eligible; with an active prior,
+`skip` is suppressed (never missed) and `fail_closed` is conflict.
 
 ## Cron parser and DST contract
 
@@ -96,3 +96,10 @@ the pinned version.
 
 This package does not implement RRULE/calendar schedules, provider-specific
 extensions, persistence, leases, execution, or automatic schedule generation.
+
+### Corrected overlap edge
+
+The overlap fixture suite explicitly covers all three policies with and without
+an active prior invocation. A policy must not suppress or conflict merely
+because it is configured to do so; those outcomes require a genuinely active
+prior invocation in the supplied overlap set.

@@ -129,15 +129,17 @@ function isActive(invocation: PriorInvocation): boolean {
 /** Pure overlap policy decision. Suppression is deliberately not a misfire. */
 export function decideOverlap(request: OverlapRequest): OverlapResult {
   const priorInvocations = request.priorInvocations ?? request.prior_invocations ?? [];
-  if (request.policy === "allow") return { policy: request.policy, decision: "eligible", reason: "allow_policy", conflictingRunIds: [] };
-  if (request.policy === "skip") return { policy: request.policy, decision: "suppressed", reason: "skip_policy", conflictingRunIds: [] };
-  if (request.policy !== "fail_closed") throw new OccurrenceCoreError("invalid_overlap_policy", "unsupported overlap policy", { path: "policy" });
+  if (request.policy !== "allow" && request.policy !== "skip" && request.policy !== "fail_closed") {
+    throw new OccurrenceCoreError("invalid_overlap_policy", "unsupported overlap policy", { path: "policy" });
+  }
   const conflicts = priorInvocations
     .filter(isActive)
     .map((invocation) => invocation.runId)
     .sort();
-  if (conflicts.length > 0) return { policy: request.policy, decision: "conflict", reason: "active_prior_invocation", conflictingRunIds: conflicts };
-  return { policy: request.policy, decision: "eligible", reason: "no_active_prior_invocation", conflictingRunIds: [] };
+  if (request.policy === "allow") return { policy: request.policy, decision: "eligible", reason: "allow_policy", conflictingRunIds: conflicts };
+  if (conflicts.length === 0) return { policy: request.policy, decision: "eligible", reason: "no_active_prior_invocation", conflictingRunIds: [] };
+  if (request.policy === "skip") return { policy: request.policy, decision: "suppressed", reason: "skip_policy", conflictingRunIds: conflicts };
+  return { policy: request.policy, decision: "conflict", reason: "active_prior_invocation", conflictingRunIds: conflicts };
 }
 
 export const evaluateOverlap = decideOverlap;

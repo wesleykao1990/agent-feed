@@ -23,3 +23,9 @@ generation path, including disabled expectations and catch-up classification.
 `completed` with zero findings proves a scheduled invocation only when trigger
 and occurrence matching succeed. A manual completed run, or a scheduled run
 outside its matching window, must not be treated as scheduled success.
+
+## M7-OC-L005 — Overlap policy is conditional, not a default state
+
+`skip` and `fail_closed` describe what to do when an active prior invocation
+exists; they do not themselves prove overlap. The pure decision must inspect
+active prior state first, while `allow` remains eligible regardless of it.

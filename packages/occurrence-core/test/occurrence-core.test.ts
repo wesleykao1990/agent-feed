@@ -233,12 +233,19 @@ test("misfire policies are deterministic and preserve explicit deferred/linked s
 });
 
 test("overlap policies are pure and fail closed on active prior invocations", () => {
-  assert.deepEqual(decideOverlap({ policy: "allow", priorInvocations: [{ runId: "r", status: "running" }] }).decision, "eligible");
-  assert.deepEqual(decideOverlap({ policy: "skip", priorInvocations: [{ runId: "r", status: "running" }] }).decision, "suppressed");
-  const conflict = decideOverlap({ policy: "fail_closed", priorInvocations: [{ runId: "r", status: "running" }, { runId: "done", status: "completed" }] });
+  const active = [{ runId: "r", status: "running" as const }];
+  const inactive = [{ runId: "done", status: "completed" as const }];
+  for (const policy of ["allow", "skip", "fail_closed"] as const) {
+    assert.equal(decideOverlap({ policy, priorInvocations: inactive }).decision, "eligible", `no active prior: ${policy}`);
+  }
+  assert.equal(decideOverlap({ policy: "allow", priorInvocations: active }).decision, "eligible");
+  assert.deepEqual(decideOverlap({ policy: "allow", priorInvocations: active }).conflictingRunIds, ["r"]);
+  const suppressed = decideOverlap({ policy: "skip", priorInvocations: active });
+  assert.equal(suppressed.decision, "suppressed");
+  assert.deepEqual(suppressed.conflictingRunIds, ["r"]);
+  const conflict = decideOverlap({ policy: "fail_closed", priorInvocations: active });
   assert.equal(conflict.decision, "conflict");
   assert.deepEqual(conflict.conflictingRunIds, ["r"]);
-  assert.equal(decideOverlap({ policy: "fail_closed", priorInvocations: [{ runId: "done", status: "completed" }] }).decision, "eligible");
 });
 
 test("batch matching rejects duplicate run IDs and cannot link one run to two occurrences", () => {
