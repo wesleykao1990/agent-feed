@@ -23,6 +23,8 @@
     "m5:architecture": "node scripts/check_m5_architecture.mjs",
     "m5a:conformance": "node scripts/run_m5_conformance.mjs --installability-only",
     "m5:conformance": "node scripts/run_m5_conformance.mjs",
+    "m6:architecture": "node scripts/check_m6_architecture.mjs",
+    "m6:conformance": "node scripts/run_m6_conformance.mjs",
     "m1:architecture": "node scripts/check_producer_architecture.mjs",
     "m1:ingress": "node scripts/run_m1_ingress_conformance.mjs",
     "schema:artifact": "node scripts/build_schema_artifact.mjs",

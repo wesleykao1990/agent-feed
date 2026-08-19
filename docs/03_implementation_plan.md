@@ -220,3 +220,40 @@ delivery history remain protected. Metrics use fixed labels and durable state,
 and Realtime may update a dashboard but is never the queue, lease,
 acknowledgement, or recovery source of truth. Hosted Supabase receipts and
 production deployment adapters are future acceptance work.
+
+## Milestone 6 — Universal remote MCP
+
+Status: **implementation and live PostgreSQL acceptance green; Claude account
+receipt waiting for eligible Owner or individual Pro/Max access**. See
+`docs/17_milestone_6_universal_remote_mcp.md` and `docs/m6/`.
+
+Deliver:
+
+- a separate Streamable HTTP composition over the existing official MCP
+  server factory;
+- request-scoped producer authentication with RFC 9728/RFC 8414 discovery;
+- static Bearer support plus an optional operator-approved OAuth PKCE pilot;
+- hard Host, Origin, streamed-body, error-redaction, and loopback boundaries;
+- no changes to the three lifecycle tools or protocol `0.1`; and
+- local, live PostgreSQL, hosted CI, and client-specific acceptance evidence.
+
+Gate:
+
+- HTTP and stdio discover the same three tools from one implementation;
+- credentials never enter tool arguments and the authenticated principal is
+  the only authority passed to `ProducerService`;
+- a full remote begin/submit/complete lifecycle survives in PostgreSQL;
+- OAuth codes are short-lived and one-use, PKCE is mandatory, refresh tokens
+  rotate, and revoked tokens fail closed; and
+- temporary tunnels and the embedded memory-only OAuth provider are not
+  described as production hosting or production identity.
+
+## Milestones 7–13 — Proof and control plane
+
+The post-Milestone 6 roadmap is defined in
+`docs/18_post_m6_roadmap.md`. Milestone 7 begins with occurrence-ledger and
+liveness correctness. Later milestones add independent assessment receipts,
+portable job definitions, a production control plane, provider conformance,
+consumer utility feedback, and only then an evidence-based protocol `0.2`
+decision. These capabilities are additive sidecars while protocol `0.1`
+remains pinned.
