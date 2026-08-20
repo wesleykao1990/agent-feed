@@ -519,3 +519,29 @@ jobs:
 
       - name: Run Milestone 11 multi-provider conformance gate
         run: npm run m11:conformance
+
+  milestone-12-utility-feedback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install protocol validation dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Install locked utility-feedback dependencies
+        run: npm --prefix packages/utility-feedback-core ci
+
+      - name: Run Milestone 12 utility-feedback gate
+        run: npm run m12:conformance

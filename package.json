@@ -35,6 +35,8 @@
     "m10:conformance": "node scripts/run_m10_conformance.mjs",
     "m11:architecture": "node scripts/check_m11_architecture.mjs",
     "m11:conformance": "node scripts/run_m11_conformance.mjs",
+    "m12:architecture": "node scripts/check_m12_architecture.mjs",
+    "m12:conformance": "node scripts/run_m12_conformance.mjs",
     "m1:architecture": "node scripts/check_producer_architecture.mjs",
     "m1:ingress": "node scripts/run_m1_ingress_conformance.mjs",
     "schema:artifact": "node scripts/build_schema_artifact.mjs",

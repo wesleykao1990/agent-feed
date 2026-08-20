@@ -1,0 +1,18 @@
+{
+  "name": "@agent-feed/utility-feedback-core",
+  "version": "0.1.1",
+  "description": "Consumer-owned append-only dispositions and bounded utility metrics for Agent Feed.",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "exports": { ".": { "types": "./src/index.ts", "default": "./src/index.ts" } },
+  "files": ["src", "test", "README.md", "package.json", "package-lock.json"],
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test --test-concurrency=1 test/*.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.1",
+    "typescript": "7.0.2"
+  }
+}
