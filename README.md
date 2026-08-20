@@ -3,6 +3,13 @@
 Agent Feed is a standalone, reusable project for transmitting structured agent
 runs, findings, and submitted evidence to multiple consumer applications.
 
+Milestone 10 status: **first local control-plane contract checkpoint green;
+durable read composition, dashboard, external identity, hosted deployment,
+alerts, runbooks, and final acceptance pending**. The new payload-free contract
+distinguishes provider, gateway, execution, validation, and delivery failures
+across tenant-scoped job, occurrence, run, assessment, and delivery state. See
+`docs/22_milestone_10_production_control_plane.md`.
+
 Milestone 9 status: **local live checkpoint and complete M0–M9 regression
 green; independent review and hosted CI pending**. The additive registry keeps logical job identity separate from
 provider topology and fails autonomous activation closed unless exact
@@ -107,6 +114,7 @@ packages/operations-postgres (PostgreSQL operations adapter)
 packages/occurrence-core (pure schedule occurrence and policy contracts)
 packages/assessment-core (pure job-proof policy and assessment contracts)
 packages/job-registry-core (pure portable definitions and capability preflight)
+packages/control-plane-core (pure tenant-scoped operational read model)
 apps/admin-dashboard (optional read-only aggregate view)
 docs/adr
 docs/m2
