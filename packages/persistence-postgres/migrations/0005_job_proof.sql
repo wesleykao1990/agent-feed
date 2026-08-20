@@ -154,6 +154,8 @@ create table if not exists agent_feed.assessment_declared_budgets (
   check (length(unit) <= 128),
   check (state = 'declared' and limit_value is not null and limit_value >= 0
          or state in ('unknown', 'not_applicable') and limit_value is null),
+  constraint assessment_declared_budgets_limit_safe_integer
+    check (limit_value is null or (limit_value >= 0 and limit_value <= 9007199254740991 and limit_value = trunc(limit_value))),
   check (jsonb_typeof(metadata) = 'object')
 );
 
@@ -187,6 +189,8 @@ create table if not exists agent_feed.assessment_usage_observations (
   check (length(unit) <= 128),
   check (state = 'observed' and value is not null and value >= 0 and provenance <> 'unknown'
          or state in ('unknown', 'not_applicable') and value is null),
+  constraint assessment_usage_observations_value_safe_integer
+    check (value is null or (value >= 0 and value <= 9007199254740991 and value = trunc(value))),
   check (jsonb_typeof(provenance_details) = 'object'),
   check (jsonb_typeof(metadata) = 'object')
 );
@@ -219,10 +223,29 @@ create table if not exists agent_feed.assessment_artifact_references (
   check (reference is null or length(reference) <= 2048),
   check (reference is null or (reference !~ '[?#]' and reference !~* '(base64|credential|password|secret|signed[[:space:]_-]*url)')),
   check (size_bytes is null or size_bytes >= 0),
+  constraint assessment_artifact_references_size_safe_integer
+    check (size_bytes is null or (size_bytes <= 9007199254740991)),
   check (jsonb_typeof(provenance) in ('object', 'string', 'null')),
   check (provenance::text !~* '(blob|content|base64|credential|password|secret|signed[[:space:]_-]*url)'),
   check (metadata::text !~* '(blob|content|base64|credential|password|secret|signed[[:space:]_-]*url)'),
   check (jsonb_typeof(metadata) = 'object')
+);
+
+-- A receipt seal is the commit-time boundary for the complete assessment
+-- aggregate.  It is intentionally a separate append-only row: a parent and
+-- all of its children are staged first, then this row is inserted last in the
+-- repository transaction.
+create table if not exists agent_feed.assessment_receipt_seals (
+  id uuid primary key default gen_random_uuid(),
+  tenant_id text not null,
+  assessment_id uuid not null,
+  sealed_at timestamptz not null default now(),
+  unique (tenant_id, id),
+  unique (tenant_id, assessment_id),
+  foreign key (tenant_id, assessment_id)
+    references agent_feed.run_assessments (tenant_id, id)
+    on delete restrict,
+  check (length(tenant_id) between 1 and 256)
 );
 
 create index if not exists run_assessments_run_idx
@@ -231,6 +254,126 @@ create index if not exists run_assessments_policy_idx
   on agent_feed.run_assessments (tenant_id, policy_version_id, created_at desc);
 create index if not exists assessment_usage_metric_idx
   on agent_feed.assessment_usage_observations (tenant_id, metric, created_at desc);
+
+-- The first 0005 release used unconstrained numeric values for the three
+-- counters below.  Add named NOT VALID checks so reapplying this migration to
+-- an existing database never rewrites or silently repairs historical proof,
+-- while every new direct-SQL row still obeys the JavaScript-safe integer
+-- contract.
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+     where conname = 'assessment_declared_budgets_limit_safe_integer'
+       and conrelid = 'agent_feed.assessment_declared_budgets'::regclass
+  ) then
+    alter table agent_feed.assessment_declared_budgets
+      add constraint assessment_declared_budgets_limit_safe_integer
+      check (limit_value is null or (limit_value >= 0 and limit_value <= 9007199254740991 and limit_value = trunc(limit_value)))
+      not valid;
+  end if;
+  if not exists (
+    select 1 from pg_constraint
+     where conname = 'assessment_usage_observations_value_safe_integer'
+       and conrelid = 'agent_feed.assessment_usage_observations'::regclass
+  ) then
+    alter table agent_feed.assessment_usage_observations
+      add constraint assessment_usage_observations_value_safe_integer
+      check (value is null or (value >= 0 and value <= 9007199254740991 and value = trunc(value)))
+      not valid;
+  end if;
+  if not exists (
+    select 1 from pg_constraint
+     where conname = 'assessment_artifact_references_size_safe_integer'
+       and conrelid = 'agent_feed.assessment_artifact_references'::regclass
+  ) then
+    alter table agent_feed.assessment_artifact_references
+      add constraint assessment_artifact_references_size_safe_integer
+      check (size_bytes is null or (size_bytes >= 0 and size_bytes <= 9007199254740991))
+      not valid;
+  end if;
+end
+$$;
+
+-- Artifact rows carry only bounded opaque references and provenance.  Keep the
+-- validation in the database as a reusable recursive function so direct SQL
+-- cannot bypass the repository/core boundary.  JSON keys are checked
+-- separately from values because a harmless-looking value under a key such as
+-- "token" is still credential material.
+create or replace function agent_feed.validate_artifact_reference_safety(value text, field_name text)
+returns void language plpgsql as $$
+begin
+  if $1 is null then
+    return;
+  end if;
+  if $1 ~ '[?#]' then
+    raise exception '% must not contain a query or fragment', field_name;
+  end if;
+  if $1 ~* '(^|[^[:alnum:]])(data|blob|inline|base64|content):'
+     or $1 ~* '^\s*[A-Za-z0-9+/]{32,}={0,2}\s*$' then
+    raise exception '% must be an opaque reference, not inline/blob/content/base64 data', field_name;
+  end if;
+  if $1 ~* '[[:alpha:]][[:alnum:]+.-]*://[^[:space:]/?#@]+@' then
+    raise exception '% must not contain URL userinfo', field_name;
+  end if;
+  if $1 ~* '(signed|presign|presigned)[[:space:]_-]*url'
+     or $1 ~* '(^|[^[:alnum:]])(?:bearer|basic)[[:space:]]+[A-Za-z0-9._~+/=-]{8,}([^[:alnum:]._~+/=-]|$)'
+     or $1 ~* '(^|[^[:alnum:]])(?:AKIA|ASIA)[0-9A-Z]{16}([^[:alnum:]]|$)'
+     or $1 ~* '(^|[^[:alnum:]])(?:gh[pousr]|github_pat)_[A-Za-z0-9_]{20,}([^[:alnum:]]|$)'
+     or $1 ~* '(^|[^[:alnum:]])sk-(?:proj-)?[A-Za-z0-9_-]{16,}([^[:alnum:]]|$)'
+     or $1 ~* '(^|[^[:alnum:]])AIza[0-9A-Za-z_-]{20,}([^[:alnum:]]|$)'
+     or $1 ~* '(^|[^[:alnum:]])xox[baprs]-[A-Za-z0-9-]{10,}([^[:alnum:]]|$)'
+     or $1 ~* '(^|[^[:alnum:]])(?:pk|rk|sk)_(?:live|test)_[0-9A-Za-z]{16,}([^[:alnum:]]|$)'
+     or $1 ~* '(^|[^[:alnum:]])eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}([^[:alnum:]]|$)'
+     or $1 ~* '(^|[^[:alnum:]])(?:api|access)[[:space:]_-]*key[[:space:]]*[:=][[:space:]]*[^[:space:]]{8,}' then
+    raise exception '% contains credential-like or signed-URL material', field_name;
+  end if;
+end
+$$;
+
+create or replace function agent_feed.validate_artifact_safety(value jsonb, field_name text)
+returns void language plpgsql as $$
+declare
+  entry record;
+  child record;
+  kind text;
+begin
+  if $1 is null then
+    return;
+  end if;
+  kind := jsonb_typeof($1);
+  if kind = 'object' then
+    for entry in select item.key, item.value from jsonb_each($1) as item(key, value) loop
+      if entry.key ~* '(authorization|credential|password|secret|token|private[[:space:]_-]*key|api[[:space:]_-]*key|access[[:space:]_-]*key|signed[[:space:]_-]*url|signature|inline|blob|base64|payload|content|raw|body)' then
+        raise exception '% contains a forbidden sensitive key', field_name || '.' || entry.key;
+      end if;
+      perform agent_feed.validate_artifact_safety(entry.value, field_name || '.' || entry.key);
+    end loop;
+  elsif kind = 'array' then
+    for child in select item.value from jsonb_array_elements($1) as item(value) loop
+      perform agent_feed.validate_artifact_safety(child.value, field_name || '[]');
+    end loop;
+  elsif kind = 'string' then
+    perform agent_feed.validate_artifact_reference_safety($1 #>> '{}', field_name);
+  end if;
+end
+$$;
+
+create or replace function agent_feed.validate_assessment_artifact_safety()
+returns trigger language plpgsql as $$
+begin
+  perform agent_feed.validate_artifact_reference_safety(new.identity, 'artifact identity');
+  perform agent_feed.validate_artifact_reference_safety(new.reference, 'artifact reference');
+  perform agent_feed.validate_artifact_safety(new.provenance, 'artifact provenance');
+  perform agent_feed.validate_artifact_safety(new.metadata, 'artifact metadata');
+  return new;
+end
+$$;
+
+drop trigger if exists assessment_artifact_references_validate_safety on agent_feed.assessment_artifact_references;
+create trigger assessment_artifact_references_validate_safety
+before insert on agent_feed.assessment_artifact_references
+for each row execute function agent_feed.validate_assessment_artifact_safety();
 
 -- Every proof row is immutable. The trigger is intentionally generic so a
 -- direct SQL caller cannot rewrite a receipt or any child telemetry/reference.
@@ -264,6 +407,73 @@ for each row execute function agent_feed.protect_job_proof_row();
 drop trigger if exists assessment_artifact_references_append_only on agent_feed.assessment_artifact_references;
 create trigger assessment_artifact_references_append_only
 before update or delete on agent_feed.assessment_artifact_references
+for each row execute function agent_feed.protect_job_proof_row();
+
+-- Once the seal exists, no child row may be appended.  This closes the gap
+-- that ordinary append-only UPDATE/DELETE guards leave open: a later INSERT
+-- would otherwise change the effective receipt aggregate.
+create or replace function agent_feed.reject_assessment_child_after_seal()
+returns trigger language plpgsql as $$
+begin
+  -- Serialize child INSERTs with the final seal (and with other child
+  -- INSERTs) on the immutable parent row.  Without this lock, a child
+  -- transaction that started before the seal committed could append after
+  -- the seal became visible.
+  perform 1
+    from agent_feed.run_assessments parent
+   where parent.tenant_id = new.tenant_id
+     and parent.id = new.assessment_id
+   for update;
+  if exists (
+    select 1 from agent_feed.assessment_receipt_seals seal
+     where seal.tenant_id = new.tenant_id
+       and seal.assessment_id = new.assessment_id
+  ) then
+    raise exception 'assessment receipt is sealed; child rows are immutable';
+  end if;
+  return new;
+end
+$$;
+
+drop trigger if exists assessment_declared_budgets_receipt_seal_guard on agent_feed.assessment_declared_budgets;
+create trigger assessment_declared_budgets_receipt_seal_guard
+before insert on agent_feed.assessment_declared_budgets
+for each row execute function agent_feed.reject_assessment_child_after_seal();
+drop trigger if exists assessment_usage_observations_receipt_seal_guard on agent_feed.assessment_usage_observations;
+create trigger assessment_usage_observations_receipt_seal_guard
+before insert on agent_feed.assessment_usage_observations
+for each row execute function agent_feed.reject_assessment_child_after_seal();
+drop trigger if exists assessment_artifact_references_receipt_seal_guard on agent_feed.assessment_artifact_references;
+create trigger assessment_artifact_references_receipt_seal_guard
+before insert on agent_feed.assessment_artifact_references
+for each row execute function agent_feed.reject_assessment_child_after_seal();
+
+-- Every newly inserted parent must have a seal by commit.  A deferred
+-- constraint trigger deliberately permits the repository's parent, children,
+-- and final seal to be inserted in that order within one transaction.
+create or replace function agent_feed.validate_assessment_receipt_seal_presence()
+returns trigger language plpgsql as $$
+begin
+  if not exists (
+    select 1 from agent_feed.assessment_receipt_seals seal
+     where seal.tenant_id = new.tenant_id
+       and seal.assessment_id = new.id
+  ) then
+    raise exception 'assessment receipt must be sealed before commit';
+  end if;
+  return new;
+end
+$$;
+
+drop trigger if exists run_assessments_receipt_seal_required on agent_feed.run_assessments;
+create constraint trigger run_assessments_receipt_seal_required
+after insert on agent_feed.run_assessments
+deferrable initially deferred
+for each row execute function agent_feed.validate_assessment_receipt_seal_presence();
+
+drop trigger if exists assessment_receipt_seals_append_only on agent_feed.assessment_receipt_seals;
+create trigger assessment_receipt_seals_append_only
+before update or delete on agent_feed.assessment_receipt_seals
 for each row execute function agent_feed.protect_job_proof_row();
 
 -- PostgreSQL jsonb text is canonical for a stored jsonb value (object keys are

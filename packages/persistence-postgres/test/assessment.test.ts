@@ -150,6 +150,45 @@ test("live PostgreSQL job-proof repository preserves authority, idempotency, rea
     await assert.rejects(store.submitAssessment({ ...firstInput, summary: "drift" }, { tenant_id: "m8-tenant", assessor_registration_version_id: independent.id }), (error: unknown) => error instanceof PersistenceError && error.code === "assessment_conflict");
     await assert.rejects(store.submitAssessment({ ...firstInput }, { tenant_id: "m8-tenant", assessor_registration_version_id: self.id }), /independent|assessment|policy/i);
     await assert.rejects(store.submitAssessment({ ...firstInput, request_idempotency_key: `m8-assess-${randomUUID()}`, usage_observations: [{ usage_key: "wall", metric: "wall_time_ms", state: "observed", value: 2, provenance: "unknown" }] }, { tenant_id: "m8-tenant", assessor_registration_version_id: independent.id }), /non-unknown|assessment-core|provenance/i);
+    await assert.rejects(store.submitAssessment({ ...firstInput, request_idempotency_key: `m8-fractional-${randomUUID()}`, declared_budgets: [{ budget_key: "wall", state: "declared", limit_value: 1.5 }] }, { tenant_id: "m8-tenant", assessor_registration_version_id: independent.id }), /safe integer|assessment-core|non-negative/i);
+
+    // A committed seal makes the whole receipt aggregate immutable, including
+    // direct SQL INSERT attempts against each child table.
+    await assert.rejects(pool.query("insert into agent_feed.assessment_declared_budgets (tenant_id, assessment_id, budget_key, state, limit_value, unit, metadata) values ($1, $2, 'late-budget', 'declared', 1, '', '{}'::jsonb)", ["m8-tenant", first.id]), /sealed|immutable/i);
+    await assert.rejects(pool.query("insert into agent_feed.assessment_usage_observations (tenant_id, assessment_id, usage_key, metric, state, value, unit, provenance, provenance_details, metadata) values ($1, $2, 'late-usage', 'wall_time_ms', 'observed', 1, '', 'executor_measured', '{}'::jsonb, '{}'::jsonb)", ["m8-tenant", first.id]), /sealed|immutable/i);
+    await assert.rejects(pool.query("insert into agent_feed.assessment_artifact_references (tenant_id, assessment_id, artifact_key, artifact_kind, artifact_hash, reference, provenance, metadata) values ($1, $2, 'late-artifact', 'json_report', $3, 'object://m8/late', '{}'::jsonb, '{}'::jsonb)", ["m8-tenant", first.id, HASH]), /sealed|immutable/i);
+    await assert.rejects(pool.query("update agent_feed.assessment_receipt_seals set sealed_at = now() where tenant_id = $1 and assessment_id = $2", ["m8-tenant", first.id]), /append-only/i);
+    await assert.rejects(pool.query("delete from agent_feed.assessment_receipt_seals where tenant_id = $1 and assessment_id = $2", ["m8-tenant", first.id]), /append-only/i);
+
+    // Stage an otherwise-valid parent in a transaction to exercise database
+    // checks before the deferred seal failure rolls the staging transaction
+    // back. This models a direct SQL caller bypassing the TypeScript adapter.
+    const stageParent = async (id: string, requestKey: string): Promise<void> => {
+      await pool.query(`insert into agent_feed.run_assessments (id, tenant_id, run_id, policy_version_id, assessor_registration_version_id, assessor_id, assessor_type, assessor_independence, request_idempotency_key, request_payload_hash, assessment_kind, verdict, failure_stage, failure_class, stop_reason, started_at, completed_at, summary, metadata, reassessment_of)
+        select $1, tenant_id, run_id, policy_version_id, assessor_registration_version_id, assessor_id, assessor_type, assessor_independence, $2, request_payload_hash, assessment_kind, verdict, failure_stage, failure_class, stop_reason, started_at, completed_at, summary, metadata, null
+          from agent_feed.run_assessments where tenant_id = $3 and id = $4`, [id, requestKey, "m8-tenant", first.id]);
+    };
+    const expectStagedInsertRejects = async (insert: (id: string) => Promise<unknown>, matcher: RegExp): Promise<void> => {
+      await pool.query("begin");
+      try {
+        const id = randomUUID();
+        await stageParent(id, `m8-stage-${randomUUID()}`);
+        await assert.rejects(insert(id), matcher);
+      } finally {
+        await pool.query("rollback");
+      }
+    };
+    await expectStagedInsertRejects((id) => pool.query("insert into agent_feed.assessment_declared_budgets (tenant_id, assessment_id, budget_key, state, limit_value, unit, metadata) values ($1, $2, 'fractional-budget', 'declared', 1.5, '', '{}'::jsonb)", ["m8-tenant", id]), /safe_integer|check|valid/i);
+    await expectStagedInsertRejects((id) => pool.query("insert into agent_feed.assessment_usage_observations (tenant_id, assessment_id, usage_key, metric, state, value, unit, provenance, provenance_details, metadata) values ($1, $2, 'fractional-usage', 'wall_time_ms', 'observed', 1.5, '', 'executor_measured', '{}'::jsonb, '{}'::jsonb)", ["m8-tenant", id]), /safe_integer|check|valid/i);
+    await expectStagedInsertRejects((id) => pool.query("insert into agent_feed.assessment_artifact_references (tenant_id, assessment_id, artifact_key, artifact_kind, artifact_hash, reference, size_bytes, provenance, metadata) values ($1, $2, 'oversized-artifact', 'json_report', $3, 'object://m8/size', 9007199254740992, '{}'::jsonb, '{}'::jsonb)", ["m8-tenant", id, HASH]), /safe_integer|check|valid/i);
+    await expectStagedInsertRejects((id) => pool.query("insert into agent_feed.assessment_artifact_references (tenant_id, assessment_id, artifact_key, artifact_kind, artifact_hash, reference, provenance, metadata) values ($1, $2, 'credential-artifact', 'json_report', $3, 'object://m8/credential', '{}'::jsonb, $4::jsonb)", ["m8-tenant", id, HASH, JSON.stringify({ token: "ghp_ABCDEFGHIJKLMNOPQRSTUVWX" })]), /credential|sensitive|forbidden/i);
+    await expectStagedInsertRejects((id) => pool.query("insert into agent_feed.assessment_artifact_references (tenant_id, assessment_id, artifact_key, artifact_kind, artifact_hash, reference, provenance, metadata) values ($1, $2, 'userinfo-artifact', 'json_report', $3, 'https://user:password@example.invalid/report', '{}'::jsonb, '{}'::jsonb)", ["m8-tenant", id, HASH]), /userinfo|query|fragment|check/i);
+
+    await pool.query("begin");
+    const unsealedId = randomUUID();
+    await stageParent(unsealedId, `m8-unsealed-${randomUUID()}`);
+    await assert.rejects(pool.query("commit"), /sealed before commit|receipt must be sealed/i);
+    await pool.query("rollback");
 
     const reassessed = await store.submitAssessment({ ...firstInput, request_idempotency_key: `m8-reassessment-${randomUUID()}`, reassessment_of: first.id, verdict: "inconclusive" }, { tenant_id: "m8-tenant", assessor_registration_version_id: independent.id });
     assert.notEqual(reassessed.id, first.id);

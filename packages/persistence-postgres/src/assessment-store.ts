@@ -213,17 +213,64 @@ function enumValue<T extends readonly string[]>(value: unknown, allowed: T, fiel
   return value as T[number];
 }
 
-function decimal(value: number | string | null | undefined, field: string, required = false): string | null {
+const ARTIFACT_SENSITIVE_KEY = /(?:authorization|credential|password|secret|token|private\s*key|api\s*key|access\s*key|signed\s*url|signature|inline|blob|base64|payload|content|raw|body)/iu;
+const ARTIFACT_CREDENTIAL_VALUE = [
+  /\b(?:bearer|basic)\s+[A-Za-z0-9._~+/=-]{8,}/iu,
+  /\bAWS4-HMAC-SHA256\b/iu,
+  /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/u,
+  /\b(?:gh[pousr]|github_pat)_[A-Za-z0-9_]{20,}\b/u,
+  /\bsk-(?:proj-)?[A-Za-z0-9_-]{16,}\b/u,
+  /\bAIza[0-9A-Za-z_-]{20,}\b/u,
+  /\bxox[baprs]-[A-Za-z0-9-]{10,}\b/u,
+  /\b(?:pk|rk|sk)_(?:live|test)_[0-9A-Za-z]{16,}\b/u,
+  /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/u,
+] as const;
+
+function unsafeArtifactText(value: string): boolean {
+  return /[?#]/u.test(value)
+    || /^\s*(?:data|blob|inline|base64|content):/iu.test(value)
+    || /^(?:[A-Za-z0-9+/]{32,}={0,2})$/u.test(value.trim())
+    || /\b[a-z][a-z0-9+.-]*:\/\/[^\s\/?#@]+@/iu.test(value)
+    || /(?:signed|presign|presigned)[\s_-]*url/iu.test(value)
+    || ARTIFACT_CREDENTIAL_VALUE.some((pattern) => pattern.test(value));
+}
+
+function assertArtifactSafety(value: unknown, field: string): void {
+  if (value === null || value === undefined) return;
+  if (typeof value === "string") {
+    if (unsafeArtifactText(value)) {
+      throw new PersistenceError("assessment_validation_failed", `${field} contains forbidden artifact content or credential material`, { field });
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => assertArtifactSafety(entry, `${field}[${index}]`));
+    return;
+  }
+  if (isObject(value)) {
+    for (const [key, entry] of Object.entries(value)) {
+      if (ARTIFACT_SENSITIVE_KEY.test(key)) {
+        throw new PersistenceError("assessment_validation_failed", `${field}.${key} is not permitted in artifact provenance or metadata`, { field: `${field}.${key}` });
+      }
+      assertArtifactSafety(entry, `${field}.${key}`);
+    }
+  }
+}
+
+function safeInteger(value: number | string | null | undefined, field: string, required = false): string | null {
   if (value === undefined || value === null || value === "") {
     if (required) throw new PersistenceError("assessment_validation_failed", `${field} is required`, { field });
     return null;
   }
+  if (typeof value === "number" && !Number.isSafeInteger(value)) {
+    throw new PersistenceError("assessment_validation_failed", `${field} must be a non-negative safe integer`, { field });
+  }
   const text = typeof value === "number" ? String(value) : value;
-  if (typeof text !== "string" || !/^(?:0|[0-9]+)(?:\.[0-9]+)?$/u.test(text)) {
-    throw new PersistenceError("assessment_validation_failed", `${field} must be a non-negative finite decimal`, { field });
+  if (typeof text !== "string" || !/^(?:0|[1-9][0-9]*)$/u.test(text)) {
+    throw new PersistenceError("assessment_validation_failed", `${field} must be a non-negative safe integer`, { field });
   }
   const numberValue = Number(text);
-  if (!Number.isFinite(numberValue) || numberValue < 0 || numberValue > Number.MAX_SAFE_INTEGER) {
+  if (!Number.isSafeInteger(numberValue) || numberValue < 0 || numberValue > Number.MAX_SAFE_INTEGER) {
     throw new PersistenceError("assessment_validation_failed", `${field} must be a non-negative safe value`, { field });
   }
   return text;
@@ -241,16 +288,13 @@ function digest(value: unknown, field: string, required = false): string | null 
 }
 
 function noArtifactPayload(value: unknown, field: string): void {
-  const text = JSON.stringify(value ?? {});
-  if (text !== undefined && /(?:blob|content|base64|credential|password|secret|signed[_ -]?url)/iu.test(text)) {
-    throw new PersistenceError("assessment_validation_failed", `${field} contains forbidden artifact content or credential material`, { field });
-  }
+  assertArtifactSafety(value ?? {}, field);
 }
 
 function artifactReference(value: string | null, field: string): string | null {
   if (value === null) return null;
   stringInput(value, field, 1, 2_048);
-  if (/[?#]/u.test(value) || /(?:base64|credential|password|secret|signed[_ -]?url)/iu.test(value)) {
+  if (unsafeArtifactText(value)) {
     throw new PersistenceError("assessment_validation_failed", `${field} must be a bounded identity/provenance reference without query, fragment, credentials, or content`, { field });
   }
   return value;
@@ -375,7 +419,7 @@ function normalizeBudgets(input: readonly DeclaredBudgetInput[] | undefined): Ar
     seen.add(budgetKey);
     const rawLimit = raw.limit ?? raw.limitValue ?? raw.limit_value;
     const state = enumValue(raw.state ?? raw.budgetState ?? raw.budget_state ?? (rawLimit === undefined ? "unknown" : "declared"), BUDGET_STATES, "declared_budgets.state");
-    const limitValue = state === "declared" ? decimal(rawLimit as number | string | null | undefined, "declared_budgets.limit_value", true) : decimal(rawLimit as number | string | null | undefined, "declared_budgets.limit_value");
+    const limitValue = state === "declared" ? safeInteger(rawLimit as number | string | null | undefined, "declared_budgets.limit_value", true) : safeInteger(rawLimit as number | string | null | undefined, "declared_budgets.limit_value");
     if (state !== "declared" && limitValue !== null) throw new PersistenceError("assessment_validation_failed", "unknown/not_applicable budgets require NULL limit_value");
     return { budgetKey, state, limitValue, unit: stringInput(value.unit ?? "", "declared_budgets.unit", 0, 128), metadata: object(value.metadata, "declared_budgets.metadata") };
   });
@@ -399,7 +443,7 @@ function normalizeUsage(input: readonly UsageObservationInput[] | undefined): Ar
     const rawValue = raw.value as number | string | null | undefined;
     const state = enumValue(raw.state ?? raw.telemetryState ?? raw.usage_state ?? (rawValue === undefined || rawValue === null ? "unknown" : "observed"), USAGE_STATES, "usage_observations.state");
     const provenance = enumValue(raw.provenance ?? raw.usageProvenance ?? raw.provenance_state ?? "unknown", PROVENANCE, "usage_observations.provenance");
-    const normalizedValue = state === "observed" ? decimal(rawValue, "usage_observations.value", true) : decimal(rawValue, "usage_observations.value");
+    const normalizedValue = state === "observed" ? safeInteger(rawValue, "usage_observations.value", true) : safeInteger(rawValue, "usage_observations.value");
     if (state === "observed" && provenance === "unknown") throw new PersistenceError("assessment_validation_failed", "observed usage requires non-unknown provenance");
     if (state !== "observed" && normalizedValue !== null) throw new PersistenceError("assessment_validation_failed", "unknown/not_applicable usage requires NULL value");
     return {
@@ -438,7 +482,7 @@ function normalizeArtifacts(input: readonly AssessmentArtifactReferenceInput[] |
     noArtifactPayload(metadata, "artifact_references.metadata");
     const identity = artifactReference((raw.identity as string | null | undefined) ?? null, "artifact_references.identity");
     const reference = artifactReference((raw.reference as string | null | undefined) ?? null, "artifact_references.reference");
-    const sizeBytes = decimal((raw.size_bytes ?? raw.sizeBytes ?? raw.byte_length ?? raw.byteLength) as number | string | null | undefined, "artifact_references.size_bytes");
+    const sizeBytes = safeInteger((raw.size_bytes ?? raw.sizeBytes ?? raw.byte_length ?? raw.byteLength) as number | string | null | undefined, "artifact_references.size_bytes");
     return {
       artifactKey,
       artifactKind,
@@ -741,7 +785,7 @@ export class PostgresAssessmentRepository {
 
     return this.withTransaction(async (client) => {
       await client.query("select pg_advisory_xact_lock(hashtextextended($1, 0))", [`m8:assessment:${tenantId}:${requestKey}`]);
-      const existing = await this.query<DbAssessmentRow>(client, `select ra.id, ra.tenant_id, ra.run_id, r.wire_run_id, r.status as run_status, r.completed_at as run_completed_at, ra.policy_version_id, ra.assessor_registration_version_id, ra.assessor_id, ra.assessor_type, ra.assessor_independence, ra.request_idempotency_key, ra.request_payload_hash, ra.assessment_kind, ra.verdict, ra.failure_stage, ra.failure_class, ra.stop_reason, ra.started_at, ra.completed_at, ra.summary, ra.metadata, ra.reassessment_of, ra.created_at from agent_feed.run_assessments ra join agent_feed.runs r on r.tenant_id = ra.tenant_id and r.id = ra.run_id where ra.tenant_id = $1 and ra.request_idempotency_key = $2 for update`, [tenantId, requestKey]);
+      const existing = await this.query<DbAssessmentRow>(client, `select ra.id, ra.tenant_id, ra.run_id, r.wire_run_id, r.status as run_status, r.completed_at as run_completed_at, ra.policy_version_id, ra.assessor_registration_version_id, ra.assessor_id, ra.assessor_type, ra.assessor_independence, ra.request_idempotency_key, ra.request_payload_hash, ra.assessment_kind, ra.verdict, ra.failure_stage, ra.failure_class, ra.stop_reason, ra.started_at, ra.completed_at, ra.summary, ra.metadata, ra.reassessment_of, ra.created_at from agent_feed.run_assessments ra join agent_feed.runs r on r.tenant_id = ra.tenant_id and r.id = ra.run_id join agent_feed.assessment_receipt_seals ars on ars.tenant_id = ra.tenant_id and ars.assessment_id = ra.id where ra.tenant_id = $1 and ra.request_idempotency_key = $2 for update`, [tenantId, requestKey]);
       if (existing[0]) {
         if (existing[0].request_payload_hash !== requestHash) throw new PersistenceError("assessment_conflict", "assessment idempotency key was reused with a different payload");
         return this.loadReceipt(client, existing[0].tenant_id, existing[0].id);
@@ -783,6 +827,7 @@ export class PostgresAssessmentRepository {
       for (const artifact of artifacts) {
         await client.query(`insert into agent_feed.assessment_artifact_references (tenant_id, assessment_id, artifact_key, artifact_kind, artifact_hash, identity, reference, provenance, media_type, size_bytes, metadata) values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11::jsonb)`, [tenantId, assessment.id, artifact.artifactKey, artifact.artifactKind, artifact.artifactHash, artifact.identity, artifact.reference, JSON.stringify(artifact.provenance), artifact.mediaType, artifact.sizeBytes, JSON.stringify(artifact.metadata)]);
       }
+      await client.query(`insert into agent_feed.assessment_receipt_seals (tenant_id, assessment_id) values ($1, $2)`, [tenantId, assessment.id]);
       return this.loadReceipt(client, tenantId, assessment.id);
     });
   }
@@ -815,7 +860,7 @@ export class PostgresAssessmentRepository {
     if (options.run_id !== undefined) { params.push(options.run_id); predicates.push(`r.wire_run_id = $${params.length}`); }
     if (options.policy_version_id !== undefined) { params.push(options.policy_version_id); predicates.push(`ra.policy_version_id = $${params.length}`); }
     params.push(limit, offset);
-    const rows = await this.query<DbAssessmentRow>(this.pool, `select ra.id, ra.tenant_id, ra.run_id, r.wire_run_id, r.status as run_status, r.completed_at as run_completed_at, ra.policy_version_id, ra.assessor_registration_version_id, ra.assessor_id, ra.assessor_type, ra.assessor_independence, ra.request_idempotency_key, ra.request_payload_hash, ra.assessment_kind, ra.verdict, ra.failure_stage, ra.failure_class, ra.stop_reason, ra.started_at, ra.completed_at, ra.summary, ra.metadata, ra.reassessment_of, ra.created_at from agent_feed.run_assessments ra join agent_feed.runs r on r.tenant_id = ra.tenant_id and r.id = ra.run_id where ${predicates.join(" and ")} order by ra.created_at, ra.id limit $${params.length - 1} offset $${params.length}`, params);
+    const rows = await this.query<DbAssessmentRow>(this.pool, `select ra.id, ra.tenant_id, ra.run_id, r.wire_run_id, r.status as run_status, r.completed_at as run_completed_at, ra.policy_version_id, ra.assessor_registration_version_id, ra.assessor_id, ra.assessor_type, ra.assessor_independence, ra.request_idempotency_key, ra.request_payload_hash, ra.assessment_kind, ra.verdict, ra.failure_stage, ra.failure_class, ra.stop_reason, ra.started_at, ra.completed_at, ra.summary, ra.metadata, ra.reassessment_of, ra.created_at from agent_feed.run_assessments ra join agent_feed.runs r on r.tenant_id = ra.tenant_id and r.id = ra.run_id join agent_feed.assessment_receipt_seals ars on ars.tenant_id = ra.tenant_id and ars.assessment_id = ra.id where ${predicates.join(" and ")} order by ra.created_at, ra.id limit $${params.length - 1} offset $${params.length}`, params);
     return Promise.all(rows.map((row) => this.loadReceipt(this.pool, tenantId, row.id)));
   }
 
@@ -824,7 +869,7 @@ export class PostgresAssessmentRepository {
   }
 
   private async loadReceipt(client: PgPool | PoolClient, tenantId: string, id: string): Promise<RunAssessmentReceipt> {
-    const rows = await this.query<DbAssessmentRow>(client, `select ra.id, ra.tenant_id, ra.run_id, r.wire_run_id, r.status as run_status, r.completed_at as run_completed_at, ra.policy_version_id, ra.assessor_registration_version_id, ra.assessor_id, ra.assessor_type, ra.assessor_independence, ra.request_idempotency_key, ra.request_payload_hash, ra.assessment_kind, ra.verdict, ra.failure_stage, ra.failure_class, ra.stop_reason, ra.started_at, ra.completed_at, ra.summary, ra.metadata, ra.reassessment_of, ra.created_at from agent_feed.run_assessments ra join agent_feed.runs r on r.tenant_id = ra.tenant_id and r.id = ra.run_id where ra.tenant_id = $1 and ra.id = $2`, [tenantId, id]);
+    const rows = await this.query<DbAssessmentRow>(client, `select ra.id, ra.tenant_id, ra.run_id, r.wire_run_id, r.status as run_status, r.completed_at as run_completed_at, ra.policy_version_id, ra.assessor_registration_version_id, ra.assessor_id, ra.assessor_type, ra.assessor_independence, ra.request_idempotency_key, ra.request_payload_hash, ra.assessment_kind, ra.verdict, ra.failure_stage, ra.failure_class, ra.stop_reason, ra.started_at, ra.completed_at, ra.summary, ra.metadata, ra.reassessment_of, ra.created_at from agent_feed.run_assessments ra join agent_feed.runs r on r.tenant_id = ra.tenant_id and r.id = ra.run_id join agent_feed.assessment_receipt_seals ars on ars.tenant_id = ra.tenant_id and ars.assessment_id = ra.id where ra.tenant_id = $1 and ra.id = $2`, [tenantId, id]);
     const row = rows[0];
     if (!row) throw new PersistenceError("assessment_not_found", `assessment ${id} was not found`, { assessment_id: id });
     const [budgets, usage, artifacts] = await Promise.all([
