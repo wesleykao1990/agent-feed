@@ -20,11 +20,17 @@ export interface FailureAggregate {
   readonly count: number;
 }
 
+export interface ControlPlaneObservationWindow {
+  readonly from: string;
+  readonly to: string;
+}
+
 export interface ControlPlaneSnapshotInput {
   readonly schemaVersion?: string;
   readonly tenantId: string;
   readonly generatedAt: string;
   readonly freshnessWindowSeconds: number;
+  readonly observationWindow: ControlPlaneObservationWindow;
   readonly jobs: CountGroup<JobState>;
   readonly occurrences: CountGroup<OccurrenceState>;
   readonly runs: CountGroup<RunState>;

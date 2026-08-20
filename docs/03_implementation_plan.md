@@ -321,16 +321,19 @@ Gate:
 
 ### Milestone 10 — Production control plane
 
-Status: **first local payload-free read-model contract checkpoint green;
+Status: **payload-free contract, live tenant-scoped PostgreSQL projection, and
+complete local M0–M10 regression green; dedicated hosted M10 gate added;
 remaining production slices pending**. See
 `docs/22_milestone_10_production_control_plane.md` and `docs/m10/`.
 
-The first checkpoint freezes tenant scope, freshness, reconciled state groups,
+The first two checkpoints freeze tenant scope, freshness, an explicit
+observation window, reconciled state groups,
 completed-zero/absence separation, and distinct provider/gateway/execution/
-validation/delivery failure layers in `packages/control-plane-core`. PostgreSQL
-composition, dashboard integration, durable external OIDC, hosted HTTPS,
-alerts, runbooks, full regression, and independent/hosted acceptance remain
-required before Milestone 10 can be called complete.
+validation/delivery failure layers in `packages/control-plane-core`, then
+derive them through a bounded `REPEATABLE READ`, read-only adapter in
+`packages/control-plane-postgres`. Dashboard integration, durable external
+OIDC, hosted HTTPS, alerts, runbooks, independent review, and hosted acceptance
+remain required before Milestone 10 can be called complete.
 
 ### Milestone 9 — Portable job registry and capability profiles
 

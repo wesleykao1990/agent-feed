@@ -4,6 +4,7 @@ import { controlPlaneSnapshotState, normalizeControlPlaneSnapshot, type ControlP
 
 const snapshot = (overrides: Partial<ControlPlaneSnapshotInput> = {}): ControlPlaneSnapshotInput => ({
   tenantId: "tenant-a", generatedAt: "2026-08-20T00:00:00.000Z", freshnessWindowSeconds: 60,
+  observationWindow: { from: "2026-08-19T00:00:00.000Z", to: "2026-08-20T00:00:00.000Z" },
   jobs: { total: 1, byState: { draft: 0, shadow: 0, active: 1, paused: 0, retired: 0 } },
   occurrences: { total: 1, byState: { pending: 0, absent: 0, running: 0, completed_zero: 1, completed: 0, partial: 0, failed: 0, cancelled: 0 } },
   runs: { total: 1, byState: { running: 0, completed: 1, partial: 0, failed: 0, cancelled: 0 } },
@@ -43,6 +44,9 @@ test("rejects unreconciled, unknown, fractional, and oversized aggregate states"
 test("rejects payload-shaped or credential-shaped top-level additions by contract", () => {
   const hostile = { ...snapshot(), evidence: { excerpt: "raw" }, authorization: "Bearer secret" };
   assert.throws(() => normalizeControlPlaneSnapshot(hostile), /evidence:unknown_field/);
+  assert.throws(() => normalizeControlPlaneSnapshot(snapshot({ failures: [{ layer: "provider", count: 1, errorDetail: "raw" } as never] })), /errorDetail:unknown_field/);
+  assert.throws(() => normalizeControlPlaneSnapshot(snapshot({ runs: { total: 1, byState: { running: 0, completed: 1, partial: 0, failed: 0, cancelled: 0 }, payload: "raw" } as never })), /runs.payload:unknown_field/);
+  assert.throws(() => normalizeControlPlaneSnapshot(snapshot({ failures: {} as never })), /failures:array_required/);
 });
 
 test("reports freshness and rejects excessive future clock skew", () => {
@@ -50,4 +54,9 @@ test("reports freshness and rejects excessive future clock skew", () => {
   assert.equal(state.stale, true);
   assert.equal(state.ageSeconds, 120);
   assert.throws(() => controlPlaneSnapshotState(snapshot({ generatedAt: "2026-08-20T00:02:00.000Z" }), Date.parse("2026-08-20T00:00:00.000Z")), /future_clock_skew/);
+});
+
+test("requires an explicit, ordered observation window", () => {
+  assert.throws(() => normalizeControlPlaneSnapshot(snapshot({ observationWindow: { from: "2026-08-21T00:00:00.000Z", to: "2026-08-20T00:00:00.000Z" } })), /from_after_to/);
+  assert.throws(() => normalizeControlPlaneSnapshot(snapshot({ observationWindow: { from: "2026-08-19T00:00:00.000Z", to: "2026-08-20T00:00:00.000Z", payload: "secret" } as never })), /unknown_field/);
 });

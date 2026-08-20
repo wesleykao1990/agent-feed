@@ -34,10 +34,11 @@ function count(value: unknown, path: string, issues: string[]): number {
 }
 
 function group<T extends string>(value: CountGroup<T>, states: readonly T[], path: string, issues: string[]): CountGroup<T> {
-  if (!value || typeof value !== "object" || !value.byState || typeof value.byState !== "object") {
+  if (!value || typeof value !== "object" || Array.isArray(value) || !value.byState || typeof value.byState !== "object" || Array.isArray(value.byState)) {
     issues.push(`${path}:count_group_required`);
     return { total: 0, byState: Object.fromEntries(states.map((state) => [state, 0])) as Record<T, number> };
   }
+  for (const key of Object.keys(value)) if (key !== "total" && key !== "byState") issues.push(`${path}.${key}:unknown_field`);
   const byState = Object.fromEntries(states.map((state) => [state, count(value.byState[state], `${path}.byState.${state}`, issues)])) as Record<T, number>;
   const total = count(value.total, `${path}.total`, issues);
   const sum = Object.values(byState as Record<string, number>).reduce((result, item) => result + item, 0);
@@ -46,13 +47,25 @@ function group<T extends string>(value: CountGroup<T>, states: readonly T[], pat
   return { total, byState };
 }
 
-function instant(value: unknown, issues: string[]): string {
+function instant(value: unknown, path: string, issues: string[]): string {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z$/u.test(value)) {
-    issues.push("generatedAt:strict_utc_timestamp_required"); return "1970-01-01T00:00:00.000Z";
+    issues.push(`${path}:strict_utc_timestamp_required`); return "1970-01-01T00:00:00.000Z";
   }
   const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) { issues.push("generatedAt:invalid_timestamp"); return "1970-01-01T00:00:00.000Z"; }
+  if (!Number.isFinite(date.getTime())) { issues.push(`${path}:invalid_timestamp`); return "1970-01-01T00:00:00.000Z"; }
   return date.toISOString();
+}
+
+function observationWindow(value: ControlPlaneSnapshotInput["observationWindow"], issues: string[]) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    issues.push("observationWindow:required");
+    return { from: "1970-01-01T00:00:00.000Z", to: "1970-01-01T00:00:00.000Z" };
+  }
+  for (const key of Object.keys(value)) if (key !== "from" && key !== "to") issues.push(`observationWindow.${key}:unknown_field`);
+  const from = instant(value.from, "observationWindow.from", issues);
+  const to = instant(value.to, "observationWindow.to", issues);
+  if (Date.parse(from) > Date.parse(to)) issues.push("observationWindow:from_after_to");
+  return { from, to };
 }
 
 function health(snapshot: Omit<ControlPlaneSnapshot, "health">): ControlPlaneHealth {
@@ -64,26 +77,33 @@ function health(snapshot: Omit<ControlPlaneSnapshot, "health">): ControlPlaneHea
 }
 
 export function normalizeControlPlaneSnapshot(input: ControlPlaneSnapshotInput): ControlPlaneSnapshot {
+  if (!input || typeof input !== "object" || Array.isArray(input)) throw new ControlPlaneContractError(["root:object_required"]);
   const issues: string[] = [];
-  const allowedFields = new Set(["schemaVersion", "tenantId", "generatedAt", "freshnessWindowSeconds", "jobs", "occurrences", "runs", "assessments", "deliveries", "failures"]);
+  const allowedFields = new Set(["schemaVersion", "tenantId", "generatedAt", "freshnessWindowSeconds", "observationWindow", "jobs", "occurrences", "runs", "assessments", "deliveries", "failures"]);
   for (const key of Object.keys(input)) if (!allowedFields.has(key)) issues.push(`${key}:unknown_field`);
   if (input.schemaVersion !== undefined && input.schemaVersion !== CONTROL_PLANE_SCHEMA_VERSION) issues.push("schemaVersion:unsupported");
   if (typeof input.tenantId !== "string" || !TENANT.test(input.tenantId)) issues.push("tenantId:invalid_scope");
   const freshnessWindowSeconds = count(input.freshnessWindowSeconds, "freshnessWindowSeconds", issues);
   if (freshnessWindowSeconds < 1 || freshnessWindowSeconds > MAX_FRESHNESS) issues.push("freshnessWindowSeconds:out_of_range");
+  const normalizedObservationWindow = observationWindow(input.observationWindow, issues);
   const failureMap = Object.fromEntries(FAILURE_LAYERS.map((layer) => [layer, 0])) as Record<FailureLayer, number>;
   const seen = new Set<FailureLayer>();
-  for (const [index, failure] of input.failures.entries()) {
-    if (!(FAILURE_LAYERS as readonly string[]).includes(failure?.layer)) { issues.push(`failures[${index}].layer:invalid`); continue; }
-    if (seen.has(failure.layer)) issues.push(`failures[${index}].layer:duplicate`);
-    seen.add(failure.layer);
-    failureMap[failure.layer] = count(failure.count, `failures[${index}].count`, issues);
+  if (!Array.isArray(input.failures)) issues.push("failures:array_required");
+  else for (const [index, failure] of input.failures.entries()) {
+    if (!failure || typeof failure !== "object" || Array.isArray(failure)) { issues.push(`failures[${index}]:object_required`); continue; }
+    for (const key of Object.keys(failure)) if (key !== "layer" && key !== "count") issues.push(`failures[${index}].${key}:unknown_field`);
+    if (!(FAILURE_LAYERS as readonly string[]).includes(failure.layer)) { issues.push(`failures[${index}].layer:invalid`); continue; }
+    const layer = failure.layer as FailureLayer;
+    if (seen.has(layer)) issues.push(`failures[${index}].layer:duplicate`);
+    seen.add(layer);
+    failureMap[layer] = count(failure.count, `failures[${index}].count`, issues);
   }
   const base: Omit<ControlPlaneSnapshot, "health"> = {
     schemaVersion: CONTROL_PLANE_SCHEMA_VERSION,
     tenantId: input.tenantId,
-    generatedAt: instant(input.generatedAt, issues),
+    generatedAt: instant(input.generatedAt, "generatedAt", issues),
     freshnessWindowSeconds,
+    observationWindow: normalizedObservationWindow,
     jobs: group<JobState>(input.jobs, JOB_STATES, "jobs", issues),
     occurrences: group<OccurrenceState>(input.occurrences, OCCURRENCE_STATES, "occurrences", issues),
     runs: group<RunState>(input.runs, RUN_STATES, "runs", issues),
