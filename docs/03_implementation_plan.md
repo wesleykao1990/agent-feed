@@ -354,6 +354,24 @@ connector, durable PostgreSQL receipt projection, provider-account evidence,
 and hosted CI remain separate acceptance slices. Protocol `0.1`, producer REST,
 and MCP lifecycle tools remain unchanged.
 
+### Milestone 12 — Utility and optimization feedback
+
+Status: **first pure contract checkpoint implemented locally; persistence and
+live-consumer acceptance pending**. See
+`docs/24_milestone_12_utility_feedback.md` and `docs/m12/`.
+
+`packages/utility-feedback-core` keeps consumer identity outside the submission
+body, appends immutable finding/artifact disposition events, and makes exact
+retries idempotent while rejecting conflicting key reuse. Utility snapshots use
+bounded safe integers and exact ratios for review burden, source yield, time to
+action, and cost per accepted or acted-on result. Every snapshot preserves its
+job-definition and validation-policy scope.
+
+Prompt and schedule changes are digest/reference-only recommendations with a
+pending state. A separate trusted approval authority must create an exact
+approval record; this package cannot apply either configuration change.
+Protocol `0.1` and producer lifecycle surfaces remain unchanged.
+
 ### Milestone 9 — Portable job registry and capability profiles
 
 Status: **local live checkpoint and complete M0–M9 regression green;

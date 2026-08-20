@@ -3,6 +3,13 @@
 Agent Feed is a standalone, reusable project for transmitting structured agent
 runs, findings, and submitted evidence to multiple consumer applications.
 
+Milestone 12 status: **first consumer-owned utility-feedback contract
+implemented locally; durable persistence, live consumers, hosted CI, and final
+acceptance pending**. The additive package records append-only finding/artifact
+dispositions, exact bounded utility ratios, and approval-gated prompt/schedule
+recommendations without changing protocol `0.1`. See
+`docs/24_milestone_12_utility_feedback.md`.
+
 Milestone 11 status: **provider-neutral comparison contract and five synthetic
 adapter-topology fixtures implemented locally; live provider accounts,
 scheduled execution, durable receipt projection, and final acceptance
@@ -127,6 +134,7 @@ packages/job-registry-core (pure portable definitions and capability preflight)
 packages/control-plane-core (pure tenant-scoped operational read model)
 packages/control-plane-postgres (read-only tenant-scoped aggregate adapter)
 packages/provider-conformance-core (pure multi-topology comparison contract)
+packages/utility-feedback-core (pure consumer disposition and utility contract)
 apps/admin-dashboard (optional read-only aggregate view)
 docs/adr
 docs/m2
