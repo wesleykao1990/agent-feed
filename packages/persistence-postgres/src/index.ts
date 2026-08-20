@@ -1,6 +1,7 @@
 export {
   DELIVERY_MIGRATION_SQL_URL,
   JOB_PROOF_MIGRATION_SQL_URL,
+  JOB_REGISTRY_MIGRATION_SQL_URL,
   ASSESSMENT_MIGRATION_SQL_URL,
   MIGRATION_SQL_URL,
   OCCURRENCE_MIGRATION_SQL_URL,
@@ -13,6 +14,7 @@ export {
 } from "./postgres-store.ts";
 export { PostgresOccurrenceRepository } from "./occurrence-store.ts";
 export { PostgresAssessmentRepository, PostgresJobProofRepository } from "./assessment-store.ts";
+export { PostgresJobRegistryRepository } from "./job-registry-store.ts";
 export { PostgresDeliveryRepository, appendOutboxEventInTransaction } from "./delivery-store.ts";
 export { PostgresDeliveryConsumerRepository } from "./delivery-consumer-store.ts";
 export type {
@@ -116,4 +118,11 @@ export type {
   TrustedAssessorVersionContext,
   RunAssessmentReceipt,
   SubmitAssessmentInput,
+  JobDefinitionVersionInput,
+  JobDefinitionVersion,
+  CapabilityProfileVersionInput,
+  CapabilityProfileVersion,
+  JobDeploymentBindingVersionInput,
+  JobDeploymentBindingVersion,
+  JobRegistryListOptions,
 } from "./types.ts";

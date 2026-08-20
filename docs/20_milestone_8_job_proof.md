@@ -1,7 +1,7 @@
 # Milestone 8 — independent job proof and operational receipts
 
-Status: **local live acceptance, independent hostile re-review, complete
-M0–M8 regression, and hosted CI green on draft PR #10**
+Status: **accepted and merged through PR #10 after local live acceptance,
+independent hostile re-review, complete M0–M8 regression, and hosted CI**
 
 Milestone 8 adds immutable validation policy and assessment proof without
 changing a producer run or collapsing execution and quality into one success

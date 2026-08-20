@@ -1,7 +1,7 @@
 # PostgreSQL persistence boundary
 
 `@agent-feed/persistence-postgres` owns the PostgreSQL adapter for Agent Feed
-Milestones 1 and 2. It owns the `agent_feed` schema and keeps the database
+durable lifecycle and additive sidecars. It owns the `agent_feed` schema and keeps the database
 separate from consumer/domain tables, HTTP handlers, and worker transport code.
 
 The `PostgresAgentFeedPersistence` service provides:
@@ -19,7 +19,8 @@ The `PostgresAgentFeedPersistence` service provides:
 
 Milestone 2 adds an ordered migration loader (`0001_agent_feed.sql` followed by
 `0002_durable_delivery.sql` and `0003_wire_run_id.sql`); Milestone 7 appends
-`0004_occurrence_ledger.sql`.
+`0004_occurrence_ledger.sql`, `0005_job_proof.sql`, and
+`0006_job_registry.sql`.
 The loader preserves an immutable outbox, normalized versioned
 selectors, tenant-global delivery positions, and a per-subscription queue. The
 ingress methods append `run.started`, `finding.submitted`, and terminal run
@@ -76,6 +77,23 @@ Policy registration and trusted-assessor registration are operator/composition
 root methods only. They are deliberately not exposed through producer REST or
 MCP paths; a production deployment must provide a dedicated assessor
 composition root and role before making these methods reachable.
+
+Milestone 9 adds `0006_job_registry.sql` and
+`PostgresJobRegistryRepository`. Logical job definitions, provider capability
+profiles, and deployment bindings are separate immutable tenant-scoped version
+streams. `@agent-feed/job-registry-core` normalizes and hashes their canonical
+documents and evaluates exact capability pins. PostgreSQL independently checks
+the hashes and projected columns, capability/profile structure and versions,
+provider topology, validation-policy reference, declared budgets, controlled
+off-switch reference, and sealed independently passed shadow assessments.
+Moving a job between providers appends a deployment-binding version while
+preserving the exact logical definition ID.
+
+Registry methods are trusted operator composition capabilities, not producer
+REST or MCP tools. An `active` row is an auditable preflight receipt; the
+repository never calls a scheduler/provider activation API. Instruction bodies,
+credentials, signed URLs, inline/base64 content, unsafe numbers, and unbounded
+metadata are rejected by both core and database validation.
 
 `PostgresDeliveryRepository` owns only durable state: `FOR UPDATE SKIP LOCKED`
 leases, append-only attempt history, idempotent acknowledgements, retry/DLQ

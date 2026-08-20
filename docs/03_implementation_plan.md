@@ -261,8 +261,8 @@ remains pinned.
 
 ### Milestone 7 — Occurrence ledger and liveness correctness
 
-Status: **local implementation, live PostgreSQL, independent re-review, the
-full M0–M6 local regression, and hosted CI green on draft PR #9**. See
+Status: **merged on `main` through PR #9 with live PostgreSQL, independent
+re-review, full prior regression, and hosted CI green**. See
 `docs/19_milestone_7_occurrence_ledger.md` and
 `docs/m7/`.
 
@@ -291,8 +291,9 @@ Gate:
 
 ### Milestone 8 — Independent job proof and operational receipts
 
-Status: **local live acceptance, independent hostile re-review, complete
-M0–M8 regression, and hosted CI green on draft PR #10**. See
+Status: **merged on `main` through PR #10 with local live acceptance,
+independent hostile re-review, complete M0–M8 regression, and hosted CI
+green**. See
 `docs/20_milestone_8_job_proof.md` and `docs/m8/`.
 
 Deliver:
@@ -316,4 +317,30 @@ Gate:
 - unknown telemetry remains null and explicitly unknown;
 - artifact references contain identity/provenance rather than blobs;
 - protocol `0.1` schemas and lifecycle tools remain unchanged; and
+- the complete prior milestone matrix remains green.
+
+### Milestone 9 — Portable job registry and capability profiles
+
+Status: **local live checkpoint and complete M0–M9 regression green;
+independent review and hosted CI pending**. See
+`docs/21_milestone_9_job_registry.md` and `docs/m9/`.
+
+Deliver:
+
+- immutable logical job-definition versions with owner, lifecycle,
+  instruction digest/reference, policy, requirements, outputs, and budgets;
+- immutable provider capability-profile versions;
+- immutable deployment-binding versions with provider topology, exact profile
+  pins, off-switch reference, and independently passed shadow evidence; and
+- pure plus database-enforced activation preflight without external provider
+  mutation.
+
+Gate:
+
+- one logical job preserves exact identity across provider moves;
+- definitions contain no secrets or instruction bodies;
+- incompatible exact-pinned capabilities fail before active registration;
+- active autonomous bindings require owner, policy, budget, off-switch, and
+  sealed independently passed shadow proof;
+- protocol `0.1` and producer lifecycle tools remain unchanged; and
 - the complete prior milestone matrix remains green.

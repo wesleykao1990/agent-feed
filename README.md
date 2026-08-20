@@ -3,16 +3,23 @@
 Agent Feed is a standalone, reusable project for transmitting structured agent
 runs, findings, and submitted evidence to multiple consumer applications.
 
-Milestone 8 status: **local live acceptance, independent hostile re-review,
-the complete M0–M8 regression, and hosted CI are green on draft PR #10**. The additive job-proof sidecar keeps technical
+Milestone 9 status: **local live checkpoint and complete M0–M9 regression
+green; independent review and hosted CI pending**. The additive registry keeps logical job identity separate from
+provider topology and fails autonomous activation closed unless exact
+capabilities, owner, policy, budget, off-switch, and shadow proof are present.
+See `docs/21_milestone_9_job_registry.md`.
+
+Milestone 8 status: **merged on `main` through PR #10 after local live
+acceptance, independent hostile re-review, complete M0–M8 regression, and
+hosted CI**. The additive job-proof sidecar keeps technical
 run status separate from quality, derives assessor authority from immutable
 trusted registrations, preserves unknown telemetry, and stores hashed artifact
 identity rather than blobs without changing protocol `0.1`. See
 `docs/20_milestone_8_job_proof.md`.
 
-Milestone 7 status: **local implementation, live PostgreSQL acceptance,
-independent re-review, the full M0–M6 local regression, and hosted CI are
-green on draft PR #9**. The additive occurrence sidecar records immutable schedule
+Milestone 7 status: **merged on `main` through PR #9 after live PostgreSQL
+acceptance, independent re-review, full prior regression, and hosted CI**.
+The additive occurrence sidecar records immutable schedule
 versions, expected nominal invocations, trusted trigger context, run links,
 and outcome-aware liveness without changing protocol `0.1` or turning Agent
 Feed into a scheduler. See `docs/19_milestone_7_occurrence_ledger.md`.
@@ -99,6 +106,7 @@ packages/operations-observability (bounded metrics/Prometheus contract)
 packages/operations-postgres (PostgreSQL operations adapter)
 packages/occurrence-core (pure schedule occurrence and policy contracts)
 packages/assessment-core (pure job-proof policy and assessment contracts)
+packages/job-registry-core (pure portable definitions and capability preflight)
 apps/admin-dashboard (optional read-only aggregate view)
 docs/adr
 docs/m2

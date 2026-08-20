@@ -88,6 +88,7 @@ jobs:
           npm --prefix packages/delivery-consumer ci
           npm --prefix packages/occurrence-core ci
           npm --prefix packages/assessment-core ci
+          npm --prefix packages/job-registry-core ci
           npm --prefix packages/persistence-postgres ci
           npm --prefix apps/api ci
 
@@ -218,6 +219,7 @@ jobs:
           npm --prefix packages/delivery-consumer ci
           npm --prefix packages/occurrence-core ci
           npm --prefix packages/assessment-core ci
+          npm --prefix packages/job-registry-core ci
           npm --prefix packages/persistence-postgres ci
           npm --prefix packages/operations-core ci
           npm --prefix packages/operations-observability ci
@@ -265,6 +267,7 @@ jobs:
           npm --prefix packages/delivery-consumer ci
           npm --prefix packages/occurrence-core ci
           npm --prefix packages/assessment-core ci
+          npm --prefix packages/job-registry-core ci
           npm --prefix packages/persistence-postgres ci
           npm --prefix apps/mcp-server ci
           npm --prefix apps/mcp-http ci
@@ -316,6 +319,7 @@ jobs:
           npm --prefix packages/delivery-consumer ci
           npm --prefix packages/occurrence-core ci
           npm --prefix packages/assessment-core ci
+          npm --prefix packages/job-registry-core ci
           npm --prefix packages/persistence-postgres ci
 
       - name: Run Milestone 7 occurrence ledger gate
@@ -365,9 +369,60 @@ jobs:
           npm --prefix packages/delivery-consumer ci
           npm --prefix packages/occurrence-core ci
           npm --prefix packages/assessment-core ci
+          npm --prefix packages/job-registry-core ci
           npm --prefix packages/persistence-postgres ci
 
       - name: Run Milestone 8 independent job-proof gate
         run: npm run m8:conformance
+        env:
+          AGENT_FEED_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_feed_test
+
+  milestone-9-job-registry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: agent_feed_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d agent_feed_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install protocol validation dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Install locked job-registry dependencies
+        run: |
+          npm --prefix packages/protocol-runtime ci
+          npm --prefix packages/delivery-core ci
+          npm --prefix packages/delivery-consumer ci
+          npm --prefix packages/occurrence-core ci
+          npm --prefix packages/assessment-core ci
+          npm --prefix packages/job-registry-core ci
+          npm --prefix packages/persistence-postgres ci
+
+      - name: Run Milestone 9 portable job-registry gate
+        run: npm run m9:conformance
         env:
           AGENT_FEED_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_feed_test

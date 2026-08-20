@@ -33,6 +33,11 @@ export type PersistenceErrorCode =
   | "assessment_conflict"
   | "assessment_not_found"
   | "assessment_validation_failed"
+  | "job_registry_version_conflict"
+  | "job_definition_version_not_found"
+  | "capability_profile_version_not_found"
+  | "job_registry_preflight_failed"
+  | "job_registry_validation_failed"
   | "invalid_input"
   | "storage_error";
 

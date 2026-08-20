@@ -1,7 +1,7 @@
 # Milestone 8 acceptance record
 
-Status: **accepted locally and independently; complete M0–M8 hosted matrix
-green on draft PR #10**
+Status: **accepted and merged through PR #10; complete M0–M8 hosted matrix
+green**
 
 Required evidence:
 
@@ -114,6 +114,5 @@ passed from a clean stacked pull-request checkout:
 - Milestone 7 occurrence-ledger job green; and
 - Milestone 8 job-proof job green with live PostgreSQL.
 
-The pull request remains draft and unmerged by design. It is stacked on the
-unmerged Milestone 7 branch, so PR #9 must land before PR #10 can be rebased or
-retargeted to `main`.
+PR #9 landed first; PR #10 was then retargeted to `main` and merged on
+2026-08-20 as merge commit `9ba2b6c2833d5a2724c9e4249e5748874640409b`.

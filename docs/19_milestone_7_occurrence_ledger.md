@@ -77,7 +77,7 @@ finding, and recommended acceptance. The full M0–M6 local regression also
 passed, including all required live PostgreSQL suites. Clean-checkout GitHub
 Actions run
 [32307120427](https://github.com/wesleykao1990/agent-feed/actions/runs/32307120427)
-then passed the complete five-job M0–M7 matrix on draft PR #9.
+then passed the complete five-job M0–M7 matrix on PR #9 before merge.
 
 ## Explicit non-claims
 
