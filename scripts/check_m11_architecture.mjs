@@ -66,6 +66,10 @@ export function checkM11Architecture() {
     "npm --prefix packages/provider-conformance-core ci",
     "npm run m11:conformance",
   ]) required(workflow, marker, "CI workflow");
+  const runner = read("scripts/run_m11_conformance.mjs");
+  for (const marker of ["generated schema dependency build", '"packages/schema", "run", "build"']) {
+    required(runner, marker, "M11 conformance runner");
+  }
 
   const milestone = read("docs/23_milestone_11_multi_provider_conformance.md");
   for (const marker of [

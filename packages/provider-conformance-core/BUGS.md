@@ -21,3 +21,7 @@
   delimiter. Matrix identity now serializes typed tuples instead.
 - A frozen receipt root still left nested proof and telemetry values mutable at
   runtime. Normalization now freezes every nested contract object and array.
+- A local generated schema `dist` directory masked a clean-checkout dependency
+  ordering gap. The root M11 runner now builds the schema artifact before the
+  provider-conformance TypeScript build, and the architecture guard requires
+  that step.

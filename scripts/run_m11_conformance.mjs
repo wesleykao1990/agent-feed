@@ -15,6 +15,7 @@ function run(label, command, args) {
 }
 
 run("provider-conformance architecture guard", NODE, ["scripts/check_m11_architecture.mjs"]);
+run("generated schema dependency build", NPM, ["--prefix", "packages/schema", "run", "build"]);
 run("provider-conformance core build", NPM, ["--prefix", "packages/provider-conformance-core", "run", "build"]);
 run("five-topology adapter fixture and contract tests", NPM, ["--prefix", "packages/provider-conformance-core", "test"]);
 run("protocol compatibility", NPM, ["run", "protocol:compatibility"]);
