@@ -1,0 +1,27 @@
+{
+  "name": "@agent-feed/provider-conformance-core",
+  "version": "0.1.1",
+  "description": "Provider-neutral multi-topology conformance receipts and comparison matrices for Agent Feed.",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "exports": { ".": { "types": "./src/index.ts", "default": "./src/index.ts" } },
+  "files": ["src", "test", "README.md", "DECISIONS.md", "BUGS.md", "LEARNINGS.md", "package.json", "package-lock.json"],
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test --test-concurrency=1 test/*.test.ts"
+  },
+  "dependencies": {
+    "@agent-feed/assessment-core": "file:../assessment-core",
+    "@agent-feed/job-registry-core": "file:../job-registry-core"
+  },
+  "devDependencies": {
+    "@agent-feed/chatgpt-manual-export-adapter": "file:../adapters/chatgpt-manual-export",
+    "@agent-feed/claude-hook-adapter": "file:../adapters/claude-hook",
+    "@agent-feed/local-file-adapter": "file:../adapters/local-file",
+    "@agent-feed/mcp-server": "file:../../apps/mcp-server",
+    "@agent-feed/rest-adapter": "file:../adapters/rest",
+    "@types/node": "22.20.1",
+    "typescript": "7.0.2"
+  }
+}

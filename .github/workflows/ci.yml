@@ -478,3 +478,44 @@ jobs:
         run: npm run m10:conformance
         env:
           AGENT_FEED_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_feed_test
+
+  milestone-11-provider-conformance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install protocol validation dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Install locked provider-conformance dependencies
+        run: |
+          npm --prefix packages/schema ci
+          npm --prefix packages/protocol-runtime ci
+          npm --prefix packages/delivery-core ci
+          npm --prefix packages/delivery-consumer ci
+          npm --prefix packages/occurrence-core ci
+          npm --prefix packages/assessment-core ci
+          npm --prefix packages/job-registry-core ci
+          npm --prefix packages/persistence-postgres ci
+          npm --prefix packages/producer-service ci
+          npm --prefix packages/adapters/local-file ci
+          npm --prefix packages/adapters/chatgpt-manual-export ci
+          npm --prefix packages/adapters/claude-hook ci
+          npm --prefix packages/adapters/rest ci
+          npm --prefix apps/mcp-server ci
+          npm --prefix packages/provider-conformance-core ci
+
+      - name: Run Milestone 11 multi-provider conformance gate
+        run: npm run m11:conformance
