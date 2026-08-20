@@ -1,7 +1,7 @@
 # Milestone 8 acceptance record
 
-Status: **hardened local live acceptance, independent re-review, and complete
-M0–M8 local regression green; hosted acceptance pending**
+Status: **accepted locally and independently; complete M0–M8 hosted matrix
+green on draft PR #10**
 
 Required evidence:
 
@@ -100,3 +100,20 @@ local bind access. The first M3 attempt selected a host Python without
 `setuptools`; rerunning the unchanged gate with the repository `.venv` first
 on `PATH` passed the isolated wheel build and every remaining test. Foundation
 validation passed through the documented `uv --with-requirements` command.
+
+## Hosted receipt — 2026-08-20
+
+GitHub Actions run
+[32331835983](https://github.com/wesleykao1990/agent-feed/actions/runs/32331835983)
+passed from a clean stacked pull-request checkout:
+
+- combined `validate` job: M0–M3 and live PostgreSQL ingress green;
+- Milestone 4 generic reference-consumer job green;
+- Milestone 5 portability/operations job green;
+- Milestone 6 remote MCP job green;
+- Milestone 7 occurrence-ledger job green; and
+- Milestone 8 job-proof job green with live PostgreSQL.
+
+The pull request remains draft and unmerged by design. It is stacked on the
+unmerged Milestone 7 branch, so PR #9 must land before PR #10 can be rebased or
+retargeted to `main`.

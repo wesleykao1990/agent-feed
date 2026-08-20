@@ -3,9 +3,8 @@
 Agent Feed is a standalone, reusable project for transmitting structured agent
 runs, findings, and submitted evidence to multiple consumer applications.
 
-Milestone 8 status: **hardened local live acceptance, independent re-review,
-and the complete M0–M8 local regression are green; hosted acceptance is
-pending**. The additive job-proof sidecar keeps technical
+Milestone 8 status: **local live acceptance, independent hostile re-review,
+the complete M0–M8 regression, and hosted CI are green on draft PR #10**. The additive job-proof sidecar keeps technical
 run status separate from quality, derives assessor authority from immutable
 trusted registrations, preserves unknown telemetry, and stores hashed artifact
 identity rather than blobs without changing protocol `0.1`. See

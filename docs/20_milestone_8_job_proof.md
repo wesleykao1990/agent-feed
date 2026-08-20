@@ -1,7 +1,7 @@
 # Milestone 8 — independent job proof and operational receipts
 
-Status: **hardened local live acceptance, independent re-review, and complete
-M0–M8 local regression green; hosted acceptance pending**
+Status: **local live acceptance, independent hostile re-review, complete
+M0–M8 regression, and hosted CI green on draft PR #10**
 
 Milestone 8 adds immutable validation policy and assessment proof without
 changing a producer run or collapsing execution and quality into one success
@@ -91,7 +91,7 @@ hardened combined gate then passed with 10 architecture boundaries, 7 core
 tests, 17 live persistence tests with zero skips, and unchanged protocol
 compatibility. Independent hostile re-review found no remaining blocker/high
 and recommended acceptance. The complete M0–M8 local regression is green;
-hosted CI remains pending.
+GitHub Actions run 32331835983 passed the complete six-job hosted matrix.
 
 ## Explicit non-claims
 

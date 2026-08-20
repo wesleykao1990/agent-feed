@@ -291,8 +291,8 @@ Gate:
 
 ### Milestone 8 — Independent job proof and operational receipts
 
-Status: **hardened local live acceptance, independent re-review, and complete
-M0–M8 local regression green; hosted acceptance pending**. See
+Status: **local live acceptance, independent hostile re-review, complete
+M0–M8 regression, and hosted CI green on draft PR #10**. See
 `docs/20_milestone_8_job_proof.md` and `docs/m8/`.
 
 Deliver:
