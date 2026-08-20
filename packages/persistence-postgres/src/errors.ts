@@ -25,6 +25,14 @@ export type PersistenceErrorCode =
   | "trigger_context_conflict"
   | "stream_mismatch"
   | "occurrence_validation_failed"
+  | "policy_version_conflict"
+  | "policy_version_not_found"
+  | "assessor_registration_conflict"
+  | "assessor_registration_not_found"
+  | "assessor_not_independent"
+  | "assessment_conflict"
+  | "assessment_not_found"
+  | "assessment_validation_failed"
   | "invalid_input"
   | "storage_error";
 

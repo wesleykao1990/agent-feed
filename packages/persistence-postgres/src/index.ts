@@ -1,5 +1,7 @@
 export {
   DELIVERY_MIGRATION_SQL_URL,
+  JOB_PROOF_MIGRATION_SQL_URL,
+  ASSESSMENT_MIGRATION_SQL_URL,
   MIGRATION_SQL_URL,
   OCCURRENCE_MIGRATION_SQL_URL,
   OCCURRENCE_LEDGER_MIGRATION_SQL_URL,
@@ -10,6 +12,7 @@ export {
   migrateAgentFeed,
 } from "./postgres-store.ts";
 export { PostgresOccurrenceRepository } from "./occurrence-store.ts";
+export { PostgresAssessmentRepository, PostgresJobProofRepository } from "./assessment-store.ts";
 export { PostgresDeliveryRepository, appendOutboxEventInTransaction } from "./delivery-store.ts";
 export { PostgresDeliveryConsumerRepository } from "./delivery-consumer-store.ts";
 export type {
@@ -81,4 +84,36 @@ export type {
   ScheduleKind,
   TrustedRunTriggerContext,
   TrustedRunTriggerContextInput,
+  AssessmentArtifactReference,
+  AssessmentArtifactReferenceInput,
+  AssessorType,
+  AssessmentFailureClass,
+  AssessmentFailureStage,
+  AssessmentKind,
+  AssessmentListOptions,
+  AssessmentMetric,
+  AssessmentProvenance,
+  UsageProvenanceType,
+  AssessmentStopReason,
+  AssessmentVerdict,
+  AssessorIndependence,
+  AssessmentAssessorType,
+  AssessorRegistrationStatus,
+  DeclaredBudget,
+  DeclaredBudgetInput,
+  DeclaredBudgetState,
+  TelemetryState,
+  TrustedAssessorContext,
+  UsageObservation,
+  UsageObservationInput,
+  UsageMetric,
+  UsageState,
+  ValidationPolicyV1,
+  ValidationPolicyVersion,
+  ValidationPolicyVersionInput,
+  TrustedAssessorRegistrationVersion,
+  TrustedAssessorRegistrationVersionInput,
+  TrustedAssessorVersionContext,
+  RunAssessmentReceipt,
+  SubmitAssessmentInput,
 } from "./types.ts";
