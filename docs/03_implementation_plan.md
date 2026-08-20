@@ -335,6 +335,25 @@ derive them through a bounded `REPEATABLE READ`, read-only adapter in
 OIDC, hosted HTTPS, alerts, runbooks, independent review, and hosted acceptance
 remain required before Milestone 10 can be called complete.
 
+### Milestone 11 — Multi-provider conformance
+
+Status: **first provider-neutral contract and synthetic adapter checkpoint
+implemented locally; live provider and durable proof acceptance pending**. See
+`docs/23_milestone_11_multi_provider_conformance.md` and `docs/m11/`.
+
+The first checkpoint adds `packages/provider-conformance-core`, which compares
+one exact logical-job definition and validation-policy version across distinct
+deployment topologies. It reuses M8 telemetry and M9 ingress vocabularies,
+requires complete terminal occurrence/execution/assessment/delivery proof, and
+keeps unsupported telemetry explicitly null and unknown.
+
+Executable fixtures cover the existing ChatGPT manual-export, Claude hook,
+generic MCP, REST, and local-file/offline boundaries. These are synthetic
+adapter-shape receipts: live ChatGPT Scheduled Tasks, a live Claude custom
+connector, durable PostgreSQL receipt projection, provider-account evidence,
+and hosted CI remain separate acceptance slices. Protocol `0.1`, producer REST,
+and MCP lifecycle tools remain unchanged.
+
 ### Milestone 9 — Portable job registry and capability profiles
 
 Status: **local live checkpoint and complete M0–M9 regression green;

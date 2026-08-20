@@ -3,6 +3,14 @@
 Agent Feed is a standalone, reusable project for transmitting structured agent
 runs, findings, and submitted evidence to multiple consumer applications.
 
+Milestone 11 status: **provider-neutral comparison contract and five synthetic
+adapter-topology fixtures implemented locally; live provider accounts,
+scheduled execution, durable receipt projection, and final acceptance
+pending**. The additive contract compares the same immutable logical job across
+ChatGPT export, Claude hook, generic MCP, REST, and local-file/offline ingress
+without changing protocol `0.1`. See
+`docs/23_milestone_11_multi_provider_conformance.md`.
+
 Milestone 10 status: **payload-free contract, live tenant-scoped PostgreSQL
 read adapter, and complete local M0–M10 regression green; dedicated hosted M10
 gate added; dashboard,
@@ -118,6 +126,7 @@ packages/assessment-core (pure job-proof policy and assessment contracts)
 packages/job-registry-core (pure portable definitions and capability preflight)
 packages/control-plane-core (pure tenant-scoped operational read model)
 packages/control-plane-postgres (read-only tenant-scoped aggregate adapter)
+packages/provider-conformance-core (pure multi-topology comparison contract)
 apps/admin-dashboard (optional read-only aggregate view)
 docs/adr
 docs/m2
