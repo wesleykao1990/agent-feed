@@ -13,6 +13,7 @@
     "src",
     "migrations",
     "README.md",
+    "M8.md",
     "package.json"
   ],
   "engines": {
@@ -25,6 +26,7 @@
   "dependencies": {
     "@agent-feed/delivery-consumer": "file:../delivery-consumer",
     "@agent-feed/delivery-core": "file:../delivery-core",
+    "@agent-feed/assessment-core": "file:../assessment-core",
     "@agent-feed/occurrence-core": "file:../occurrence-core",
     "@agent-feed/protocol-runtime": "file:../protocol-runtime",
     "pg": "8.16.3"

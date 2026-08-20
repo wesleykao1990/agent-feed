@@ -6,6 +6,7 @@ import { PersistenceError } from "./errors.ts";
 import { payloadHash } from "./hash.ts";
 import { appendOutboxEventInTransaction } from "./delivery-store.ts";
 import { PostgresOccurrenceRepository } from "./occurrence-store.ts";
+import { PostgresAssessmentRepository } from "./assessment-store.ts";
 import type { DeliveryEvent } from "./delivery-types.ts";
 import type {
   BeginRunRequest,
@@ -43,6 +44,14 @@ import type {
   MaterializeScheduleOccurrencesInput,
   TrustedRunTriggerContext,
   TrustedRunTriggerContextInput,
+  AssessmentListOptions,
+  RunAssessmentReceipt,
+  SubmitAssessmentInput,
+  TrustedAssessorRegistrationVersion,
+  TrustedAssessorRegistrationVersionInput,
+  TrustedAssessorVersionContext,
+  ValidationPolicyVersion,
+  ValidationPolicyVersionInput,
 } from "./types.ts";
 
 const MAX_FINDINGS_PER_BATCH = 100;
@@ -294,8 +303,11 @@ export const WIRE_RUN_ID_MIGRATION_SQL_URL = new URL("../migrations/0003_wire_ru
 export const OCCURRENCE_LEDGER_MIGRATION_SQL_URL = new URL("../migrations/0004_occurrence_ledger.sql", import.meta.url);
 /** Short compatibility alias for callers that name the sidecar migration by capability. */
 export const OCCURRENCE_MIGRATION_SQL_URL = OCCURRENCE_LEDGER_MIGRATION_SQL_URL;
+export const JOB_PROOF_MIGRATION_SQL_URL = new URL("../migrations/0005_job_proof.sql", import.meta.url);
+/** Short compatibility alias for the Milestone 8 sidecar migration. */
+export const ASSESSMENT_MIGRATION_SQL_URL = JOB_PROOF_MIGRATION_SQL_URL;
 
-/** Apply M1, M2, M3, and the additive M7 occurrence sidecar. */
+/** Apply M1, M2, M3, M7 occurrence, and M8 job-proof sidecars. */
 export async function migrateAgentFeed(pool: PgPool, sql?: string): Promise<void> {
   const migrations = sql === undefined
     ? [
@@ -303,6 +315,7 @@ export async function migrateAgentFeed(pool: PgPool, sql?: string): Promise<void
       await readFile(DELIVERY_MIGRATION_SQL_URL, "utf8"),
       await readFile(WIRE_RUN_ID_MIGRATION_SQL_URL, "utf8"),
       await readFile(OCCURRENCE_LEDGER_MIGRATION_SQL_URL, "utf8"),
+      await readFile(JOB_PROOF_MIGRATION_SQL_URL, "utf8"),
     ]
     : [sql];
   // Two application processes may start against an empty database at the same
@@ -336,10 +349,12 @@ export function createAgentFeedPool(connectionString = process.env.AGENT_FEED_DA
 export class PostgresAgentFeedPersistence {
   readonly pool: PgPool;
   readonly occurrence: PostgresOccurrenceRepository;
+  readonly assessment: PostgresAssessmentRepository;
 
   constructor(pool: PgPool) {
     this.pool = pool;
     this.occurrence = new PostgresOccurrenceRepository(pool);
+    this.assessment = new PostgresAssessmentRepository(pool);
   }
 
   /** Adapter-owned readiness probe used by transport composition roots. */
@@ -999,6 +1014,46 @@ export class PostgresAgentFeedPersistence {
 
   async list_migration_quarantine(tenantId = "default"): Promise<MigrationQuarantineRecord[]> {
     return this.occurrence.list_migration_quarantine(tenantId);
+  }
+
+  async createValidationPolicyVersion(input: ValidationPolicyVersionInput): Promise<ValidationPolicyVersion> {
+    return this.assessment.createValidationPolicyVersion(input);
+  }
+
+  async create_validation_policy_version(input: ValidationPolicyVersionInput): Promise<ValidationPolicyVersion> {
+    return this.assessment.create_validation_policy_version(input);
+  }
+
+  async registerTrustedAssessorVersion(input: TrustedAssessorRegistrationVersionInput): Promise<TrustedAssessorRegistrationVersion> {
+    return this.assessment.registerTrustedAssessorVersion(input);
+  }
+
+  async register_trusted_assessor_version(input: TrustedAssessorRegistrationVersionInput): Promise<TrustedAssessorRegistrationVersion> {
+    return this.assessment.register_trusted_assessor_version(input);
+  }
+
+  async submitAssessment(input: SubmitAssessmentInput, context: TrustedAssessorVersionContext): Promise<RunAssessmentReceipt> {
+    return this.assessment.submitAssessment(input, context);
+  }
+
+  async submit_assessment(input: SubmitAssessmentInput, context: TrustedAssessorVersionContext): Promise<RunAssessmentReceipt> {
+    return this.assessment.submit_assessment(input, context);
+  }
+
+  async getAssessment(tenantId: string, id: string): Promise<RunAssessmentReceipt | null> {
+    return this.assessment.getAssessment(tenantId, id);
+  }
+
+  async get_assessment(tenantId: string, id: string): Promise<RunAssessmentReceipt | null> {
+    return this.assessment.get_assessment(tenantId, id);
+  }
+
+  async listAssessments(options: AssessmentListOptions): Promise<RunAssessmentReceipt[]> {
+    return this.assessment.listAssessments(options);
+  }
+
+  async list_assessments(options: AssessmentListOptions): Promise<RunAssessmentReceipt[]> {
+    return this.assessment.list_assessments(options);
   }
 
   private async withTransaction<T>(operation: (client: PgTransactionClient) => Promise<T>): Promise<T> {

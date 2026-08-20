@@ -52,6 +52,31 @@ tenant/version/stream/context/window checks for direct SQL callers. The legacy
 terminal liveness trigger remains only for compatibility; M7 occurrence reads
 do not consult its mutable state.
 
+Milestone 8 adds the additive `0005_job_proof.sql` sidecar through
+`PostgresAssessmentRepository`. It stores immutable validation policy versions,
+trusted assessor registration versions, run assessment receipts, declared
+budget rows, usage rows, and bounded artifact identity/provenance references.
+The repository accepts only an exact trusted assessor-version context as its
+authority boundary; assessment submissions cannot provide assessor identity,
+type, independence, or technical run status. Authority snapshots are derived
+from the registered row, and `producer_self_check` is always persisted as
+`self`. Technical completion is read by joining the persisted run and never
+changes a quality/security/compliance receipt.
+
+`@agent-feed/assessment-core` validates and canonically hashes policy and
+assessment values before the repository transaction. PostgreSQL repeats tenant,
+authority, policy-kind, policy-budget, usage-state, artifact-hash, and
+append-only checks for direct SQL callers. Usage values are nullable for
+`unknown`/`not_applicable`; observed values are non-negative and require
+non-unknown provenance. Artifact rows contain no blob/content/base64,
+credentials, or signed URL material. Reassessment uses a new idempotency key,
+must reference the same tenant/run/policy version, and appends a new receipt.
+
+Policy registration and trusted-assessor registration are operator/composition
+root methods only. They are deliberately not exposed through producer REST or
+MCP paths; a production deployment must provide a dedicated assessor
+composition root and role before making these methods reachable.
+
 `PostgresDeliveryRepository` owns only durable state: `FOR UPDATE SKIP LOCKED`
 leases, append-only attempt history, idempotent acknowledgements, retry/DLQ
 transitions, expired-lease recovery, replay idempotency, and pull paging. It
