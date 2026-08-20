@@ -1,0 +1,24 @@
+{
+  "name": "@agent-feed/control-plane-postgres",
+  "version": "0.1.1",
+  "description": "Read-only tenant-scoped PostgreSQL projections for the Agent Feed control plane.",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "exports": { ".": { "types": "./src/index.ts", "default": "./src/index.ts" } },
+  "files": ["src", "test", "README.md", "DECISIONS.md", "BUGS.md", "LEARNINGS.md", "package.json", "package-lock.json"],
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test --test-concurrency=1 test/*.test.ts"
+  },
+  "dependencies": {
+    "@agent-feed/control-plane-core": "file:../control-plane-core",
+    "pg": "8.16.3"
+  },
+  "devDependencies": {
+    "@agent-feed/persistence-postgres": "file:../persistence-postgres",
+    "@types/node": "22.20.1",
+    "@types/pg": "8.15.5",
+    "typescript": "7.0.2"
+  }
+}
