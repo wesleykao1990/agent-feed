@@ -27,6 +27,8 @@
     "m6:conformance": "node scripts/run_m6_conformance.mjs",
     "m7:architecture": "node scripts/check_m7_architecture.mjs",
     "m7:conformance": "node scripts/run_m7_conformance.mjs",
+    "m8:architecture": "node scripts/check_m8_architecture.mjs",
+    "m8:conformance": "node scripts/run_m8_conformance.mjs",
     "m1:architecture": "node scripts/check_producer_architecture.mjs",
     "m1:ingress": "node scripts/run_m1_ingress_conformance.mjs",
     "schema:artifact": "node scripts/build_schema_artifact.mjs",

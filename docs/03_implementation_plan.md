@@ -288,3 +288,32 @@ Gate:
 - timezone/DST, misfire, and overlap fixtures pass with persisted occurrences;
 - protocol `0.1` schemas and lifecycle tools remain unchanged; and
 - the full prior milestone CI matrix remains green.
+
+### Milestone 8 — Independent job proof and operational receipts
+
+Status: **hardened local live acceptance, independent re-review, and complete
+M0–M8 local regression green; hosted acceptance pending**. See
+`docs/20_milestone_8_job_proof.md` and `docs/m8/`.
+
+Deliver:
+
+- a pure assessment contract for policies, authority compatibility, typed
+  outcomes, explicit telemetry, hashed artifact references, and canonical
+  request identity;
+- immutable, tenant-scoped policy and trusted assessor registration versions;
+- immutable run assessment receipts with declared budget, observed usage, and
+  artifact-reference children;
+- exact idempotent retry and append-only same-run/same-policy reassessment;
+- technical status derived from the persisted run and kept separate from the
+  quality verdict; and
+- a trusted composition-root boundary absent from producer REST and MCP.
+
+Gate:
+
+- producer self-checks cannot satisfy independent policies;
+- caller-supplied authority or technical status fails closed;
+- reassessment does not mutate the run or earlier receipt;
+- unknown telemetry remains null and explicitly unknown;
+- artifact references contain identity/provenance rather than blobs;
+- protocol `0.1` schemas and lifecycle tools remain unchanged; and
+- the complete prior milestone matrix remains green.

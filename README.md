@@ -3,6 +3,14 @@
 Agent Feed is a standalone, reusable project for transmitting structured agent
 runs, findings, and submitted evidence to multiple consumer applications.
 
+Milestone 8 status: **hardened local live acceptance, independent re-review,
+and the complete M0–M8 local regression are green; hosted acceptance is
+pending**. The additive job-proof sidecar keeps technical
+run status separate from quality, derives assessor authority from immutable
+trusted registrations, preserves unknown telemetry, and stores hashed artifact
+identity rather than blobs without changing protocol `0.1`. See
+`docs/20_milestone_8_job_proof.md`.
+
 Milestone 7 status: **local implementation, live PostgreSQL acceptance,
 independent re-review, the full M0–M6 local regression, and hosted CI are
 green on draft PR #9**. The additive occurrence sidecar records immutable schedule
@@ -91,10 +99,12 @@ packages/operations-core (pure retention/audit contracts)
 packages/operations-observability (bounded metrics/Prometheus contract)
 packages/operations-postgres (PostgreSQL operations adapter)
 packages/occurrence-core (pure schedule occurrence and policy contracts)
+packages/assessment-core (pure job-proof policy and assessment contracts)
 apps/admin-dashboard (optional read-only aggregate view)
 docs/adr
 docs/m2
 docs/m5
+docs/m8
 docs/operations
 skills/chatgpt
 skills/claude
@@ -202,6 +212,20 @@ It verifies fixed UTC interval cadence, pinned five-field cron/timezone
 materialization, trusted trigger provenance, one-run/one-occurrence matching,
 outcome-aware liveness, tenant isolation, legacy quarantine, and unchanged
 protocol `0.1`. It never invokes work; schedulers remain external.
+
+The Milestone 8 gate also requires a disposable PostgreSQL URL and fails
+closed without it:
+
+```sh
+npm --prefix packages/assessment-core ci
+npm --prefix packages/persistence-postgres ci
+AGENT_FEED_DATABASE_URL=postgresql://... npm run m8:conformance
+```
+
+It verifies trusted assessor provenance, independent-policy enforcement,
+append-only reassessment, technical/quality separation, explicit unknown
+telemetry, hashed artifact references, tenant isolation, and unchanged
+protocol `0.1`. Validator execution and artifact storage remain external.
 
 The Milestone 4 gate is Node-only and deliberately has no PostgreSQL or
 Rewards Optimizer dependency:
