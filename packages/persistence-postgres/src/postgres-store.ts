@@ -7,6 +7,7 @@ import { payloadHash } from "./hash.ts";
 import { appendOutboxEventInTransaction } from "./delivery-store.ts";
 import { PostgresOccurrenceRepository } from "./occurrence-store.ts";
 import { PostgresAssessmentRepository } from "./assessment-store.ts";
+import { PostgresJobRegistryRepository } from "./job-registry-store.ts";
 import type { DeliveryEvent } from "./delivery-types.ts";
 import type {
   BeginRunRequest,
@@ -306,6 +307,7 @@ export const OCCURRENCE_MIGRATION_SQL_URL = OCCURRENCE_LEDGER_MIGRATION_SQL_URL;
 export const JOB_PROOF_MIGRATION_SQL_URL = new URL("../migrations/0005_job_proof.sql", import.meta.url);
 /** Short compatibility alias for the Milestone 8 sidecar migration. */
 export const ASSESSMENT_MIGRATION_SQL_URL = JOB_PROOF_MIGRATION_SQL_URL;
+export const JOB_REGISTRY_MIGRATION_SQL_URL = new URL("../migrations/0006_job_registry.sql", import.meta.url);
 
 /** Apply M1, M2, M3, M7 occurrence, and M8 job-proof sidecars. */
 export async function migrateAgentFeed(pool: PgPool, sql?: string): Promise<void> {
@@ -316,6 +318,7 @@ export async function migrateAgentFeed(pool: PgPool, sql?: string): Promise<void
       await readFile(WIRE_RUN_ID_MIGRATION_SQL_URL, "utf8"),
       await readFile(OCCURRENCE_LEDGER_MIGRATION_SQL_URL, "utf8"),
       await readFile(JOB_PROOF_MIGRATION_SQL_URL, "utf8"),
+      await readFile(JOB_REGISTRY_MIGRATION_SQL_URL, "utf8"),
     ]
     : [sql];
   // Two application processes may start against an empty database at the same
@@ -350,11 +353,13 @@ export class PostgresAgentFeedPersistence {
   readonly pool: PgPool;
   readonly occurrence: PostgresOccurrenceRepository;
   readonly assessment: PostgresAssessmentRepository;
+  readonly jobRegistry: PostgresJobRegistryRepository;
 
   constructor(pool: PgPool) {
     this.pool = pool;
     this.occurrence = new PostgresOccurrenceRepository(pool);
     this.assessment = new PostgresAssessmentRepository(pool);
+    this.jobRegistry = new PostgresJobRegistryRepository(pool);
   }
 
   /** Adapter-owned readiness probe used by transport composition roots. */

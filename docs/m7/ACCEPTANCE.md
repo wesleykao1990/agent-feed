@@ -1,7 +1,7 @@
 # Milestone 7 acceptance record
 
-Status: **accepted locally and independently; complete M0–M7 hosted matrix
-green on draft PR #9**
+Status: **accepted and merged through PR #9; complete M0–M7 hosted matrix
+green**
 
 Required evidence:
 
@@ -56,4 +56,5 @@ passed from a clean pull-request checkout after the local-dependency graph fix:
 - Milestone 6 remote MCP job green; and
 - Milestone 7 occurrence-ledger job green with live PostgreSQL.
 
-The pull request remains draft and unmerged by design.
+PR #9 was merged into `main` on 2026-08-20 as merge commit
+`7f404c8716f64c50a1eb924f12b3d6c8257b9a42`.

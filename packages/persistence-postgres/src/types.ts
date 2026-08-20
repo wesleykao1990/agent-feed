@@ -1,4 +1,13 @@
 import type { Pool, PoolClient } from "pg";
+import type {
+  ActivationPreflight,
+  CapabilityProfile,
+  CapabilityProfileInput,
+  DeploymentActivationState,
+  DeploymentTopology,
+  JobDefinition,
+  JobDefinitionInput,
+} from "@agent-feed/job-registry-core";
 
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
@@ -208,6 +217,74 @@ export interface LivenessResult {
   stream_id: string;
   liveness_status: "healthy" | "due" | "overdue" | "degraded" | "disabled" | "never_seen";
   expected_by: string | null;
+}
+
+/** M9 immutable portable job-registry sidecar types. */
+export interface JobDefinitionVersionInput {
+  tenant_id?: string;
+  definition: JobDefinitionInput;
+  metadata?: JsonObject;
+}
+
+export interface JobDefinitionVersion {
+  id: string;
+  tenant_id: string;
+  definition: JobDefinition;
+  definition_hash: string;
+  metadata: JsonObject;
+  created_at: string;
+}
+
+export interface CapabilityProfileVersionInput {
+  tenant_id?: string;
+  profile: CapabilityProfileInput;
+  metadata?: JsonObject;
+}
+
+export interface CapabilityProfileVersion {
+  id: string;
+  tenant_id: string;
+  profile: CapabilityProfile;
+  profile_hash: string;
+  metadata: JsonObject;
+  created_at: string;
+}
+
+export interface JobDeploymentBindingVersionInput {
+  tenant_id?: string;
+  binding_key: string;
+  version: number;
+  job_definition_version_id: string;
+  activation_state: DeploymentActivationState;
+  topology: DeploymentTopology;
+  capability_profile_version_ids: string[];
+  off_switch_reference: string | null;
+  shadow_assessment_ids?: string[];
+  metadata?: JsonObject;
+}
+
+export interface JobDeploymentBindingVersion {
+  id: string;
+  tenant_id: string;
+  binding_key: string;
+  version: number;
+  job_definition_version_id: string;
+  activation_state: DeploymentActivationState;
+  topology: DeploymentTopology;
+  capability_profile_version_ids: string[];
+  off_switch_reference: string | null;
+  shadow_assessment_ids: string[];
+  preflight: ActivationPreflight;
+  binding_hash: string;
+  metadata: JsonObject;
+  created_at: string;
+}
+
+export interface JobRegistryListOptions {
+  tenant_id?: string;
+  job_key?: string;
+  binding_key?: string;
+  limit?: number;
 }
 
 /** M7 occurrence sidecar types.  These are deliberately separate from the
