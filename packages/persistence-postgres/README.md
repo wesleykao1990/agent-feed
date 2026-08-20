@@ -18,11 +18,39 @@ The `PostgresAgentFeedPersistence` service provides:
 - immutable terminal runs enforced by database triggers.
 
 Milestone 2 adds an ordered migration loader (`0001_agent_feed.sql` followed by
-`0002_durable_delivery.sql` and `0003_wire_run_id.sql`), an immutable outbox, normalized versioned
+`0002_durable_delivery.sql` and `0003_wire_run_id.sql`); Milestone 7 appends
+`0004_occurrence_ledger.sql`.
+The loader preserves an immutable outbox, normalized versioned
 selectors, tenant-global delivery positions, and a per-subscription queue. The
 ingress methods append `run.started`, `finding.submitted`, and terminal run
 events through the same transaction client as accepted rows. A quarantined
 finding remains auditable but is never fanned out.
+
+Milestone 7 adds the additive `0004_occurrence_ledger.sql` sidecar. Schedule
+expectation versions carry an immutable
+`stream_id`; expected occurrences and run links are tenant-scoped and
+append-only; occurrence liveness joins the current run status, so a running,
+failed, cancelled, partial, or completed-zero run remains distinct from an
+absent invocation. `PostgresOccurrenceRepository` accepts the public wire run
+ID and resolves it through the tenant-scoped internal UUID. Only scheduled
+triggers may match normal expectations; legacy triggers are restricted to
+legacy expectations, and explicit/windowed matching rejects missing or
+ambiguous candidates. `@agent-feed/occurrence-core` is the sole repository
+validator/calculator: `materializeScheduleOccurrences` bridges persisted
+versions to the core expectation ID/version and stores only its canonical UTC
+nominal keys and grace windows. Legacy `stream_expectations` migrate only a version-1
+baseline; they do not fabricate historical occurrences or links. If old stream
+activity cannot be attributed to tenant `default`, migration records a
+deterministic quarantine row instead.
+
+Trigger provenance is a separate immutable `run_trigger_contexts` receipt.
+Schedulers or trusted adapters call `recordTrustedRunTriggerContext` before a
+link; protocol runs without a context, or contexts for manual/test/retry/
+replay/backfill/event/unknown triggers, cannot satisfy an expectation. Link
+inputs never choose their trigger kind, and database triggers repeat the
+tenant/version/stream/context/window checks for direct SQL callers. The legacy
+terminal liveness trigger remains only for compatibility; M7 occurrence reads
+do not consult its mutable state.
 
 `PostgresDeliveryRepository` owns only durable state: `FOR UPDATE SKIP LOCKED`
 leases, append-only attempt history, idempotent acknowledgements, retry/DLQ

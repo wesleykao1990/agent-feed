@@ -3,6 +3,13 @@
 Agent Feed is a standalone, reusable project for transmitting structured agent
 runs, findings, and submitted evidence to multiple consumer applications.
 
+Milestone 7 status: **local implementation, live PostgreSQL acceptance,
+independent re-review, the full M0–M6 local regression, and hosted CI are
+green on draft PR #9**. The additive occurrence sidecar records immutable schedule
+versions, expected nominal invocations, trusted trigger context, run links,
+and outcome-aware liveness without changing protocol `0.1` or turning Agent
+Feed into a scheduler. See `docs/19_milestone_7_occurrence_ledger.md`.
+
 Milestone 6 status: **authenticated Streamable HTTP, OAuth, live PostgreSQL,
 and hosted CI acceptance are green; the Claude account receipt is waiting for
 Owner or individual Pro/Max access**. The new
@@ -83,6 +90,7 @@ apps/delivery-worker (composition foundation; no production entrypoint yet)
 packages/operations-core (pure retention/audit contracts)
 packages/operations-observability (bounded metrics/Prometheus contract)
 packages/operations-postgres (PostgreSQL operations adapter)
+packages/occurrence-core (pure schedule occurrence and policy contracts)
 apps/admin-dashboard (optional read-only aggregate view)
 docs/adr
 docs/m2
@@ -181,6 +189,20 @@ npm run m3:conformance
 Run the root foundation/protocol gates and live M1/M2 PostgreSQL gates as
 documented in `docs/m3/ACCEPTANCE.md` before accepting a final commit.
 
+The Milestone 7 gate requires a disposable PostgreSQL URL and fails closed
+without it:
+
+```sh
+npm --prefix packages/occurrence-core ci
+npm --prefix packages/persistence-postgres ci
+AGENT_FEED_DATABASE_URL=postgresql://... npm run m7:conformance
+```
+
+It verifies fixed UTC interval cadence, pinned five-field cron/timezone
+materialization, trusted trigger provenance, one-run/one-occurrence matching,
+outcome-aware liveness, tenant isolation, legacy quarantine, and unchanged
+protocol `0.1`. It never invokes work; schedulers remain external.
+
 The Milestone 4 gate is Node-only and deliberately has no PostgreSQL or
 Rewards Optimizer dependency:
 
@@ -226,7 +248,7 @@ scope. Milestone 4 maintenance uses
 
 Read the relevant milestone record, the ADR index, and the operational runbook
 before adding code. Milestone decisions, bugs, learnings, and refactor-debt
-reviews are append-only in `docs/m3/`, `docs/m4/`, and `docs/m5/`.
+reviews are append-only in the corresponding `docs/m*/` directory.
 
 ## ChatGPT monitoring
 

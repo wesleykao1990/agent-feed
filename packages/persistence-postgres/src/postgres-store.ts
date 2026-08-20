@@ -5,6 +5,7 @@ import type { PoolClient, QueryResultRow } from "pg";
 import { PersistenceError } from "./errors.ts";
 import { payloadHash } from "./hash.ts";
 import { appendOutboxEventInTransaction } from "./delivery-store.ts";
+import { PostgresOccurrenceRepository } from "./occurrence-store.ts";
 import type { DeliveryEvent } from "./delivery-types.ts";
 import type {
   BeginRunRequest,
@@ -28,6 +29,20 @@ import type {
   StreamExpectationInput,
   SubmitBatchRequest,
   TerminalRunStatus,
+  ExpectedOccurrence,
+  ExpectedOccurrenceInput,
+  ExpectedOccurrenceListOptions,
+  MigrationQuarantineRecord,
+  OccurrenceLiveness,
+  OccurrenceLivenessOptions,
+  RunOccurrenceLink,
+  RunOccurrenceLinkInput,
+  ScheduleExpectationListOptions,
+  ScheduleExpectationVersion,
+  ScheduleExpectationVersionInput,
+  MaterializeScheduleOccurrencesInput,
+  TrustedRunTriggerContext,
+  TrustedRunTriggerContextInput,
 } from "./types.ts";
 
 const MAX_FINDINGS_PER_BATCH = 100;
@@ -276,14 +291,18 @@ function makeBeginReceipt(row: DbRunRow, value: unknown): RunRecord {
 export const MIGRATION_SQL_URL = new URL("../migrations/0001_agent_feed.sql", import.meta.url);
 export const DELIVERY_MIGRATION_SQL_URL = new URL("../migrations/0002_durable_delivery.sql", import.meta.url);
 export const WIRE_RUN_ID_MIGRATION_SQL_URL = new URL("../migrations/0003_wire_run_id.sql", import.meta.url);
+export const OCCURRENCE_LEDGER_MIGRATION_SQL_URL = new URL("../migrations/0004_occurrence_ledger.sql", import.meta.url);
+/** Short compatibility alias for callers that name the sidecar migration by capability. */
+export const OCCURRENCE_MIGRATION_SQL_URL = OCCURRENCE_LEDGER_MIGRATION_SQL_URL;
 
-/** Apply M1, M2, and the additive wire-run-ID compatibility schema. */
+/** Apply M1, M2, M3, and the additive M7 occurrence sidecar. */
 export async function migrateAgentFeed(pool: PgPool, sql?: string): Promise<void> {
   const migrations = sql === undefined
     ? [
       await readFile(MIGRATION_SQL_URL, "utf8"),
       await readFile(DELIVERY_MIGRATION_SQL_URL, "utf8"),
       await readFile(WIRE_RUN_ID_MIGRATION_SQL_URL, "utf8"),
+      await readFile(OCCURRENCE_LEDGER_MIGRATION_SQL_URL, "utf8"),
     ]
     : [sql];
   // Two application processes may start against an empty database at the same
@@ -316,9 +335,11 @@ export function createAgentFeedPool(connectionString = process.env.AGENT_FEED_DA
  */
 export class PostgresAgentFeedPersistence {
   readonly pool: PgPool;
+  readonly occurrence: PostgresOccurrenceRepository;
 
   constructor(pool: PgPool) {
     this.pool = pool;
+    this.occurrence = new PostgresOccurrenceRepository(pool);
   }
 
   /** Adapter-owned readiness probe used by transport composition roots. */
@@ -807,6 +828,177 @@ export class PostgresAgentFeedPersistence {
 
   async sweep_overdue_streams(now = new Date()): Promise<LivenessResult[]> {
     return this.sweepOverdueStreams(now);
+  }
+
+  // M7 occurrence sidecar methods.  These wrappers keep the historical
+  // PostgresAgentFeedPersistence composition root usable while exposing the
+  // focused repository as a standalone export for scheduler-neutral callers.
+  async createScheduleExpectationVersion(input: ScheduleExpectationVersionInput): Promise<ScheduleExpectationVersion> {
+    return this.occurrence.createScheduleExpectationVersion(input);
+  }
+
+  async registerScheduleExpectationVersion(input: ScheduleExpectationVersionInput): Promise<ScheduleExpectationVersion> {
+    return this.occurrence.registerScheduleExpectationVersion(input);
+  }
+
+  async create_schedule_expectation_version(input: ScheduleExpectationVersionInput): Promise<ScheduleExpectationVersion> {
+    return this.occurrence.create_schedule_expectation_version(input);
+  }
+
+  async register_schedule_expectation_version(input: ScheduleExpectationVersionInput): Promise<ScheduleExpectationVersion> {
+    return this.occurrence.register_schedule_expectation_version(input);
+  }
+
+  async getScheduleExpectationVersion(tenantId: string, scheduleKey: string, version: number): Promise<ScheduleExpectationVersion | null> {
+    return this.occurrence.getScheduleExpectationVersion(tenantId, scheduleKey, version);
+  }
+
+  async getScheduleExpectationVersionById(tenantId: string, id: string): Promise<ScheduleExpectationVersion | null> {
+    return this.occurrence.getScheduleExpectationVersionById(tenantId, id);
+  }
+
+  async get_schedule_expectation_version(tenantId: string, scheduleKey: string, version: number): Promise<ScheduleExpectationVersion | null> {
+    return this.occurrence.get_schedule_expectation_version(tenantId, scheduleKey, version);
+  }
+
+  async get_schedule_expectation_version_by_id(tenantId: string, id: string): Promise<ScheduleExpectationVersion | null> {
+    return this.occurrence.get_schedule_expectation_version_by_id(tenantId, id);
+  }
+
+  async listScheduleExpectationVersions(options: ScheduleExpectationListOptions): Promise<ScheduleExpectationVersion[]> {
+    return this.occurrence.listScheduleExpectationVersions(options);
+  }
+
+  async list_schedule_expectation_versions(options: ScheduleExpectationListOptions): Promise<ScheduleExpectationVersion[]> {
+    return this.occurrence.list_schedule_expectation_versions(options);
+  }
+
+  async createExpectedOccurrence(input: ExpectedOccurrenceInput): Promise<ExpectedOccurrence> {
+    return this.occurrence.createExpectedOccurrence(input);
+  }
+
+  async insertExpectedOccurrence(input: ExpectedOccurrenceInput): Promise<ExpectedOccurrence> {
+    return this.occurrence.insertExpectedOccurrence(input);
+  }
+
+  async create_expected_occurrence(input: ExpectedOccurrenceInput): Promise<ExpectedOccurrence> {
+    return this.occurrence.create_expected_occurrence(input);
+  }
+
+  async insert_expected_occurrence(input: ExpectedOccurrenceInput): Promise<ExpectedOccurrence> {
+    return this.occurrence.insert_expected_occurrence(input);
+  }
+
+  async materializeExpectedOccurrences(inputs: ExpectedOccurrenceInput[]): Promise<ExpectedOccurrence[]> {
+    return this.occurrence.materializeExpectedOccurrences(inputs);
+  }
+
+  async materialize_expected_occurrences(inputs: ExpectedOccurrenceInput[]): Promise<ExpectedOccurrence[]> {
+    return this.occurrence.materialize_expected_occurrences(inputs);
+  }
+
+  async materializeScheduleOccurrences(input: MaterializeScheduleOccurrencesInput): Promise<ExpectedOccurrence[]> {
+    return this.occurrence.materializeScheduleOccurrences(input);
+  }
+
+  async materialize_schedule_occurrences(input: MaterializeScheduleOccurrencesInput): Promise<ExpectedOccurrence[]> {
+    return this.occurrence.materialize_schedule_occurrences(input);
+  }
+
+  async recordTrustedRunTriggerContext(input: TrustedRunTriggerContextInput): Promise<TrustedRunTriggerContext> {
+    return this.occurrence.recordTrustedRunTriggerContext(input);
+  }
+
+  async record_trusted_run_trigger_context(input: TrustedRunTriggerContextInput): Promise<TrustedRunTriggerContext> {
+    return this.occurrence.record_trusted_run_trigger_context(input);
+  }
+
+  async getTrustedRunTriggerContext(tenantId: string, runId: string): Promise<TrustedRunTriggerContext | null> {
+    return this.occurrence.getTrustedRunTriggerContext(tenantId, runId);
+  }
+
+  async get_trusted_run_trigger_context(tenantId: string, runId: string): Promise<TrustedRunTriggerContext | null> {
+    return this.occurrence.get_trusted_run_trigger_context(tenantId, runId);
+  }
+
+  async getExpectedOccurrence(tenantId: string, occurrenceId: string): Promise<ExpectedOccurrence | null> {
+    return this.occurrence.getExpectedOccurrence(tenantId, occurrenceId);
+  }
+
+  async get_expected_occurrence(tenantId: string, occurrenceId: string): Promise<ExpectedOccurrence | null> {
+    return this.occurrence.get_expected_occurrence(tenantId, occurrenceId);
+  }
+
+  async listExpectedOccurrences(options: ExpectedOccurrenceListOptions): Promise<ExpectedOccurrence[]> {
+    return this.occurrence.listExpectedOccurrences(options);
+  }
+
+  async list_expected_occurrences(options: ExpectedOccurrenceListOptions): Promise<ExpectedOccurrence[]> {
+    return this.occurrence.list_expected_occurrences(options);
+  }
+
+  async linkRunToOccurrence(input: RunOccurrenceLinkInput): Promise<RunOccurrenceLink> {
+    return this.occurrence.linkRunToOccurrence(input);
+  }
+
+  async link_run_to_occurrence(input: RunOccurrenceLinkInput): Promise<RunOccurrenceLink> {
+    return this.occurrence.link_run_to_occurrence(input);
+  }
+
+  async matchRunToOccurrence(input: RunOccurrenceLinkInput): Promise<RunOccurrenceLink> {
+    return this.occurrence.matchRunToOccurrence(input);
+  }
+
+  async match_run_to_occurrence(input: RunOccurrenceLinkInput): Promise<RunOccurrenceLink> {
+    return this.occurrence.match_run_to_occurrence(input);
+  }
+
+  async getRunOccurrenceLink(tenantId: string, linkId: string): Promise<RunOccurrenceLink | null> {
+    return this.occurrence.getRunOccurrenceLink(tenantId, linkId);
+  }
+
+  async getRunOccurrenceLinkForRun(tenantId: string, runId: string): Promise<RunOccurrenceLink | null> {
+    return this.occurrence.getRunOccurrenceLinkForRun(tenantId, runId);
+  }
+
+  async get_run_occurrence_link(tenantId: string, linkId: string): Promise<RunOccurrenceLink | null> {
+    return this.occurrence.get_run_occurrence_link(tenantId, linkId);
+  }
+
+  async get_run_occurrence_link_for_run(tenantId: string, runId: string): Promise<RunOccurrenceLink | null> {
+    return this.occurrence.get_run_occurrence_link_for_run(tenantId, runId);
+  }
+
+  async listRunOccurrenceLinks(tenantId: string, limit = 500, offset = 0): Promise<RunOccurrenceLink[]> {
+    return this.occurrence.listRunOccurrenceLinks(tenantId, limit, offset);
+  }
+
+  async list_run_occurrence_links(tenantId: string, limit = 500, offset = 0): Promise<RunOccurrenceLink[]> {
+    return this.occurrence.list_run_occurrence_links(tenantId, limit, offset);
+  }
+
+  async getOccurrenceLiveness(tenantId: string, occurrenceId: string, now: string | Date = new Date()): Promise<OccurrenceLiveness | null> {
+    return this.occurrence.getOccurrenceLiveness(tenantId, occurrenceId, now);
+  }
+
+  async get_occurrence_liveness(tenantId: string, occurrenceId: string, now: string | Date = new Date()): Promise<OccurrenceLiveness | null> {
+    return this.occurrence.get_occurrence_liveness(tenantId, occurrenceId, now);
+  }
+
+  async listOccurrenceLiveness(options: OccurrenceLivenessOptions): Promise<OccurrenceLiveness[]> {
+    return this.occurrence.listOccurrenceLiveness(options);
+  }
+
+  async list_occurrence_liveness(options: OccurrenceLivenessOptions): Promise<OccurrenceLiveness[]> {
+    return this.occurrence.list_occurrence_liveness(options);
+  }
+
+  async listMigrationQuarantine(tenantId = "default"): Promise<MigrationQuarantineRecord[]> {
+    return this.occurrence.listMigrationQuarantine(tenantId);
+  }
+
+  async list_migration_quarantine(tenantId = "default"): Promise<MigrationQuarantineRecord[]> {
+    return this.occurrence.list_migration_quarantine(tenantId);
   }
 
   private async withTransaction<T>(operation: (client: PgTransactionClient) => Promise<T>): Promise<T> {
