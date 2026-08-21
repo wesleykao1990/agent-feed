@@ -310,8 +310,9 @@ export const JOB_PROOF_MIGRATION_SQL_URL = new URL("../migrations/0005_job_proof
 export const ASSESSMENT_MIGRATION_SQL_URL = JOB_PROOF_MIGRATION_SQL_URL;
 export const JOB_REGISTRY_MIGRATION_SQL_URL = new URL("../migrations/0006_job_registry.sql", import.meta.url);
 export const UTILITY_FEEDBACK_MIGRATION_SQL_URL = new URL("../migrations/0007_utility_feedback.sql", import.meta.url);
+export const TARGET_ATTEMPT_LEDGER_MIGRATION_SQL_URL = new URL("../migrations/0008_target_attempt_ledger.sql", import.meta.url);
 
-/** Apply the ordered foundation and M2/M3/M7/M8/M9/M12 sidecar migrations. */
+/** Apply the ordered foundation and sidecar migrations. */
 export async function migrateAgentFeed(pool: PgPool, sql?: string): Promise<void> {
   const migrations = sql === undefined
     ? [
@@ -322,6 +323,7 @@ export async function migrateAgentFeed(pool: PgPool, sql?: string): Promise<void
       await readFile(JOB_PROOF_MIGRATION_SQL_URL, "utf8"),
       await readFile(JOB_REGISTRY_MIGRATION_SQL_URL, "utf8"),
       await readFile(UTILITY_FEEDBACK_MIGRATION_SQL_URL, "utf8"),
+      await readFile(TARGET_ATTEMPT_LEDGER_MIGRATION_SQL_URL, "utf8"),
     ]
     : [sql];
   // Two application processes may start against an empty database at the same

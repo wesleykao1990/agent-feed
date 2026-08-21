@@ -16,3 +16,5 @@
   access rather than recording a skip.
 - A canonical digest is not enough for byte-stable replay if the emitted JSON
   retains caller object insertion order; normalize the wire object too.
+- Attempt history must remain append-only; derive current and last-resolved
+  target state so a failed retry cannot erase an earlier resolution.

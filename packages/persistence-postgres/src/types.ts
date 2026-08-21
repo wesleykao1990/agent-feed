@@ -841,3 +841,83 @@ export interface MigrationQuarantineRecord {
 
 export type PgPool = Pool;
 export type PgTransactionClient = PoolClient;
+
+/** Generic, provider-neutral outcomes for one target operation attempt. */
+export const TARGET_ATTEMPT_OUTCOMES = [
+  "resolved",
+  "not_found",
+  "access",
+  "auth",
+  "timeout",
+  "unsupported",
+  "validation_rejected",
+  "interrupted",
+] as const;
+export type TargetAttemptOutcome = typeof TARGET_ATTEMPT_OUTCOMES[number];
+
+/**
+ * Append-only target-attempt input.  This is deliberately a sidecar contract:
+ * none of these fields are part of protocol 0.1 or a provider/domain schema.
+ */
+export interface TargetAttemptInput {
+  tenant_id?: string;
+  job_deployment_id: string;
+  run_id: string;
+  work_unit_id: string;
+  target_id: string;
+  attempt_number: number;
+  idempotency_key: string;
+  input_digest: string;
+  outcome: TargetAttemptOutcome;
+  locator_digest?: string | null;
+  locator_reference?: string | null;
+  accepted_finding_count: number;
+  accepted_evidence_count: number;
+  attempted_at: string;
+}
+
+export interface TargetAttempt {
+  id: string;
+  tenant_id: string;
+  job_deployment_id: string;
+  run_id: string;
+  work_unit_id: string;
+  target_id: string;
+  attempt_number: number;
+  idempotency_key: string;
+  payload_hash: string;
+  input_digest: string;
+  outcome: TargetAttemptOutcome;
+  locator_digest: string | null;
+  locator_reference: string | null;
+  accepted_finding_count: number;
+  accepted_evidence_count: number;
+  attempted_at: string;
+  recorded_at: string;
+}
+
+export interface TargetAttemptProjection {
+  tenant_id: string;
+  job_deployment_id: string;
+  run_id: string;
+  work_unit_id: string;
+  target_id: string;
+  latest: TargetAttempt | null;
+  last_resolved: TargetAttempt | null;
+}
+
+export interface AppendTargetAttemptResult {
+  attempt: TargetAttempt;
+  projection: TargetAttemptProjection;
+  appended: boolean;
+}
+
+export interface TargetAttemptListOptions {
+  tenant_id?: string;
+  job_deployment_id: string;
+  run_id: string;
+  work_unit_id?: string;
+  target_id?: string;
+  limit?: number;
+  offset?: number;
+}

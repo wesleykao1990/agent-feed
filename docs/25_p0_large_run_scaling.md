@@ -49,6 +49,15 @@ risk rather than solve resumability.
 - `ProducerClient.submitLargeRun`, which awaits each durable batch receipt
   before requesting the next and exposes an accepted-batch checkpoint hook.
 
+The persistence package also now has an additive `0008_target_attempt_ledger`
+sidecar. It records deployment-UUID/run/work-unit/target attempts with
+deterministic idempotency, monotone attempt numbers, bounded credential-free
+locator material, and generic outcomes. A tenant-scoped immutable run-to-
+deployment binding proves that all attempts in a run use one registered job
+deployment. Derived latest and last-resolved projections preserve a prior
+resolution when a later retry fails. This ledger does not change protocol
+`0.1`, job scheduling, or domain/economic semantics.
+
 Input order, fixed `submitted_at`, metadata, limits, and content are part of
 plan identity. Replaying those exact inputs produces byte-equal requests.
 Changing any of them is a new plan, not a resume.

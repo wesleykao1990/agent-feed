@@ -8,3 +8,4 @@
 | LR-D004 | Submit sequentially and checkpoint after the durable receipt. | This supplies natural backpressure and does not outrun the producer rate limit. |
 | LR-D005 | Leave completion explicit. | A generator or callback failure must never be represented as a successful terminal run. |
 | LR-D006 | Keep family/role coverage outside Agent Feed. | The P0 vocabulary and authority decisions belong to the Rewards consumer. |
+| LR-D007 | Persist target attempts in an additive, generic sidecar with an immutable tenant-scoped run/deployment binding and derived latest/last-resolved projections. | Resumable jobs need durable retry evidence tied to one registered deployment, while a later transport failure must not erase an earlier resolution or introduce provider/domain vocabulary. |

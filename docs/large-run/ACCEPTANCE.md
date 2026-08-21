@@ -8,6 +8,9 @@ Status: **pure TypeScript SDK checkpoint accepted locally; live scale pending**
 - repeated identical input produces byte-equal requests and identities.
 - sequential submission reports a checkpoint only after each accepted receipt.
 - completion is neither synthesized nor called by the helper.
+- an additive generic target-attempt sidecar stores exact retries, monotone
+  attempts, and separate latest/last-resolved projections bound to one
+  tenant-scoped registered deployment per run, without changing protocol `0.1`.
 - live PostgreSQL stores 3 batches, 250 findings, and 250 evidence records,
   reconciles terminal counts, and accepts the regenerated batches as exact
   retries after completion.

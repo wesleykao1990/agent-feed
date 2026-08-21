@@ -3,6 +3,7 @@ export {
   JOB_PROOF_MIGRATION_SQL_URL,
   JOB_REGISTRY_MIGRATION_SQL_URL,
   UTILITY_FEEDBACK_MIGRATION_SQL_URL,
+  TARGET_ATTEMPT_LEDGER_MIGRATION_SQL_URL,
   ASSESSMENT_MIGRATION_SQL_URL,
   MIGRATION_SQL_URL,
   OCCURRENCE_MIGRATION_SQL_URL,
@@ -17,6 +18,7 @@ export { PostgresOccurrenceRepository } from "./occurrence-store.ts";
 export { PostgresAssessmentRepository, PostgresJobProofRepository } from "./assessment-store.ts";
 export { PostgresJobRegistryRepository } from "./job-registry-store.ts";
 export { PostgresUtilityFeedbackRepository } from "./utility-feedback-store.ts";
+export { PostgresTargetAttemptRepository, PostgresTargetAttemptStore } from "./target-attempt-store.ts";
 export type { AppendStoredResult } from "./utility-feedback-store.ts";
 export { PostgresDeliveryRepository, appendOutboxEventInTransaction } from "./delivery-store.ts";
 export { PostgresDeliveryConsumerRepository } from "./delivery-consumer-store.ts";
@@ -128,4 +130,11 @@ export type {
   JobDeploymentBindingVersionInput,
   JobDeploymentBindingVersion,
   JobRegistryListOptions,
+  TargetAttemptOutcome,
+  TargetAttemptInput,
+  TargetAttempt,
+  TargetAttemptProjection,
+  AppendTargetAttemptResult,
+  TargetAttemptListOptions,
 } from "./types.ts";
+export { TARGET_ATTEMPT_OUTCOMES } from "./types.ts";
