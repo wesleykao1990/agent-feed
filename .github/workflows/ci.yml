@@ -562,6 +562,12 @@ jobs:
 
       - name: Install locked utility-feedback dependencies
         run: |
+          npm --prefix packages/protocol-runtime ci
+          npm --prefix packages/delivery-core ci
+          npm --prefix packages/delivery-consumer ci
+          npm --prefix packages/occurrence-core ci
+          npm --prefix packages/assessment-core ci
+          npm --prefix packages/job-registry-core ci
           npm --prefix packages/utility-feedback-core ci
           npm --prefix packages/utility-feedback-service ci
           npm --prefix packages/persistence-postgres ci
