@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — MCP validation repair diagnostics
+
+- Added bounded, redacted MCP schema-validation diagnostics so scheduled
+  producers can repair invalid nested batch fields instead of receiving only a
+  root-level `schema_validation_failed` result.
+
 ## Unreleased — MCP submit schema portability fix
 
 - Re-expressed the unchanged non-empty `submit_batch` invariant without a

@@ -97,8 +97,11 @@ npm run build
 npm test
 ```
 
-Tool failures return MCP `isError: true` results containing only a stable
-error code. JSON-RPC protocol failures use deterministic standard error codes;
-unknown service/adapter failures become `internal_error`. Raw exception
-messages, SQL, credentials, payload details, and persistence identifiers are
-never included in errors.
+Tool failures return MCP `isError: true` results containing a stable error
+code. Schema failures may additionally return up to eight bounded repair
+issues, each with a sanitized path and stable issue code. Submitted values,
+validator messages, and sensitive path segments are never returned. JSON-RPC
+protocol failures use deterministic standard error codes; unknown
+service/adapter failures become `internal_error`. Raw exception messages, SQL,
+credentials, payload details, and persistence identifiers are never included
+in errors.
