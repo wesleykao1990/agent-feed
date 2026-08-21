@@ -109,6 +109,33 @@ function npmCommand() {
   return process.platform === "win32" ? "npm.cmd" : "npm";
 }
 
+export function mcpDependencySetupPlan() {
+  const schemaRoot = path.join(REPO_ROOT, "packages", "schema");
+  const packageRoot = (name) => path.join(REPO_ROOT, "packages", name);
+  return [
+    { args: ["--prefix", schemaRoot, "ci"], error_code: "schema_dependency_install_failed" },
+    { args: ["--prefix", schemaRoot, "run", "build"], error_code: "schema_build_failed" },
+    ...[
+      "protocol-runtime",
+      "delivery-core",
+      "delivery-consumer",
+      "assessment-core",
+      "job-registry-core",
+      "occurrence-core",
+      "utility-feedback-core",
+      "persistence-postgres",
+      "producer-service",
+    ].map((name) => ({
+      args: ["--prefix", packageRoot(name), "ci"],
+      error_code: "mcp_dependency_install_failed",
+    })),
+    {
+      args: ["--prefix", path.join(REPO_ROOT, "apps", "mcp-server"), "ci"],
+      error_code: "mcp_dependency_install_failed",
+    },
+  ];
+}
+
 export async function setupRuntime(options = {}) {
   const runtimeDir = path.resolve(options.runtime_dir ?? DEFAULT_RUNTIME_DIR);
   const configPath = path.resolve(options.config_path ?? path.join(runtimeDir, "config.json"));
@@ -151,11 +178,13 @@ export async function setupRuntime(options = {}) {
     options.force,
   );
   if (!options.skip_install) {
-    const install = spawnSync(npmCommand(), ["--prefix", path.join(REPO_ROOT, "apps", "mcp-server"), "ci"], {
-      cwd: REPO_ROOT,
-      stdio: "inherit",
-    });
-    if (install.status !== 0) throw new OperatorError("mcp_dependency_install_failed");
+    for (const step of mcpDependencySetupPlan()) {
+      const install = spawnSync(npmCommand(), step.args, {
+        cwd: REPO_ROOT,
+        stdio: "inherit",
+      });
+      if (install.status !== 0) throw new OperatorError(step.error_code);
+    }
   }
   await mkdir(runtimeDir, { recursive: true, mode: 0o700 });
   await chmod(runtimeDir, 0o700);

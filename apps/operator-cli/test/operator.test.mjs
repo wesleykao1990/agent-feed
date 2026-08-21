@@ -8,6 +8,7 @@ import {
   composeArguments,
   createConfig,
   createMcpEnvironment,
+  mcpDependencySetupPlan,
   renderMcpWrapper,
   renderPostgresEnv,
   runDoctor,
@@ -15,6 +16,19 @@ import {
   validateConfig,
 } from "../src/operator.mjs";
 import { parseArguments } from "../src/main.mjs";
+
+test("setup builds the canonical schema before installing the MCP server", () => {
+  const plan = mcpDependencySetupPlan();
+  const labels = plan.map((step) => [path.basename(step.args[1]), ...step.args.slice(2)].join(" "));
+  assert.equal(labels[0], "schema ci");
+  assert.equal(labels[1], "schema run build");
+  assert.equal(labels.at(-1), "mcp-server ci");
+  assert.ok(labels.indexOf("producer-service ci") < labels.indexOf("mcp-server ci"));
+  assert.ok(labels.indexOf("persistence-postgres ci") < labels.indexOf("mcp-server ci"));
+  assert.equal(plan[0].error_code, "schema_dependency_install_failed");
+  assert.equal(plan[1].error_code, "schema_build_failed");
+  assert.ok(plan.slice(2).every((step) => step.error_code === "mcp_dependency_install_failed"));
+});
 
 test("docker setup creates scoped credentials without accepting weak or malformed values", () => {
   const config = createConfig({
