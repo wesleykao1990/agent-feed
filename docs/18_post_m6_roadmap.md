@@ -97,6 +97,21 @@ Gate: feedback remains consumer-owned and cannot rewrite findings; comparisons
 are scoped to definition and policy versions; prompt or schedule changes are
 recommendations and require approval.
 
+## Pre-Milestone 13 scaling checkpoint — bounded large-run submission
+
+The Rewards Optimizer P0 rehearsal proved one family-role result through a
+three-event Agent Feed bundle, then identified 44-family producer coverage as
+the next data step. Before treating that expansion as evidence for protocol
+`0.2`, provide deterministic bounded producer batching, sequential backpressure,
+and restart-safe exact retries without increasing protocol or ingress limits.
+
+Gate: an asynchronous stream larger than one protocol batch stays within the
+1 MiB and deployment item limits; a finding remains atomic with newly
+introduced evidence; duplicate IDs, forward evidence references, and a single
+oversized unit fail closed; regenerating an identical stopped plan produces
+byte-equal requests; completion remains explicit. See
+`docs/25_p0_large_run_scaling.md` and `docs/large-run/`.
+
 ## Milestone 13 — Protocol 0.2 decision
 
 Evaluate sidecars only after use through at least three provider topologies,

@@ -39,7 +39,16 @@ export {
   createRunBundle,
   type ProducerClientOptions,
   type ProducerFindingsOptions,
+  type SubmitLargeRunOptions,
+  type SubmitLargeRunProgress,
+  type SubmitLargeRunSummary,
 } from "./producer.ts";
+export {
+  LARGE_RUN_DEFAULTS,
+  planLargeRunBatches,
+  type LargeRunBatchPlanOptions,
+  type LargeRunUnit,
+} from "./large-run.ts";
 export {
   AgentFeedConsumerClient,
   ConsumerClient,

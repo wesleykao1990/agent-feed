@@ -1,0 +1,21 @@
+{
+  "name": "@agent-feed/utility-feedback-service",
+  "version": "0.1.1",
+  "description": "Trusted consumer application boundary for Agent Feed utility feedback.",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "exports": { ".": { "types": "./src/index.ts", "default": "./src/index.ts" } },
+  "files": ["src", "test", "README.md", "package.json", "package-lock.json"],
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test --test-concurrency=1 test/*.test.ts"
+  },
+  "dependencies": {
+    "@agent-feed/utility-feedback-core": "file:../utility-feedback-core"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.1",
+    "typescript": "7.0.2"
+  }
+}

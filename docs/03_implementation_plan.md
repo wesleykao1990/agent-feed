@@ -372,6 +372,25 @@ pending state. A separate trusted approval authority must create an exact
 approval record; this package cannot apply either configuration change.
 Protocol `0.1` and producer lifecycle surfaces remain unchanged.
 
+### Pre-Milestone 13 scaling checkpoint — bounded large-run submission
+
+Status: **TypeScript SDK pure checkpoint implemented locally; live sustained
+load and Python parity pending**. See `docs/25_p0_large_run_scaling.md` and
+`docs/large-run/`.
+
+The Rewards Optimizer P0 rehearsal on 2026-08-21 proved one exact family-role
+path but explicitly left 44-family producer coverage unproven. The TypeScript
+SDK now accepts synchronous or asynchronous atomic units, keeps each finding
+beside evidence introduced by that unit, plans deterministic protocol `0.1`
+batches under existing security defaults, and submits them sequentially.
+Canonical content-derived batch and idempotency identities make a regenerated
+ordered plan an exact retry after interruption. Missing/forward evidence,
+duplicate IDs, and an individually oversized unit fail before transport.
+
+This checkpoint does not turn Agent Feed into a crawler or task scheduler,
+does not raise request limits, does not infer missing Rewards coverage, and
+does not complete a producer run automatically.
+
 ### Milestone 9 — Portable job registry and capability profiles
 
 Status: **local live checkpoint and complete M0–M9 regression green;

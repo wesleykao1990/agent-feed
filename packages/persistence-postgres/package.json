@@ -30,6 +30,7 @@
     "@agent-feed/job-registry-core": "file:../job-registry-core",
     "@agent-feed/occurrence-core": "file:../occurrence-core",
     "@agent-feed/protocol-runtime": "file:../protocol-runtime",
+    "@agent-feed/utility-feedback-core": "file:../utility-feedback-core",
     "pg": "8.16.3"
   },
   "devDependencies": {

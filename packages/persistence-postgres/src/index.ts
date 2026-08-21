@@ -2,6 +2,7 @@ export {
   DELIVERY_MIGRATION_SQL_URL,
   JOB_PROOF_MIGRATION_SQL_URL,
   JOB_REGISTRY_MIGRATION_SQL_URL,
+  UTILITY_FEEDBACK_MIGRATION_SQL_URL,
   ASSESSMENT_MIGRATION_SQL_URL,
   MIGRATION_SQL_URL,
   OCCURRENCE_MIGRATION_SQL_URL,
@@ -15,6 +16,8 @@ export {
 export { PostgresOccurrenceRepository } from "./occurrence-store.ts";
 export { PostgresAssessmentRepository, PostgresJobProofRepository } from "./assessment-store.ts";
 export { PostgresJobRegistryRepository } from "./job-registry-store.ts";
+export { PostgresUtilityFeedbackRepository } from "./utility-feedback-store.ts";
+export type { AppendStoredResult } from "./utility-feedback-store.ts";
 export { PostgresDeliveryRepository, appendOutboxEventInTransaction } from "./delivery-store.ts";
 export { PostgresDeliveryConsumerRepository } from "./delivery-consumer-store.ts";
 export type {
