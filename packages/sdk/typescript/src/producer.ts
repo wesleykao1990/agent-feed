@@ -10,6 +10,11 @@ import {
   type AgentFeedRequestOptions,
 } from "./client.ts";
 import { AgentFeedResponseError } from "./errors.ts";
+import {
+  planLargeRunBatches,
+  type LargeRunBatchPlanOptions,
+  type LargeRunUnit,
+} from "./large-run.ts";
 import type {
   ProducerFindingsResponse,
   ProducerFindingResponse,
@@ -19,6 +24,27 @@ import type {
 export type ProducerClientOptions = AgentFeedClientOptions;
 
 export interface ProducerFindingsOptions extends AgentFeedRequestOptions {}
+
+export interface SubmitLargeRunProgress {
+  batch: SubmitBatchRequest;
+  receipt: ProducerRunResponse;
+  batches_submitted: number;
+  findings_submitted: number;
+  evidence_submitted: number;
+}
+
+export interface SubmitLargeRunOptions extends LargeRunBatchPlanOptions {
+  request?: AgentFeedRequestOptions;
+  on_batch_accepted?: (progress: SubmitLargeRunProgress) => void | Promise<void>;
+}
+
+export interface SubmitLargeRunSummary {
+  run_id: string;
+  batches_submitted: number;
+  findings_submitted: number;
+  evidence_submitted: number;
+  last_sequence_number: number | null;
+}
 
 function segment(value: string, field: string): string {
   if (typeof value !== "string" || value.length === 0 || value.trim() !== value) throw new Error(`${field}_invalid`);
@@ -90,6 +116,44 @@ export class ProducerClient extends AgentFeedClient {
       idempotency_keyed: true,
     }, options);
     return runResponse(body, operation);
+  }
+
+  /**
+   * Sequentially submit a deterministic bounded stream of large-run units.
+   *
+   * A stopped caller can replay the same ordered units and options: previously
+   * accepted requests retain byte-equal idempotency keys and are exact retries.
+   * Completion remains explicit and caller-owned.
+   */
+  async submitLargeRun(
+    runId: string,
+    units: Iterable<LargeRunUnit> | AsyncIterable<LargeRunUnit>,
+    options: SubmitLargeRunOptions,
+  ): Promise<SubmitLargeRunSummary> {
+    const summary: SubmitLargeRunSummary = {
+      run_id: runId,
+      batches_submitted: 0,
+      findings_submitted: 0,
+      evidence_submitted: 0,
+      last_sequence_number: null,
+    };
+    for await (const batch of planLargeRunBatches(runId, units, options)) {
+      const receipt = await this.submitBatch(runId, batch, options.request ?? {});
+      summary.batches_submitted += 1;
+      summary.findings_submitted += batch.findings.length;
+      summary.evidence_submitted += batch.evidence.length;
+      summary.last_sequence_number = batch.sequence_number;
+      if (options.on_batch_accepted) {
+        await options.on_batch_accepted({
+          batch: structuredClone(batch),
+          receipt,
+          batches_submitted: summary.batches_submitted,
+          findings_submitted: summary.findings_submitted,
+          evidence_submitted: summary.evidence_submitted,
+        });
+      }
+    }
+    return summary;
   }
 
   async completeRun(
@@ -178,4 +242,10 @@ export function createRunBundle(
   };
 }
 
-export type { ProducerFindingsResponse, ProducerFindingResponse, ProducerRunResponse };
+export type {
+  LargeRunBatchPlanOptions,
+  LargeRunUnit,
+  ProducerFindingsResponse,
+  ProducerFindingResponse,
+  ProducerRunResponse,
+};

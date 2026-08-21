@@ -1,11 +1,18 @@
 # Milestone 12 — utility and optimization feedback
 
-Status: **first pure contract checkpoint green locally; milestone not accepted**
+Status: **durable persistence and trusted-service checkpoint green locally; milestone not accepted**
 
 Milestone 12 adds consumer-owned utility evidence without changing producer
 claims or protocol `0.1`. The first checkpoint is deliberately pure: it freezes
 identity, validation, idempotency, metric, and approval semantics before a
 database or API is introduced.
+
+The second checkpoint adds `0007_utility_feedback.sql`,
+`PostgresUtilityFeedbackRepository`, and
+`@agent-feed/utility-feedback-service`. The service accepts authenticated
+ownership separately from request bodies. PostgreSQL independently verifies
+canonical hashes and projections, ensures targets belong to the tenant, and
+blocks updates and deletes.
 
 ## Disposition contract
 
@@ -49,10 +56,12 @@ exists in this package.
 - Protocol `0.1`, producer REST, and MCP lifecycle tools are unchanged.
 - Feedback remains consumer-owned and is not producer or assessor truth.
 - No Rewards Optimizer code, schema, database, or domain policy is included.
-- The first checkpoint makes no durable, live-consumer, dashboard, hosted-CI,
-  or recommendation-application claim.
+- Recommendations and approvals are durable evidence, but there is still no
+  recommendation-application command.
+- Provider credentials remain outside the core, service, database, and records.
+- The credential smoke checks cached Codex login and exported OpenAI API-key
+  authentication separately and never persists either credential.
 
-Remaining slices are an append-only tenant-scoped PostgreSQL sidecar, a trusted
-consumer application service, bounded aggregate projection, reference-consumer
-integration, live two-consumer evidence, independent hostile review, and full
-prior-milestone regression.
+Remaining slices are bounded aggregate projection, reference-consumer
+integration, live two-consumer evidence, independent hostile review, hosted-CI
+evidence, and full prior-milestone regression.

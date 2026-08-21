@@ -4,6 +4,12 @@
 durable lifecycle and additive sidecars. It owns the `agent_feed` schema and keeps the database
 separate from consumer/domain tables, HTTP handlers, and worker transport code.
 
+Migration `0007_utility_feedback.sql` adds the consumer-owned Milestone 12
+sidecar. `PostgresUtilityFeedbackRepository` durably appends finding or sealed
+artifact dispositions, digest-only optimization recommendations, and separate
+approval events. Database triggers independently enforce canonical hashes,
+target ownership, tenant/consumer isolation, and immutable history.
+
 The `PostgresAgentFeedPersistence` service provides:
 
 - idempotent `beginRun`, with a canonical payload hash and conflict detection;

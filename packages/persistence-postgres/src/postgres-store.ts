@@ -8,6 +8,7 @@ import { appendOutboxEventInTransaction } from "./delivery-store.ts";
 import { PostgresOccurrenceRepository } from "./occurrence-store.ts";
 import { PostgresAssessmentRepository } from "./assessment-store.ts";
 import { PostgresJobRegistryRepository } from "./job-registry-store.ts";
+import { PostgresUtilityFeedbackRepository } from "./utility-feedback-store.ts";
 import type { DeliveryEvent } from "./delivery-types.ts";
 import type {
   BeginRunRequest,
@@ -308,8 +309,9 @@ export const JOB_PROOF_MIGRATION_SQL_URL = new URL("../migrations/0005_job_proof
 /** Short compatibility alias for the Milestone 8 sidecar migration. */
 export const ASSESSMENT_MIGRATION_SQL_URL = JOB_PROOF_MIGRATION_SQL_URL;
 export const JOB_REGISTRY_MIGRATION_SQL_URL = new URL("../migrations/0006_job_registry.sql", import.meta.url);
+export const UTILITY_FEEDBACK_MIGRATION_SQL_URL = new URL("../migrations/0007_utility_feedback.sql", import.meta.url);
 
-/** Apply M1, M2, M3, M7 occurrence, and M8 job-proof sidecars. */
+/** Apply the ordered foundation and M2/M3/M7/M8/M9/M12 sidecar migrations. */
 export async function migrateAgentFeed(pool: PgPool, sql?: string): Promise<void> {
   const migrations = sql === undefined
     ? [
@@ -319,6 +321,7 @@ export async function migrateAgentFeed(pool: PgPool, sql?: string): Promise<void
       await readFile(OCCURRENCE_LEDGER_MIGRATION_SQL_URL, "utf8"),
       await readFile(JOB_PROOF_MIGRATION_SQL_URL, "utf8"),
       await readFile(JOB_REGISTRY_MIGRATION_SQL_URL, "utf8"),
+      await readFile(UTILITY_FEEDBACK_MIGRATION_SQL_URL, "utf8"),
     ]
     : [sql];
   // Two application processes may start against an empty database at the same
@@ -354,12 +357,14 @@ export class PostgresAgentFeedPersistence {
   readonly occurrence: PostgresOccurrenceRepository;
   readonly assessment: PostgresAssessmentRepository;
   readonly jobRegistry: PostgresJobRegistryRepository;
+  readonly utilityFeedback: PostgresUtilityFeedbackRepository;
 
   constructor(pool: PgPool) {
     this.pool = pool;
     this.occurrence = new PostgresOccurrenceRepository(pool);
     this.assessment = new PostgresAssessmentRepository(pool);
     this.jobRegistry = new PostgresJobRegistryRepository(pool);
+    this.utilityFeedback = new PostgresUtilityFeedbackRepository(pool as Pool);
   }
 
   /** Adapter-owned readiness probe used by transport composition roots. */

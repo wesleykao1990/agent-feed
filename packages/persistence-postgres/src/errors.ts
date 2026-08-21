@@ -38,6 +38,12 @@ export type PersistenceErrorCode =
   | "capability_profile_version_not_found"
   | "job_registry_preflight_failed"
   | "job_registry_validation_failed"
+  | "utility_feedback_conflict"
+  | "utility_feedback_not_found"
+  | "utility_feedback_validation_failed"
+  | "recommendation_conflict"
+  | "recommendation_not_found"
+  | "recommendation_approval_conflict"
   | "invalid_input"
   | "storage_error";
 

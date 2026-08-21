@@ -6,3 +6,10 @@
 - Exact ratios keep raw counts auditable and preserve zero-denominator absence.
 - Recommendations and approvals are evidence; applying configuration remains a
   separate authorized operation.
+- Polymorphic targets need database-side existence checks: finding feedback is
+  tied to a tenant/run/finding identity, while artifact feedback additionally
+  requires a sealed assessment receipt and matching digest.
+- A transport must supply tenant, consumer, and approval authority as trusted
+  context. Putting those fields back in request JSON would undo the boundary.
+- Credential acceptance should report the authentication mode actually tested;
+  cached Codex login and an exported OpenAI API key are independently testable.

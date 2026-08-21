@@ -51,12 +51,14 @@ test("packed SDK imports in an ordinary Node consumer without strip-types", asyn
 
     const probe = [
       "import assert from 'node:assert/strict';",
-      "import { ConsumerClient, PROTOCOL_VERSION, ProducerClient } from '@agent-feed/sdk';",
+      "import { ConsumerClient, PROTOCOL_VERSION, ProducerClient, planLargeRunBatches } from '@agent-feed/sdk';",
       "await import('@agent-feed/sdk/generated/protocol');",
       "assert.equal(PROTOCOL_VERSION, '0.1');",
       "assert.equal(typeof ProducerClient, 'function');",
       "assert.equal(typeof ConsumerClient, 'function');",
-      "new ProducerClient({ baseUrl: 'https://feed.example.test' });",
+      "assert.equal(typeof planLargeRunBatches, 'function');",
+      "const producer = new ProducerClient({ baseUrl: 'https://feed.example.test' });",
+      "assert.equal(typeof producer.submitLargeRun, 'function');",
       "new ConsumerClient({ baseUrl: 'https://feed.example.test' });",
     ].join("\n");
     await execFileAsync(process.execPath, ["--input-type=module", "-e", probe], {

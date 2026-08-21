@@ -92,6 +92,40 @@ const findings = await producer.getFindings(runId);
 `createRunBundle` and `producer.buildRunBundle` create a schema-typed,
 portable bundle for an agent that cannot call the network.
 
+## Large result sets
+
+`submitLargeRun` accepts a synchronous or asynchronous stream of atomic units,
+plans protocol-valid requests under the deployment's 1 MiB, 100-finding, and
+100-evidence defaults, and submits one batch at a time. It does not complete
+the run. The caller must send `completeRun` only after every planned batch has
+been durably accepted.
+
+```ts
+const summary = await producer.submitLargeRun(runId, sourceFamilyUnits(), {
+  // Keep this fixed when regenerating a stopped plan.
+  submitted_at: "2026-08-21T03:00:00.000Z",
+  on_batch_accepted: async ({ batch, batches_submitted }) => {
+    await saveCheckpoint({
+      sequence_number: batch.sequence_number,
+      batches_submitted,
+    });
+  },
+});
+```
+
+Each `LargeRunUnit` contains `findings` and `evidence` arrays and is never split
+across requests. A finding may reference evidence introduced by the same unit
+or by an earlier unit; forward and missing references fail before submission.
+Batch IDs and idempotency keys are derived from canonical content, so replaying
+the same ordered units with the same options produces byte-equal exact retries.
+The planner rejects a unit that cannot fit by itself instead of raising server
+limits or silently separating a finding from its new evidence.
+
+`planLargeRunBatches` exposes the async batch stream when callers need to store
+or inspect the plan before transport. Input order is part of batch identity.
+Changing order, metadata, limits, timestamps, or content creates a new plan and
+must not reuse an earlier checkpoint.
+
 ## Consumer pull, acknowledgement, and replay
 
 Consumer routes follow the delivery API design in
