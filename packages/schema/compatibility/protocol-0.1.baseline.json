@@ -1042,22 +1042,20 @@
     },
     "submit-batch.schema.json": {
       "additionalProperties": false,
-      "anyOf": [
-        {
-          "properties": {
-            "findings": {
-              "minItems": 1
-            }
+      "not": {
+        "properties": {
+          "evidence": {
+            "maxItems": 0
+          },
+          "findings": {
+            "maxItems": 0
           }
         },
-        {
-          "properties": {
-            "evidence": {
-              "minItems": 1
-            }
-          }
-        }
-      ],
+        "required": [
+          "evidence",
+          "findings"
+        ]
+      },
       "properties": {
         "batch_id": {
           "minLength": 3,
