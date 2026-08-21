@@ -18,6 +18,7 @@ import {
   MCP_TOOL_NAMES,
   createOfficialMcpServer,
   createOfficialMcpServerFromEnvironment,
+  safeToolError,
   serveAgentFeedMcpStdio,
 } from "../src/index.ts";
 import { AgentFeedMcpServer } from "../src/server.ts";
@@ -506,7 +507,10 @@ test("integration uses the concrete ProducerService validation and scope boundar
   });
   assert.ok(invalid);
   const invalidContent = success(invalid).content as Array<{ text: string }>;
-  assert.deepEqual(JSON.parse(invalidContent[0]!.text), { error: "schema_validation_failed" });
+  assert.deepEqual(JSON.parse(invalidContent[0]!.text), {
+    error: "schema_validation_failed",
+    issues: [{ path: "$", code: "unexpected_field" }],
+  });
   assert.equal(persistence.begins.length, 1);
 
   const batch = await server.handleMessage({
@@ -554,6 +558,54 @@ test("integration uses the concrete ProducerService validation and scope boundar
   assert.ok(completed);
   assert.equal("isError" in success(completed), false);
   assert.equal(persistence.completes.length, 1);
+});
+
+test("schema failures expose bounded repair diagnostics without service details", () => {
+  const diagnostic = safeToolError(new ProducerServiceError(
+    "schema_validation_failed",
+    "raw validation message must stay private",
+    {
+      details: {
+        errors: [
+          { path: "/findings/0/effective_time/effective_from", message: 'must match format "date-time"' },
+          { path: "$.attributes.secret", message: "must be a string" },
+          { path: "/evidence/0/source/uri", message: 'must match format "uri"' },
+        ],
+      },
+    },
+  ));
+  assert.deepEqual(JSON.parse(diagnostic.content[0]!.text), {
+    error: "schema_validation_failed",
+    issues: [
+      { path: "/findings/0/effective_time/effective_from", code: "invalid_date_time" },
+      { path: "$", code: "invalid_type" },
+      { path: "/evidence/0/source/uri", code: "invalid_uri" },
+    ],
+  });
+  assert.deepEqual(diagnostic.structuredContent, JSON.parse(diagnostic.content[0]!.text));
+  assert.equal(diagnostic.content[0]!.text.includes("raw validation message"), false);
+  assert.equal(diagnostic.content[0]!.text.includes("secret"), false);
+});
+
+test("schema repair diagnostics stop after eight safe issues", () => {
+  const diagnostic = safeToolError(new ProducerServiceError(
+    "schema_validation_failed",
+    "private aggregate message",
+    {
+      details: {
+        errors: Array.from({ length: 12 }, (_, index) => ({
+          path: `/findings/${index}/effective_time/effective_from`,
+          message: 'must match format "date-time"',
+        })),
+      },
+    },
+  ));
+  const body = diagnostic.structuredContent as { issues: Array<{ path: string; code: string }> };
+  assert.equal(body.issues.length, 8);
+  assert.deepEqual(body.issues.at(-1), {
+    path: "/findings/7/effective_time/effective_from",
+    code: "invalid_date_time",
+  });
 });
 
 test("environment composition parses scoped credentials without exposing secrets", () => {

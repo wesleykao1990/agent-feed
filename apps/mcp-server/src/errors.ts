@@ -38,6 +38,59 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+const MAX_VALIDATION_ISSUES = 8;
+const MAX_VALIDATION_PATH_LENGTH = 256;
+const SAFE_VALIDATION_PATH = /^(?:\$|[A-Za-z0-9_$.[\]/~-]+)$/u;
+const SENSITIVE_VALIDATION_PATH = /(?:^|[._/\[])(?:api[_-]?key|authorization|bearer|cookie|credential|password|secret|token)(?:$|[._/\]])/iu;
+
+interface SafeValidationIssue {
+  readonly path: string;
+  readonly code: string;
+}
+
+function validationIssueCode(message: string): string {
+  if (/required/iu.test(message)) return "required";
+  if (/not allowed|additional propert/iu.test(message)) return "unexpected_field";
+  if (/date-time|ISO date-time/iu.test(message)) return "invalid_date_time";
+  if (/URI/iu.test(message)) return "invalid_uri";
+  if (/sha256|digest/iu.test(message)) return "invalid_hash";
+  if (/duplicate/iu.test(message)) return "duplicate_items";
+  if (/too long|at most|more than/iu.test(message)) return "too_large";
+  if (/at least|fewer than/iu.test(message)) return "too_small";
+  if (/between|minimum|maximum|greater than|less than/iu.test(message)) return "out_of_range";
+  if (/not supported/iu.test(message)) return "unsupported_value";
+  if (/must be (?:an? )?(?:array|boolean|integer|null|number|object|string)/iu.test(message)) return "invalid_type";
+  if (/format|pattern/iu.test(message)) return "invalid_format";
+  return "invalid_value";
+}
+
+function safeValidationPath(value: unknown): string {
+  if (
+    typeof value !== "string"
+    || value.length === 0
+    || value.length > MAX_VALIDATION_PATH_LENGTH
+    || !SAFE_VALIDATION_PATH.test(value)
+    || SENSITIVE_VALIDATION_PATH.test(value)
+  ) return "$";
+  return value;
+}
+
+function safeValidationIssues(error: ProducerServiceError): readonly SafeValidationIssue[] {
+  if (error.code !== "schema_validation_failed") return [];
+  const raw = error.details.errors;
+  if (!Array.isArray(raw)) return [];
+  const output: SafeValidationIssue[] = [];
+  for (const item of raw) {
+    if (!isRecord(item) || typeof item.message !== "string") continue;
+    output.push({
+      path: safeValidationPath(item.path),
+      code: validationIssueCode(item.message),
+    });
+    if (output.length === MAX_VALIDATION_ISSUES) break;
+  }
+  return output;
+}
+
 export const JSON_RPC_ERROR_CODES = Object.freeze({
   parse_error: -32700,
   invalid_request: -32600,
@@ -84,9 +137,15 @@ export function safeToolError(error: unknown): McpToolCallResult {
     : candidate !== undefined && SAFE_SERVICE_ERROR_CODES.has(candidate as ProducerServiceErrorCode)
       ? candidate
       : "internal_error";
+  const issues = error instanceof ProducerServiceError ? safeValidationIssues(error) : [];
+  const body = {
+    error: code,
+    ...(issues.length === 0 ? {} : { issues }),
+  };
   return {
-    content: [{ type: "text", text: JSON.stringify({ error: code }) }],
+    content: [{ type: "text", text: JSON.stringify(body) }],
     isError: true,
+    structuredContent: body,
   };
 }
 

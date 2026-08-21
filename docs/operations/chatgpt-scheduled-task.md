@@ -156,6 +156,13 @@ For every scheduled occurrence, use the attached Agent Feed tools.
    monitored content into tool arguments.
 ```
 
+When `submit_batch` returns `schema_validation_failed`, use its bounded
+`issues` array to repair only the indicated paths. Retry at most once. Reuse
+the original batch and idempotency identifiers only when the payload is byte
+equivalent; a repaired payload must use a new batch id and idempotency key.
+The issue codes and sanitized paths are repair hints, not evidence that the
+submission was accepted.
+
 The full field-level and failure-closure rules remain in
 `skills/chatgpt/SKILL.md`.
 
