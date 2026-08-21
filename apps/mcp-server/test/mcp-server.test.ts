@@ -143,6 +143,33 @@ test("initialize negotiates MCP and tools/list exposes exactly the three publish
   assert.deepEqual(tools.map((tool) => tool.name), [...MCP_TOOL_NAMES]);
   assert.equal((tools[0]?.inputSchema as Record<string, unknown>).additionalProperties, false);
   assert.equal((tools[1]?.inputSchema as Record<string, unknown>).$id, "https://agent-feed.dev/schemas/submit-batch.schema.json");
+  const submitSchema = tools[1]?.inputSchema as Record<string, unknown>;
+  assert.deepEqual(submitSchema.required, [
+    "protocol_version",
+    "run_id",
+    "batch_id",
+    "idempotency_key",
+    "sequence_number",
+    "submitted_at",
+    "findings",
+    "evidence",
+    "metadata",
+  ]);
+  assert.deepEqual(
+    Object.keys(submitSchema.properties as Record<string, unknown>).sort(),
+    [
+      "batch_id",
+      "evidence",
+      "findings",
+      "idempotency_key",
+      "metadata",
+      "protocol_version",
+      "run_id",
+      "sequence_number",
+      "submitted_at",
+    ],
+  );
+  assert.equal("anyOf" in submitSchema, false);
 });
 
 test("modern MCP discovery and requests use the per-request envelope without initialize", async () => {

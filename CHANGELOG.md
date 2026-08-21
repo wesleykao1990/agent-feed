@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — MCP submit schema portability fix
+
+- Re-expressed the unchanged non-empty `submit_batch` invariant without a
+  top-level `anyOf`. Some connector schema compilers treated those validation
+  branches as alternative request shapes and exposed only `findings` or
+  `evidence`, dropping the other seven required root fields.
+- Added a regression asserting that MCP discovery exposes all nine required
+  root properties and no top-level `anyOf`. The accepted wire values and
+  protocol version remain unchanged.
+
 ## Unreleased — Milestone 5 portability and operations
 
 - Added a dependency-free SQLite lifecycle/liveness portability reference with

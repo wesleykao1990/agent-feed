@@ -57,20 +57,18 @@
       "type": "object"
     }
   },
-  "anyOf": [
-    {
-      "properties": {
-        "findings": {
-          "minItems": 1
-        }
+  "not": {
+    "properties": {
+      "findings": {
+        "maxItems": 0
+      },
+      "evidence": {
+        "maxItems": 0
       }
     },
-    {
-      "properties": {
-        "evidence": {
-          "minItems": 1
-        }
-      }
-    }
-  ]
+    "required": [
+      "findings",
+      "evidence"
+    ]
+  }
 }
