@@ -1,0 +1,106 @@
+{
+  "contract": "agent-feed.source-recovery.v0",
+  "synthetic": true,
+  "trust": "untrusted",
+  "target": {
+    "target_id": "synthetic.target.001",
+    "locators": [
+      {
+        "locator_id": "registered",
+        "kind": "registered",
+        "uri": "https://example.invalid/official/rules",
+        "status": "registered_input"
+      },
+      {
+        "locator_id": "official-static-candidate",
+        "kind": "approved_alternate_candidate",
+        "uri": "https://example.invalid/official/rules.pdf",
+        "status": "discovery_lead_until_fetched_and_validated"
+      }
+    ]
+  },
+  "outcome_vocabulary": [
+    "http_failure",
+    "js_empty",
+    "marker_missing",
+    "partial_role",
+    "safety_rejected",
+    "resolved"
+  ],
+  "attempts": [
+    {
+      "attempt_number": 1,
+      "locator_id": "registered",
+      "stage": "registered_locator",
+      "outcome": "http_failure",
+      "http_class": "5xx",
+      "retryable": true
+    },
+    {
+      "attempt_number": 2,
+      "locator_id": "registered",
+      "stage": "bounded_backoff",
+      "outcome": "http_failure",
+      "http_class": "429",
+      "retryable": true
+    },
+    {
+      "attempt_number": 3,
+      "locator_id": "registered",
+      "stage": "normal_browser_headers_redirect",
+      "outcome": "js_empty",
+      "retryable": false
+    },
+    {
+      "attempt_number": 4,
+      "locator_id": "official-static-candidate",
+      "stage": "static_equivalent",
+      "outcome": "marker_missing",
+      "retryable": false,
+      "validation": {
+        "publisher": true,
+        "domain": true,
+        "title": false,
+        "role_marker": false
+      }
+    },
+    {
+      "attempt_number": 5,
+      "locator_id": "official-static-candidate",
+      "stage": "static_equivalent",
+      "outcome": "partial_role",
+      "retryable": false,
+      "validation": {
+        "publisher": true,
+        "domain": true,
+        "title": true,
+        "role_marker": false
+      }
+    },
+    {
+      "attempt_number": 6,
+      "locator_id": "official-static-candidate",
+      "stage": "safety_gate",
+      "outcome": "safety_rejected",
+      "reason_code": "challenge_or_credential_required",
+      "retryable": false
+    }
+  ],
+  "terminal": {
+    "outcome": "operator_capture_required",
+    "resolved": false,
+    "reason_code": "no_validated_source",
+    "next_action": "operator_capture_in_separate_controlled_workflow"
+  },
+  "claim": {
+    "status": "unresolved",
+    "finding": null,
+    "missing_fields": ["validated_source", "canonical_evidence"],
+    "claim_completeness": "partial"
+  },
+  "persistence": {
+    "agent_feed_wire_payload": false,
+    "ledger_label_preservation": "not_claimed",
+    "note": "The current generic sidecar outcome enum does not accept the recovery labels; do not encode them into locator, digest, count, or claim fields."
+  }
+}

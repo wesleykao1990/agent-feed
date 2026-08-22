@@ -58,6 +58,35 @@ deployment. Derived latest and last-resolved projections preserve a prior
 resolution when a later retry fails. This ledger does not change protocol
 `0.1`, job scheduling, or domain/economic semantics.
 
+## Generic source recovery
+
+The ChatGPT/Codex producer guidance now defines a deterministic per-target
+retrieval ladder: registered locator; normal browser headers and bounded
+redirects; bounded `429`/`5xx` backoff; finite producer-approved alternate
+official host/path candidates; validated static/PDF/language/CDN equivalents;
+one browser-rendered fallback for a JavaScript-empty response; then the
+explicit unresolved terminal `operator_capture_required`. It forbids login,
+credentials/cookies, CAPTCHA, WAF bypass, search snippets as evidence, and
+invented claims. Each attempt has one of the generic recovery results
+`http_failure`, `js_empty`, `marker_missing`, `partial_role`,
+`safety_rejected`, or `resolved`; a resolved candidate must pass the configured
+publisher, domain, title, and role-marker checks.
+
+This is producer recovery guidance, not a new Agent Feed protocol or crawler.
+Alternate locators remain leads until fetched and validated. LR-D006 remains
+in force: Agent Feed does not know family/role policy and does not decide
+support or canonical truth. The current target-attempt sidecar still accepts
+only its existing coarse outcome enum; this checkpoint intentionally does not
+pretend that enum preserves the six recovery labels. A lossless durable
+`recovery_outcome` field requires a separately reviewed additive migration and
+is outside this owned documentation/example scope. The producer must not
+smuggle that label through a locator, digest, count, or claim field.
+
+The synthetic unresolved trace at
+`examples/rewards-optimizer/source-recovery.example.json` demonstrates two
+credential-free locator inputs, ordered attempt outcomes, and explicit operator
+capture without claiming a real source or economic result.
+
 Input order, fixed `submitted_at`, metadata, limits, and content are part of
 plan identity. Replaying those exact inputs produces byte-equal requests.
 Changing any of them is a new plan, not a resume.
