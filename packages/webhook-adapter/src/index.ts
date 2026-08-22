@@ -1,4 +1,4 @@
-export { NodeHttpClient } from "./http-client.ts";
+export { NodeHttpClient, type NodeHttpClientOptions } from "./http-client.ts";
 export { IdentityEndpointResolver, WebhookTransport } from "./transport.ts";
 export { NodeDnsResolver, isPublicAddress, resolveSafeEndpoint } from "./ssrf.ts";
 export { classifyWebhookResult } from "./retry.ts";

@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
+import { createServer, type RequestListener, type Server } from "node:http";
 import test from "node:test";
 import {
+  NodeHttpClient,
   WebhookTransport,
   WebhookTransportError,
   classifyWebhookResult,
@@ -18,6 +20,36 @@ import type {
 } from "@agent-feed/delivery-core";
 
 const publicAddress: ResolvedAddress = { address: "93.184.216.34", family: 4 };
+
+async function listenLocal(handler: RequestListener, host = "127.0.0.1"): Promise<{ server: Server; port: number }> {
+  const server = createServer(handler);
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, host, () => resolve());
+  });
+  const address = server.address();
+  if (address === null || typeof address === "string") throw new Error("local_server_address_missing");
+  return { server, port: address.port };
+}
+
+async function closeLocal(server: Server): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    server.close((error) => error === undefined ? resolve() : reject(error));
+  });
+}
+
+function nodeRequest(url: string, resolvedAddresses: readonly ResolvedAddress[], signal = new AbortController().signal): HttpRequest {
+  return {
+    method: "POST",
+    url,
+    headers: { "content-type": "application/json" },
+    body: "{}",
+    signal,
+    redirect: "error",
+    resolvedAddresses,
+    maxResponseBytes: 1024,
+  };
+}
 
 class FakeDns implements DnsResolver {
   readonly addresses: readonly ResolvedAddress[];
@@ -104,6 +136,60 @@ test("sends the exact signed raw body and transport headers", async () => {
   assert.equal(http.requests[0]!.headers["x-agent-feed-protocol-version"], "0.1");
   assert.equal(http.requests[0]!.redirect, "error");
   assert.equal(http.requests[0]!.resolvedAddresses[0]!.address, publicAddress.address);
+});
+
+test("falls back across already pinned addresses only after a pre-response connection failure", async () => {
+  let requests = 0;
+  const local = await listenLocal((_request, response) => {
+    requests += 1;
+    response.statusCode = 204;
+    response.end();
+  });
+  try {
+    const client = new NodeHttpClient();
+    const response = await client.request(nodeRequest(`http://example.test:${local.port}/webhook`, [
+      { address: "not-an-ip", family: 4 },
+      { address: "127.0.0.1", family: 4 },
+    ]));
+    assert.equal(response.status, 204);
+    assert.equal(requests, 1);
+  } finally {
+    await closeLocal(local.server);
+  }
+});
+
+test("does not retry after an HTTP response and bounds address attempts", async () => {
+  let requests = 0;
+  const local = await listenLocal((_request, response) => {
+    requests += 1;
+    response.statusCode = 503;
+    response.end();
+  });
+  try {
+    const response = await new NodeHttpClient().request(nodeRequest(`http://example.test:${local.port}/webhook`, [
+      { address: "127.0.0.1", family: 4 },
+      { address: "not-an-ip", family: 4 },
+    ]));
+    assert.equal(response.status, 503);
+    assert.equal(requests, 1);
+
+    let requestedLimit: number | undefined;
+    const boundedAddresses = [
+      { address: "not-used", family: 4 },
+    ] as ResolvedAddress[];
+    boundedAddresses.slice = ((_start: number, end?: number): ResolvedAddress[] => {
+      requestedLimit = end;
+      return [];
+    }) as typeof boundedAddresses.slice;
+    const bounded = new NodeHttpClient({ maxAddressAttempts: 1 });
+    await assert.rejects(
+      () => bounded.request(nodeRequest("http://example.test/webhook", boundedAddresses)),
+      /validated_address_missing/,
+    );
+    assert.equal(requestedLimit, 1, "the bounded client must cap address attempts");
+  } finally {
+    await closeLocal(local.server);
+  }
 });
 
 test("rejects unsafe schemes, ports, credentials, queries, and IP literals", async () => {
