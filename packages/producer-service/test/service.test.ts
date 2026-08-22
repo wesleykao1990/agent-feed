@@ -237,6 +237,65 @@ test("rejects scalar, expanded, included, nested, accessor, and hidden credentia
   }
 });
 
+test("rejects hostile representations before schema reads or persistence", async () => {
+  let getterReads = 0;
+  const accessor = {} as Record<string, unknown>;
+  Object.defineProperty(accessor, "credential", {
+    enumerable: true,
+    configurable: true,
+    get: () => {
+      getterReads += 1;
+      return "secret";
+    },
+  });
+
+  const inherited = Object.create({ token: "inherited-secret" }) as Record<string, unknown>;
+  inherited.safe = "ordinary";
+  const sparse: unknown[] = [];
+  sparse.length = 1;
+  const cycle: Record<string, unknown> = {};
+  cycle.self = cycle;
+  const trapReads = { ownKeys: 0, getPrototypeOf: 0, getOwnPropertyDescriptor: 0, get: 0 };
+  const proxyTarget = requirementOnlyDescriptor();
+  const trappingProxy = new Proxy(proxyTarget, {
+    ownKeys: () => {
+      trapReads.ownKeys += 1;
+      return Reflect.ownKeys(proxyTarget);
+    },
+    getPrototypeOf: () => {
+      trapReads.getPrototypeOf += 1;
+      return Object.getPrototypeOf(proxyTarget);
+    },
+    getOwnPropertyDescriptor: (_target, key) => {
+      trapReads.getOwnPropertyDescriptor += 1;
+      return Object.getOwnPropertyDescriptor(proxyTarget, key);
+    },
+    get: (_target, key) => {
+      trapReads.get += 1;
+      return proxyTarget[key as keyof typeof proxyTarget];
+    },
+  });
+  const rejected: Array<[string, unknown]> = [
+    ["inherited", { claim: inherited }],
+    ["sparse", { claim: sparse }],
+    ["cycle", { claim: cycle }],
+    ["accessor", { claim: accessor }],
+    ["trapping proxy", { claim: { credential: trappingProxy } }],
+  ];
+
+  for (const [label, metadata] of rejected) {
+    const fake = new FakePersistence();
+    await assert.rejects(
+      service(fake).beginRun({ ...BEGIN, metadata }, PRINCIPAL),
+      (error: unknown) => error instanceof ProducerServiceError && error.code === "secret_field_rejected",
+      label,
+    );
+    assert.equal(fake.beginInputs.length, 0, `${label} must be rejected before persistence`);
+  }
+  assert.equal(getterReads, 0, "accessor getter must never be invoked");
+  assert.deepEqual(trapReads, { ownKeys: 0, getPrototypeOf: 0, getOwnPropertyDescriptor: 0, get: 0 });
+});
+
 test("adapter errors cross the persistence port without a concrete adapter dependency", async () => {
   const known = new FakePersistence();
   known.beginRun = async () => {

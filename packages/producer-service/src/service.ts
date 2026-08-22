@@ -1,4 +1,5 @@
 import { createHash, timingSafeEqual } from "node:crypto";
+import { types as nodeTypes } from "node:util";
 import { defaultProtocolValidator } from "./validation.ts";
 import {
   ProducerServiceError,
@@ -193,7 +194,10 @@ function resolveSecurityPolicy(overrides: Partial<SecurityPolicy> = {}): Securit
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
+  return value !== null
+    && typeof value === "object"
+    && !nodeTypes.isProxy(value)
+    && !Array.isArray(value);
 }
 
 function normalizedFieldName(name: string): string {
@@ -214,6 +218,7 @@ const REQUIREMENT_KIND = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/u;
  * transport for secrets.
  */
 function isRequirementOnlyCredentialDescriptor(value: unknown): boolean {
+  if (nodeTypes.isProxy(value)) return false;
   if (!isRecord(value)) return false;
   let keys: PropertyKey[];
   try {
@@ -253,24 +258,57 @@ function isArrayIndexKey(key: string, length: number): boolean {
  */
 function findUnsafeProperty(value: unknown, path = "$", seen = new WeakSet<object>()): string | null {
   if (value === null || typeof value !== "object") return null;
-  if (seen.has(value)) return null;
+  if (nodeTypes.isProxy(value)) return path;
+  if (seen.has(value)) return `${path}.__cycle`;
   seen.add(value);
 
-  let keys: PropertyKey[];
-  try { keys = Reflect.ownKeys(value); } catch { return path; }
-  const array = Array.isArray(value);
-  for (const key of keys) {
-    if (array && key === "length") continue;
-    if (typeof key !== "string") return `${path}.${String(key)}`;
-    if (array && !isArrayIndexKey(key, value.length)) return `${path}.${key}`;
-    let descriptor: PropertyDescriptor | undefined;
-    try { descriptor = Object.getOwnPropertyDescriptor(value, key); } catch { return `${path}.${key}`; }
-    if (!descriptor || descriptor.enumerable !== true || !("value" in descriptor)) return `${path}.${key}`;
-    const childPath = array ? `${path}[${key}]` : `${path}.${key}`;
-    const unsafe = findUnsafeProperty(descriptor.value, childPath, seen);
-    if (unsafe) return unsafe;
+  try {
+    const array = Array.isArray(value);
+    let prototype: object | null;
+    try { prototype = Object.getPrototypeOf(value); } catch { return path; }
+    if (array
+      ? prototype !== Array.prototype
+      : prototype !== Object.prototype && prototype !== null) return path;
+
+    let keys: PropertyKey[];
+    try { keys = Reflect.ownKeys(value); } catch { return path; }
+    const arrayIndices: number[] = [];
+    for (const key of keys) {
+      if (array && key === "length") continue;
+      if (typeof key !== "string") return `${path}.${String(key)}`;
+      if (array) {
+        const lengthDescriptor = Object.getOwnPropertyDescriptor(value, "length");
+        if (
+          !lengthDescriptor
+          || !("value" in lengthDescriptor)
+          || typeof lengthDescriptor.value !== "number"
+          || !Number.isSafeInteger(lengthDescriptor.value)
+        ) return `${path}.length`;
+        if (!isArrayIndexKey(key, lengthDescriptor.value)) return `${path}.${key}`;
+        arrayIndices.push(Number(key));
+      }
+      let descriptor: PropertyDescriptor | undefined;
+      try { descriptor = Object.getOwnPropertyDescriptor(value, key); } catch { return `${path}.${key}`; }
+      if (!descriptor || descriptor.enumerable !== true || !("value" in descriptor)) return `${path}.${key}`;
+      const childPath = array ? `${path}[${key}]` : `${path}.${key}`;
+      const unsafe = findUnsafeProperty(descriptor.value, childPath, seen);
+      if (unsafe) return unsafe;
+    }
+    if (array) {
+      const lengthDescriptor = Object.getOwnPropertyDescriptor(value, "length");
+      const length = lengthDescriptor && "value" in lengthDescriptor && typeof lengthDescriptor.value === "number"
+        ? lengthDescriptor.value
+        : -1;
+      if (arrayIndices.length !== length) return `${path}.__sparse`;
+      arrayIndices.sort((left, right) => left - right);
+      for (let index = 0; index < arrayIndices.length; index += 1) {
+        if (arrayIndices[index] !== index) return `${path}.__sparse`;
+      }
+    }
+    return null;
+  } finally {
+    seen.delete(value);
   }
-  return null;
 }
 
 function looksLikeSecretField(name: string): boolean {
@@ -279,6 +317,7 @@ function looksLikeSecretField(name: string): boolean {
 }
 
 function findSecretField(value: unknown, path = "$"): string | null {
+  if (nodeTypes.isProxy(value)) return path;
   if (Array.isArray(value)) {
     for (let index = 0; index < value.length; index += 1) {
       const found = findSecretField(value[index], `${path}[${index}]`);
@@ -309,6 +348,7 @@ function walkStringValues(value: unknown, callback: (value: string, path: string
     callback(value, path);
     return;
   }
+  if (nodeTypes.isProxy(value)) return;
   if (Array.isArray(value)) {
     value.forEach((child, index) => walkStringValues(child, callback, `${path}[${index}]`));
     return;
@@ -330,12 +370,15 @@ function emitQuarantine(policy: SecurityPolicy, event: QuarantineEvent): void {
   }
 }
 
-function securityCheck(value: unknown, policy: SecurityPolicy, runId?: string): void {
+function rejectUnsafeRepresentation(value: unknown, policy: SecurityPolicy, runId?: string): void {
   const unsafePath = findUnsafeProperty(value);
-  if (unsafePath !== null) {
-    emitQuarantine(policy, { kind: "payload", reason: "secret_field", ...(runId === undefined ? {} : { run_id: runId }), field_path: unsafePath });
-    if (policy.reject_secrets) throw new ProducerServiceError("secret_field_rejected", "payload contains a secret-bearing field");
-  }
+  if (unsafePath === null) return;
+  emitQuarantine(policy, { kind: "payload", reason: "secret_field", ...(runId === undefined ? {} : { run_id: runId }), field_path: unsafePath });
+  throw new ProducerServiceError("secret_field_rejected", "payload contains a secret-bearing field");
+}
+
+function securityCheck(value: unknown, policy: SecurityPolicy, runId?: string): void {
+  rejectUnsafeRepresentation(value, policy, runId);
   // A Proxy can present ordinary-looking descriptors while still intercepting
   // reads.  Node's structured clone rejects Proxy values without invoking the
   // target, so reject the whole payload before any persistence call.
@@ -461,6 +504,7 @@ export class ProducerService {
   }
 
   private async beginRunInternal(value: unknown, principal: ProducerPrincipal, wireRunId?: string): Promise<RunRecord> {
+    rejectUnsafeRepresentation(value, this.security);
     let input: BeginRunRequest;
     try { input = this.validator.begin(value); } catch (error) { throw mapPersistenceError(error); }
     assertBeginScope(principal, input);
@@ -473,6 +517,7 @@ export class ProducerService {
   }
 
   async submitBatch(runId: string, value: unknown, principal: ProducerPrincipal): Promise<RunRecord> {
+    rejectUnsafeRepresentation(value, this.security, runId);
     const bodyId = bodyRunId(value);
     if (bodyId !== null && bodyId !== runId) throw new ProducerServiceError("invalid_input", "path run_id and body run_id must match");
     // Scope the path before full body/schema processing. This prevents a
@@ -492,6 +537,7 @@ export class ProducerService {
   }
 
   async completeRun(runId: string, value: unknown, principal: ProducerPrincipal): Promise<RunRecord> {
+    rejectUnsafeRepresentation(value, this.security, runId);
     const bodyId = bodyRunId(value);
     if (bodyId !== null && bodyId !== runId) throw new ProducerServiceError("invalid_input", "path run_id and body run_id must match");
     await this.scopedRun(runId, principal);
