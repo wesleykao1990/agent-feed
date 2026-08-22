@@ -21,6 +21,11 @@ function loadFixture(): DeliveryEvent {
   return JSON.parse(readFileSync(fileURLToPath(fixturePath), "utf8")) as DeliveryEvent;
 }
 
+function loadRewardClaimExample(): Record<string, unknown> {
+  const fixturePath = new URL("../reward-claim.example.json", import.meta.url);
+  return JSON.parse(readFileSync(fileURLToPath(fixturePath), "utf8")) as Record<string, unknown>;
+}
+
 function cloneEvent(event: DeliveryEvent): DeliveryEvent {
   return structuredClone(event);
 }
@@ -38,6 +43,28 @@ test("maps a Finding claim into an explicitly untrusted observation", () => {
   assert.equal(observation.submitted_evidence.length, 1);
   assert.equal(observation.finding.attributes.canonical_source_capture_required, true);
   assert.equal("promote" in new ReferenceConsumer(TEST_SCOPE), false);
+});
+
+test("preserves synthetic Rewards claims and explicit incompleteness as untrusted attributes", () => {
+  const event = loadFixture();
+  const example = loadRewardClaimExample();
+  const attributes = example.attributes as Record<string, unknown>;
+  (event.payload.finding as Record<string, unknown>).attributes = attributes;
+
+  const observation = mapDeliveryEvent(event, TEST_SCOPE);
+  const claims = observation.finding.attributes.reward_claims as Record<string, unknown>;
+  const claim = (claims.claims as Array<Record<string, unknown>>)[0]!;
+  assert.deepEqual(claim.missing_fields, ["fee", "validity"]);
+  assert.equal(claim.claim_completeness, "partial");
+  assert.deepEqual(claim.unknown_provider_field, { preserve_as_untrusted: true });
+  assert.deepEqual((claim.eligibility as Record<string, unknown>).credential, {
+    classification: "requirement_only",
+    kind: "two_factor_authentication_phone",
+    required: true,
+    value_included: false,
+  });
+  assert.equal(observation.trust, "untrusted");
+  assert.equal(observation.promotion_status, "not_promoted");
 });
 
 test("keeps transport replay dedupe separate from semantic dedupe", () => {

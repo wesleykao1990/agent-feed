@@ -124,6 +124,16 @@ function batchPayload(runId: string, evidence: Record<string, unknown>[]): Recor
   };
 }
 
+function requirementOnlyDescriptor(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    classification: "requirement_only",
+    kind: "two_factor_authentication_phone",
+    required: true,
+    value_included: false,
+    ...overrides,
+  };
+}
+
 test("producer application validates the published schema, injects tenant scope, and delegates durable lifecycle operations", async () => {
   const fake = new FakePersistence();
   const application = service(fake);
@@ -147,6 +157,84 @@ test("producer application validates the published schema, injects tenant scope,
     () => new StaticProducerAuthenticator([{ tenant_id: "tenant_a", producer_id: "producer_a", secret: "secret-a", allowed_stream_ids: ["*"] }]),
     /wildcard_producer_credentials_are_not_allowed/u,
   );
+});
+
+test("accepts an exact requirement-only descriptor without accepting a credential value", async () => {
+  const fake = new FakePersistence();
+  const application = service(fake);
+  const metadata = {
+    reward_claims: {
+      credential: requirementOnlyDescriptor(),
+      authentication: requirementOnlyDescriptor({ kind: "identity_verification" }),
+    },
+  };
+
+  await application.beginRun({ ...BEGIN, metadata }, PRINCIPAL);
+  assert.deepEqual(fake.beginInputs[0]?.metadata, metadata);
+});
+
+test("accepts the descriptor in an open finding attribute without changing the protocol boundary", async () => {
+  const fake = new FakePersistence();
+  fake.runs.set("run_aaaaaaaa", run());
+  const application = service(fake);
+  const finding = {
+    finding_id: "finding_reward_001",
+    finding_type: "rewards.claim",
+    title: "Synthetic requirement",
+    summary: "A synthetic eligibility requirement claim.",
+    subjects: [{ type: "program", id: "synthetic", name: "Synthetic" }],
+    effective_time: { occurred_at: null, effective_from: null, effective_to: null },
+    assessment: {
+      novelty: "new",
+      source_authority_claim: "unknown",
+      evidence_completeness: "partial",
+      agent_confidence: null,
+    },
+    evidence_refs: [],
+    producer_dedupe_key: null,
+    routing_tags: [],
+    attributes: {
+      reward_claims: {
+        claims: [{ value: { credential: requirementOnlyDescriptor() } }],
+      },
+    },
+    security_flags: [],
+  };
+  const batch = { ...batchPayload("run_aaaaaaaa", []), findings: [finding] };
+
+  await application.submitBatch("run_aaaaaaaa", batch, PRINCIPAL);
+  assert.equal(fake.submitInputs.length, 1);
+});
+
+test("rejects scalar, expanded, included, nested, accessor, and hidden credential descriptors", async () => {
+  const accessorDescriptor = requirementOnlyDescriptor();
+  Object.defineProperty(accessorDescriptor, "kind", {
+    enumerable: true,
+    configurable: true,
+    get: () => "two_factor_authentication_phone",
+  });
+  const hiddenDescriptor = requirementOnlyDescriptor();
+  Object.defineProperty(hiddenDescriptor, "token", { enumerable: false, value: "opaque-value" });
+  const proxyDescriptor = new Proxy(requirementOnlyDescriptor(), {});
+  const rejected: Array<[string, unknown]> = [
+    ["scalar", "two-factor-authentication phone number"],
+    ["extra field", requirementOnlyDescriptor({ value: "not permitted" })],
+    ["included value", requirementOnlyDescriptor({ value_included: true })],
+    ["nested token", requirementOnlyDescriptor({ details: { token: "opaque-value" } })],
+    ["accessor", accessorDescriptor],
+    ["hidden field", hiddenDescriptor],
+    ["proxy", proxyDescriptor],
+  ];
+
+  for (const [label, credential] of rejected) {
+    const fake = new FakePersistence();
+    await assert.rejects(
+      service(fake).beginRun({ ...BEGIN, metadata: { claim: { credential } } }, PRINCIPAL),
+      (error: unknown) => error instanceof ProducerServiceError && error.code === "secret_field_rejected",
+      label,
+    );
+    assert.equal(fake.beginInputs.length, 0, `${label} must be rejected before persistence`);
+  }
 });
 
 test("adapter errors cross the persistence port without a concrete adapter dependency", async () => {

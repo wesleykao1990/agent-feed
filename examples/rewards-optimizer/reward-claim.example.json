@@ -1,0 +1,58 @@
+{
+  "synthetic": true,
+  "attributes": {
+    "reward_claims": {
+      "version": "reward-claim.v1",
+      "claims": [
+        {
+          "claim_id": "claim.synthetic.transfer.001",
+          "claim_type": "transfer_ratio",
+          "family_id": "synthetic.family",
+          "source_role_id": "synthetic_role",
+          "source_ids": [
+            "synthetic.source"
+          ],
+          "subject": "synthetic_rewards_program",
+          "predicate": "converts_at_declared_ratio",
+          "value": {
+            "source_units": "synthetic_source_units",
+            "destination_units": "synthetic_destination_units"
+          },
+          "applicability": {
+            "scope": "synthetic_only",
+            "effective_from": null,
+            "effective_to": null
+          },
+          "exclusions": [],
+          "evidence_locator": "synthetic locator",
+          "short_paraphrase": "Synthetic claim only; no economic value is asserted.",
+          "source_asset": "synthetic_source_points",
+          "destination_asset": "synthetic_destination_units",
+          "eligibility": {
+            "credential": {
+              "classification": "requirement_only",
+              "kind": "two_factor_authentication_phone",
+              "required": true,
+              "value_included": false
+            }
+          },
+          "calculation": {
+            "source_units": "synthetic_source_units",
+            "destination_units": "synthetic_destination_units",
+            "rounding": "provider_defined"
+          },
+          "missing_fields": [
+            "fee",
+            "validity"
+          ],
+          "claim_completeness": "partial",
+          "unknown_provider_field": {
+            "preserve_as_untrusted": true
+          }
+        }
+      ]
+    }
+  },
+  "trust": "untrusted",
+  "promotion_status": "not_promoted"
+}

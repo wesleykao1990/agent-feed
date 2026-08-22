@@ -201,8 +201,77 @@ function normalizedFieldName(name: string): string {
 }
 
 const SECRET_FIELD_NAMES = new Set([
-  "password", "passwd", "secret", "token", "accesstoken", "refreshtoken", "apikey", "privatekey", "clientsecret", "authorization", "cookie", "setcookie", "credential", "credentials",
+  "password", "passwd", "secret", "token", "accesstoken", "refreshtoken", "apikey", "privatekey", "clientsecret", "authorization", "cookie", "setcookie", "auth", "authentication", "credential", "credentials", "credentialrequirement", "authenticationrequirement",
 ]);
+
+const REQUIREMENT_DESCRIPTOR_KEYS = ["classification", "kind", "required", "value_included"] as const;
+const REQUIREMENT_KIND = /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/u;
+
+/**
+ * Credential-shaped fields may carry an eligibility requirement, but never a
+ * credential value.  The descriptor is intentionally closed so adding a
+ * value, nested object, accessor, or hidden property cannot become a new
+ * transport for secrets.
+ */
+function isRequirementOnlyCredentialDescriptor(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  let keys: PropertyKey[];
+  try {
+    keys = Reflect.ownKeys(value);
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype !== Object.prototype && prototype !== null) return false;
+  } catch {
+    return false;
+  }
+  if (keys.length !== REQUIREMENT_DESCRIPTOR_KEYS.length || keys.some((key) => typeof key !== "string")) return false;
+  const expected = new Set<string>(REQUIREMENT_DESCRIPTOR_KEYS);
+  if (keys.some((key) => !expected.has(key as string))) return false;
+  for (const key of REQUIREMENT_DESCRIPTOR_KEYS) {
+    let descriptor: PropertyDescriptor | undefined;
+    try { descriptor = Object.getOwnPropertyDescriptor(value, key); } catch { return false; }
+    if (!descriptor || descriptor.enumerable !== true || !("value" in descriptor)) return false;
+  }
+  const descriptor = value as Record<string, unknown>;
+  return descriptor.classification === "requirement_only"
+    && typeof descriptor.kind === "string"
+    && REQUIREMENT_KIND.test(descriptor.kind)
+    && typeof descriptor.required === "boolean"
+    && descriptor.value_included === false;
+}
+
+function isArrayIndexKey(key: string, length: number): boolean {
+  if (!/^(?:0|[1-9][0-9]*)$/u.test(key)) return false;
+  const index = Number(key);
+  return Number.isSafeInteger(index) && index >= 0 && index < length;
+}
+
+/**
+ * JSON protocol values must expose only enumerable data properties.  Checking
+ * descriptors before reading values keeps getters/non-enumerables out of the
+ * security walk; structuredClone below additionally rejects reachable Proxy
+ * objects before they can be persisted.
+ */
+function findUnsafeProperty(value: unknown, path = "$", seen = new WeakSet<object>()): string | null {
+  if (value === null || typeof value !== "object") return null;
+  if (seen.has(value)) return null;
+  seen.add(value);
+
+  let keys: PropertyKey[];
+  try { keys = Reflect.ownKeys(value); } catch { return path; }
+  const array = Array.isArray(value);
+  for (const key of keys) {
+    if (array && key === "length") continue;
+    if (typeof key !== "string") return `${path}.${String(key)}`;
+    if (array && !isArrayIndexKey(key, value.length)) return `${path}.${key}`;
+    let descriptor: PropertyDescriptor | undefined;
+    try { descriptor = Object.getOwnPropertyDescriptor(value, key); } catch { return `${path}.${key}`; }
+    if (!descriptor || descriptor.enumerable !== true || !("value" in descriptor)) return `${path}.${key}`;
+    const childPath = array ? `${path}[${key}]` : `${path}.${key}`;
+    const unsafe = findUnsafeProperty(descriptor.value, childPath, seen);
+    if (unsafe) return unsafe;
+  }
+  return null;
+}
 
 function looksLikeSecretField(name: string): boolean {
   const normalized = normalizedFieldName(name);
@@ -221,7 +290,10 @@ function findSecretField(value: unknown, path = "$"): string | null {
   for (const [key, child] of Object.entries(value)) {
     if (["contains_secrets", "contains_personal_data", "security_flags"].includes(key)) continue;
     const childPath = `${path}.${key}`;
-    if (looksLikeSecretField(key)) return childPath;
+    if (looksLikeSecretField(key)) {
+      if (isRequirementOnlyCredentialDescriptor(child)) continue;
+      return childPath;
+    }
     const found = findSecretField(child, childPath);
     if (found) return found;
   }
@@ -259,6 +331,18 @@ function emitQuarantine(policy: SecurityPolicy, event: QuarantineEvent): void {
 }
 
 function securityCheck(value: unknown, policy: SecurityPolicy, runId?: string): void {
+  const unsafePath = findUnsafeProperty(value);
+  if (unsafePath !== null) {
+    emitQuarantine(policy, { kind: "payload", reason: "secret_field", ...(runId === undefined ? {} : { run_id: runId }), field_path: unsafePath });
+    if (policy.reject_secrets) throw new ProducerServiceError("secret_field_rejected", "payload contains a secret-bearing field");
+  }
+  // A Proxy can present ordinary-looking descriptors while still intercepting
+  // reads.  Node's structured clone rejects Proxy values without invoking the
+  // target, so reject the whole payload before any persistence call.
+  try { structuredClone(value); } catch {
+    emitQuarantine(policy, { kind: "payload", reason: "secret_field", ...(runId === undefined ? {} : { run_id: runId }), field_path: "$" });
+    if (policy.reject_secrets) throw new ProducerServiceError("secret_field_rejected", "payload contains a secret-bearing field");
+  }
   const secretField = findSecretField(value);
   if (secretField) {
     emitQuarantine(policy, { kind: "payload", reason: "secret_field", ...(runId === undefined ? {} : { run_id: runId }), field_path: secretField });

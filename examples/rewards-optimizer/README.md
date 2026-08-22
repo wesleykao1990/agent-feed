@@ -63,6 +63,14 @@ transport keys, semantic keys, and untrusted observations. A real consumer
 must add source verification and explicit human/application policy before any
 domain-specific use.
 
+`reward-claim.example.json` is a synthetic transport fragment for a Rewards
+consumer. Its `attributes.reward_claims` value is consumer-owned structured
+data, not an Agent Feed-validated rule: unknown fields are preserved, and
+`missing_fields` plus `claim_completeness: "partial"` make incompleteness
+explicit. The requirement-only credential descriptor carries eligibility
+semantics without carrying a credential value. No URL or real economic value
+is included.
+
 ## Reuse in another consumer
 
 Import the built package from `dist` or use the source during local
