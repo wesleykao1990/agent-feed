@@ -109,3 +109,31 @@ delay, transient retries, database latency, delivery backlog, downstream review
 yield, and interruption recovery. Production scale requires a shared limiter or
 gateway for multiple API replicas; the built-in limiter is process-local by
 design.
+
+## Bounded historical delivery proof
+
+The Rewards P0 recovery set later required delivery of events that predated
+its consumer subscription. Agent Feed now exposes one operator-only
+materializer that accepts exact event IDs plus an exact run-ID cross-check. It
+reapplies the active subscription selectors in one transaction and has no
+date, position, stream, run, or all-history wildcard. Missing, repeated,
+cross-tenant, cross-run, quarantined, or selector-mismatched members roll back
+the entire set. Repeating the same exact set is idempotent.
+
+The authorized live proof materialized 21 events from five exact runs and no
+others. A temporary HTTPS hostname expired before the first send, producing 21
+normal retry transitions without consumer side effects. Endpoint rotation
+then acknowledged 17 events; four subset terminal events initially returned
+HTTP 500 because the Rewards consumer redacted their raw payload before its
+target-scope reconciliation. After the consumer retained only an immutable
+target-ID scope projection, those four retries acknowledged. Final Agent Feed
+state was 21 acknowledged deliveries, zero retry/dead-letter rows, and 46
+attempt records (21 succeeded and 25 failed before retry).
+
+Two transport lessons are now encoded in code. First, a DNS name may resolve
+to several already-policy-approved addresses; the webhook client tries a
+bounded maximum of four pinned addresses only for connection failures before
+response headers. It never re-resolves DNS, follows a redirect, retries after
+an HTTP response, or weakens private-address rejection. Second, historical
+delivery is a narrowly authorized queue operation, not a reason to make all
+old outbox history visible to every new subscription.

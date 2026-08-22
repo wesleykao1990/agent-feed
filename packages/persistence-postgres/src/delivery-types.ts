@@ -89,6 +89,24 @@ export interface SubscriptionInput {
   endpoint?: Partial<DeliveryEndpoint> | null;
 }
 
+/**
+ * An operator-authorized, exact historical event set. Event IDs are the only
+ * selection key; run IDs are a mandatory cross-check and never a wildcard.
+ */
+export interface HistoricalDeliveryMaterializationInput {
+  tenantId: string;
+  consumerId: string;
+  subscriptionId: string;
+  eventIds: readonly string[];
+  runIds: readonly string[];
+}
+
+export interface HistoricalDeliveryMaterializationResult {
+  targetEvents: number;
+  insertedDeliveries: number;
+  alreadyMaterialized: number;
+}
+
 /** Accept unknown JSON from pg while keeping the public payload type strict. */
 export function asDeliveryPayload(value: unknown): JsonObject {
   if (value && typeof value === "object" && !Array.isArray(value)) return value as JsonObject;

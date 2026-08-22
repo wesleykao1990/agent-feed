@@ -24,6 +24,28 @@ variables are documented by `npm --prefix apps/delivery-worker start -- --help`.
 The command prints only bounded counters and stable error codes; it never
 prints database URLs, endpoint URLs, event payloads, or signing key material.
 
+Historical events remain future-subscription-invisible unless an operator
+explicitly materializes one exact set. The bounded command requires repeated
+event IDs plus repeated run IDs as a cross-check; it has no all-history, date,
+position, or stream wildcard:
+
+```sh
+npm --prefix apps/delivery-worker run materialize-history -- \
+  --tenant-id rewards-local \
+  --consumer-id rewards-optimizer \
+  --subscription-id 00000000-0000-4000-8000-000000000001 \
+  --event-id event-one --event-id event-two \
+  --run-id run-one
+```
+
+The existing active subscription selectors are reapplied to every requested
+event. Missing IDs, an event/run-set mismatch, quarantined events, selector
+mismatches, duplicate input IDs, or an unavailable subscription reject the
+entire transaction. Repeating the same command returns the same target count
+with those rows reported as already materialized. This command creates only
+delivery queue rows; it cannot alter outbox events, receipts,
+acknowledgements, findings, or evidence.
+
 The key file is an owner-only JSON map keyed by the subscription's
 `signing_secret_ref`:
 

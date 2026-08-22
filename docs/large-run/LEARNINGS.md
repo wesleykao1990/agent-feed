@@ -18,3 +18,17 @@
   retains caller object insertion order; normalize the wire object too.
 - Attempt history must remain append-only; derive current and last-resolved
   target state so a failed retry cannot erase an earlier resolution.
+- Future-only subscription activation and historical recovery are separate
+  operations. Historical recovery needs an exact event set, an independent
+  run-set cross-check, selector replay, and one transaction—not a broad
+  “deliver old events” switch.
+- Temporary HTTPS endpoints can disappear between configuration and send.
+  Durable retry must preserve the event while endpoint rotation remains an
+  explicit subscription update.
+- Trying only the first safe DNS result creates avoidable outages. Retry a
+  small bounded set of already validated pinned addresses only before response
+  headers; never re-resolve or turn an HTTP response into an address retry.
+- End-to-end delivery tests reveal ordering/privacy defects that component
+  tests miss. The Rewards subset-terminal failure was caused by redaction
+  occurring before scope reconciliation, not by producer extraction or queue
+  durability.

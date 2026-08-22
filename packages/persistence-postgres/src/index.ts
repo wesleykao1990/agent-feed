@@ -34,6 +34,8 @@ export type {
   DeliveryEventType,
   DeliveryJob,
   DeliveryRepository,
+  HistoricalDeliveryMaterializationInput,
+  HistoricalDeliveryMaterializationResult,
   LeaseClaimInput,
   LeaseOutcomeInput,
   LeaseTransitionResult,

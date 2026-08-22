@@ -17,3 +17,11 @@ export {
   type DeliveryRunnerDependencies,
   type DeliveryRunnerRuntime,
 } from "./runner.ts";
+export {
+  HistoricalMaterializationCliError,
+  historicalMaterializationUsage,
+  parseHistoricalMaterializationArguments,
+  runHistoricalMaterialization,
+  type HistoricalMaterializationArguments,
+  type HistoricalMaterializationDependencies,
+} from "./materialize-history.ts";

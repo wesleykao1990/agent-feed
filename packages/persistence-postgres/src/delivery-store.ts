@@ -15,6 +15,8 @@ import type {
   DeliveryEventType,
   DeliveryJob,
   DeliveryRepository,
+  HistoricalDeliveryMaterializationInput,
+  HistoricalDeliveryMaterializationResult,
   LeaseClaimInput,
   LeaseOutcomeInput,
   LeaseTransitionResult,
@@ -157,6 +159,25 @@ function validateSelector(input: SubscriptionInput): SubscriptionSelectors {
       ? [...new Set(input.eventTypes)]
       : ["run.started", "finding.submitted", "run.completed", "run.partial", "run.failed"],
   };
+}
+
+const HISTORICAL_SET_LIMIT = 100;
+const HISTORICAL_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,511}$/u;
+
+function exactHistoricalIds(
+  values: readonly string[],
+  field: "event_ids" | "run_ids",
+): string[] {
+  if (
+    !Array.isArray(values) ||
+    values.length < 1 ||
+    values.length > HISTORICAL_SET_LIMIT ||
+    values.some((value) => typeof value !== "string" || !HISTORICAL_ID.test(value)) ||
+    new Set(values).size !== values.length
+  ) {
+    throw new Error(`historical_${field}_invalid`);
+  }
+  return [...values].sort((left, right) => left.localeCompare(right));
 }
 
 /**
@@ -473,6 +494,171 @@ export class PostgresDeliveryRepository implements DeliveryRepository {
 
   async createSubscription(input: SubscriptionInput): Promise<ConsumerSubscription> {
     return this.registerSubscription(input);
+  }
+
+  /**
+   * Materialize one exact, previously persisted outbox set for an existing
+   * active subscription. This is deliberately separate from normal future
+   * fan-out and never selects all history by date, position, stream, or run.
+   */
+  async materializeHistoricalDeliveries(
+    input: HistoricalDeliveryMaterializationInput,
+  ): Promise<HistoricalDeliveryMaterializationResult> {
+    if (!input.tenantId || !input.consumerId) throw new Error("historical_scope_invalid");
+    const subscriptionId = uuidOrNull(input.subscriptionId);
+    if (subscriptionId === null) throw new Error("historical_subscription_id_invalid");
+    const eventIds = exactHistoricalIds(input.eventIds, "event_ids");
+    const runIds = exactHistoricalIds(input.runIds, "run_ids");
+
+    return this.withTransaction(async (client) => {
+      const subscription = await client.query<{
+        selector_version: number | string;
+        include_run_events: boolean;
+      }>(
+        `select v.selector_version, v.include_run_events
+           from agent_feed.consumer_subscriptions s
+           join agent_feed.consumer_subscription_versions v
+             on v.tenant_id = s.tenant_id
+            and v.consumer_id = s.consumer_id
+            and v.subscription_id = s.id
+            and v.active
+          where s.tenant_id = $1 and s.consumer_id = $2 and s.id = $3::uuid
+            and s.enabled and s.status = 'active'
+          for update of s, v`,
+        [input.tenantId, input.consumerId, subscriptionId],
+      );
+      const version = subscription.rows[0];
+      if (!version || subscription.rows.length !== 1)
+        throw new Error("historical_subscription_unavailable");
+      const selectorVersion = int(version.selector_version);
+
+      const events = await client.query<{
+        event_id: string;
+        wire_run_id: string;
+      }>(
+        `select event_id, wire_run_id
+           from agent_feed.outbox_events
+          where tenant_id = $1 and event_id = any($2::text[])
+          order by event_id
+          for share`,
+        [input.tenantId, eventIds],
+      );
+      if (events.rows.length !== eventIds.length)
+        throw new Error("historical_event_set_incomplete");
+      const actualEventIds = events.rows.map((row) => row.event_id).sort();
+      if (actualEventIds.some((value, index) => value !== eventIds[index]))
+        throw new Error("historical_event_set_mismatch");
+      const actualRunIds = [...new Set(events.rows.map((row) => row.wire_run_id))].sort();
+      if (
+        actualRunIds.length !== runIds.length ||
+        actualRunIds.some((value, index) => value !== runIds[index])
+      )
+        throw new Error("historical_run_set_mismatch");
+
+      const matched = await client.query<{ event_id: string }>(
+        `select e.event_id
+           from agent_feed.outbox_events e
+          where e.tenant_id = $1
+            and e.event_id = any($2::text[])
+            and e.delivery_eligibility = 'eligible'
+            and (e.finding_id is not null or $5::boolean)
+            and (not exists (
+                   select 1 from agent_feed.consumer_subscription_selectors x
+                    where x.tenant_id = $1 and x.consumer_id = $3
+                      and x.subscription_id = $4::uuid
+                      and x.selector_version = $6
+                      and x.selector_kind = 'stream_id'
+                 ) or exists (
+                   select 1 from agent_feed.consumer_subscription_selectors x
+                    where x.tenant_id = $1 and x.consumer_id = $3
+                      and x.subscription_id = $4::uuid
+                      and x.selector_version = $6
+                      and x.selector_kind = 'stream_id'
+                      and x.selector_value = e.stream_id
+                 ))
+            and (not exists (
+                   select 1 from agent_feed.consumer_subscription_selectors x
+                    where x.tenant_id = $1 and x.consumer_id = $3
+                      and x.subscription_id = $4::uuid
+                      and x.selector_version = $6
+                      and x.selector_kind = 'event_type'
+                 ) or exists (
+                   select 1 from agent_feed.consumer_subscription_selectors x
+                    where x.tenant_id = $1 and x.consumer_id = $3
+                      and x.subscription_id = $4::uuid
+                      and x.selector_version = $6
+                      and x.selector_kind = 'event_type'
+                      and x.selector_value = e.event_type
+                 ))
+            and (e.event_type <> 'finding.submitted' or not exists (
+                   select 1 from agent_feed.consumer_subscription_selectors x
+                    where x.tenant_id = $1 and x.consumer_id = $3
+                      and x.subscription_id = $4::uuid
+                      and x.selector_version = $6
+                      and x.selector_kind = 'finding_type'
+                 ) or exists (
+                   select 1 from agent_feed.consumer_subscription_selectors x
+                    where x.tenant_id = $1 and x.consumer_id = $3
+                      and x.subscription_id = $4::uuid
+                      and x.selector_version = $6
+                      and x.selector_kind = 'finding_type'
+                      and x.selector_value = coalesce(e.finding_type, '')
+                 ))
+            and (e.event_type <> 'finding.submitted' or not exists (
+                   select 1 from agent_feed.consumer_subscription_selectors x
+                    where x.tenant_id = $1 and x.consumer_id = $3
+                      and x.subscription_id = $4::uuid
+                      and x.selector_version = $6
+                      and x.selector_kind = 'routing_tag'
+                 ) or exists (
+                   select 1 from agent_feed.consumer_subscription_selectors x
+                    where x.tenant_id = $1 and x.consumer_id = $3
+                      and x.subscription_id = $4::uuid
+                      and x.selector_version = $6
+                      and x.selector_kind = 'routing_tag'
+                      and x.match_mode = 'any' and e.routing_tags ? x.selector_value
+                 ) or (
+                   exists (
+                     select 1 from agent_feed.consumer_subscription_selectors x
+                      where x.tenant_id = $1 and x.consumer_id = $3
+                        and x.subscription_id = $4::uuid
+                        and x.selector_version = $6
+                        and x.selector_kind = 'routing_tag' and x.match_mode = 'all'
+                   ) and not exists (
+                     select 1 from agent_feed.consumer_subscription_selectors x
+                      where x.tenant_id = $1 and x.consumer_id = $3
+                        and x.subscription_id = $4::uuid
+                        and x.selector_version = $6
+                        and x.selector_kind = 'routing_tag' and x.match_mode = 'all'
+                        and not (e.routing_tags ? x.selector_value)
+                   )
+                 ))
+          order by e.event_id`,
+        [input.tenantId, eventIds, input.consumerId, subscriptionId,
+          version.include_run_events, selectorVersion],
+      );
+      if (matched.rows.length !== eventIds.length)
+        throw new Error("historical_event_selector_mismatch");
+
+      const inserted = await client.query(
+        `insert into agent_feed.consumer_deliveries (
+           tenant_id, consumer_id, subscription_id, selector_version,
+           event_id, state, attempt_count, next_attempt_at
+         )
+         select $1, $3, $4::uuid, $5, e.event_id, 'pending', 0, now()
+           from agent_feed.outbox_events e
+          where e.tenant_id = $1 and e.event_id = any($2::text[])
+          order by e.delivery_position, e.event_id
+         on conflict (tenant_id, subscription_id, event_id) do nothing`,
+        [input.tenantId, eventIds, input.consumerId, subscriptionId, selectorVersion],
+      );
+      const insertedDeliveries = inserted.rowCount ?? 0;
+      return {
+        targetEvents: eventIds.length,
+        insertedDeliveries,
+        alreadyMaterialized: eventIds.length - insertedDeliveries,
+      };
+    });
   }
 
   private async insertSubscriptionVersion(
