@@ -42,7 +42,8 @@ Usage:
   agent-feed setup [--runtime-dir PATH] [--config PATH] [--database-url URL | --database-url-file PATH]
                    [--tenant ID] [--producer ID] [--stream ID] [--postgres-port PORT]
                    [--skip-install] [--force]
-  agent-feed doctor [--config PATH] [--offline] [--require-tunnel]
+  agent-feed doctor [--config PATH] [--offline]
+                    [--require-tunnel --tunnel-url-file PATH --tunnel-pid-file PATH]
   agent-feed postgres <up|stop|status> [--runtime-dir PATH]
   agent-feed mcp [--config PATH]
 
@@ -84,8 +85,20 @@ export async function runCli(argv) {
       return 0;
     }
     if (command === "doctor") {
-      const args = parseArguments([subcommand, ...rest].filter(Boolean), new Set(["config", "offline", "require_tunnel"]));
-      const checks = await runDoctor({ config_path: args.config, offline: args.offline, require_tunnel: args.require_tunnel });
+      const args = parseArguments(
+        [subcommand, ...rest].filter(Boolean),
+        new Set(["config", "offline", "require_tunnel", "tunnel_url_file", "tunnel_pid_file"]),
+      );
+      if ((args.tunnel_url_file || args.tunnel_pid_file) && !args.require_tunnel) {
+        throw new OperatorError("tunnel_health_requires_require_tunnel");
+      }
+      const checks = await runDoctor({
+        config_path: args.config,
+        offline: args.offline,
+        require_tunnel: args.require_tunnel,
+        tunnel_url_file: args.tunnel_url_file,
+        tunnel_pid_file: args.tunnel_pid_file,
+      });
       for (const check of checks) output(`${check.ok ? "PASS" : "FAIL"}  ${check.name} — ${check.detail}`);
       return checks.every((check) => check.ok) ? 0 : 1;
     }

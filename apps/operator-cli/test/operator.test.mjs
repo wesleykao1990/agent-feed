@@ -13,6 +13,8 @@ import {
   renderPostgresEnv,
   runDoctor,
   setupRuntime,
+  tunnelHealthArguments,
+  tunnelHealthResultOk,
   validateConfig,
 } from "../src/operator.mjs";
 import { parseArguments } from "../src/main.mjs";
@@ -220,6 +222,62 @@ test("offline doctor validates private configuration and detects insecure permis
   } finally {
     await rm(runtimeDir, { recursive: true, force: true });
   }
+});
+
+test("tunnel doctor fails closed unless PID, endpoints, and an authenticated poll are healthy", async () => {
+  const runtimeDir = await mkdtemp(path.join(os.tmpdir(), "agent-feed-tunnel-doctor-"));
+  try {
+    const result = await setupRuntime({ runtime_dir: runtimeDir, skip_install: true });
+    const missingPaths = await runDoctor({
+      config_path: result.config_path,
+      offline: true,
+      require_tunnel: true,
+      command_exists: () => true,
+    });
+    assert.equal(missingPaths.find((check) => check.name === "tunnel runtime health")?.ok, false);
+
+    const healthy = await runDoctor({
+      config_path: result.config_path,
+      offline: true,
+      require_tunnel: true,
+      tunnel_url_file: path.join(runtimeDir, "health.url"),
+      tunnel_pid_file: path.join(runtimeDir, "tunnel.pid"),
+      command_exists: () => true,
+      tunnel_health_probe: () => true,
+    });
+    assert.equal(healthy.every((check) => check.ok), true);
+
+    const unhealthy = await runDoctor({
+      config_path: result.config_path,
+      offline: true,
+      require_tunnel: true,
+      tunnel_url_file: path.join(runtimeDir, "health.url"),
+      tunnel_pid_file: path.join(runtimeDir, "tunnel.pid"),
+      command_exists: () => true,
+      tunnel_health_probe: () => false,
+    });
+    assert.equal(unhealthy.find((check) => check.name === "tunnel runtime health")?.ok, false);
+  } finally {
+    await rm(runtimeDir, { recursive: true, force: true });
+  }
+});
+
+test("tunnel health command and JSON acceptance are exact and fail closed", () => {
+  assert.deepEqual(tunnelHealthArguments("./health.url", "./tunnel.pid").slice(-2), ["--require-control-plane-poll", "--json"]);
+  const complete = {
+    status: 0,
+    stdout: JSON.stringify({
+      result: "ok",
+      process: { running: true },
+      healthz: { ok: true },
+      readyz: { ok: true },
+      control_plane_poll: { ok: true },
+    }),
+  };
+  assert.equal(tunnelHealthResultOk(complete), true);
+  assert.equal(tunnelHealthResultOk({ ...complete, stdout: "not json" }), false);
+  assert.equal(tunnelHealthResultOk({ ...complete, stdout: JSON.stringify({ ...JSON.parse(complete.stdout), readyz: { ok: false } }) }), false);
+  assert.equal(tunnelHealthResultOk({ ...complete, status: 1 }), false);
 });
 
 test("Docker lifecycle preserves the named volume and never removes data", () => {

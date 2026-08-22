@@ -83,12 +83,22 @@ Use the generated absolute command as the Secure MCP Tunnel stdio target:
 Then follow [ChatGPT Scheduled Task MCP runbook](chatgpt-scheduled-task.md).
 Tunnel and ChatGPT workspace association, runtime-key creation, Developer Mode,
 plugin installation, and task attachment are explicit account-side operations;
-the repository does not automate them. Run this additional local check after
-installing the official tunnel client:
+the repository does not automate them. Run this additional fail-closed check
+after installing and starting the official tunnel client. Use the health URL
+file written by that tunnel runtime and the PID file written by its service
+supervisor:
 
 ```sh
-bin/agent-feed doctor --require-tunnel
+bin/agent-feed doctor \
+  --require-tunnel \
+  --tunnel-url-file /private/path/to/tunnel-health.url \
+  --tunnel-pid-file /private/path/to/tunnel-client.pid
 ```
+
+The command fails if either path is omitted, the PID is not running, either
+health endpoint is unhealthy, or no authenticated control-plane poll has
+completed. A profile-only `tunnel-client doctor` result is not sufficient for
+an unattended ChatGPT schedule.
 
 Do not use `npm start` as the tunnel's stdio command because package-manager
 output can corrupt MCP JSON-RPC. Do not put database, producer, or tunnel

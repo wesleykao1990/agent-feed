@@ -1,6 +1,6 @@
 # Milestone 5 modularity and refactor-debt audit
 
-Reviewed: 2026-08-18
+Reviewed: 2026-08-23
 
 ## Boundaries
 
@@ -27,6 +27,8 @@ Reviewed: 2026-08-18
 - [x] Docker actions expose only `up`, `stop`, and `status`; no volume removal
   path exists.
 - [x] Account-side tunnel and ChatGPT operations remain outside the module.
+- [x] Tunnel liveness probing composes the official client and validates its
+  structured result without owning tunnel credentials or control-plane state.
 - [x] Static and behavioral gates are separate and wired to clean-checkout CI.
 
 ## Deferred work, not immediate refactor debt

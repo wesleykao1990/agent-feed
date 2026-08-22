@@ -1,7 +1,7 @@
 # ChatGPT Scheduled Task MCP runbook
 
 Status: private development and acceptance path
-Reviewed: 2026-08-18
+Reviewed: 2026-08-23
 
 ChatGPT web Scheduled Tasks can use installed plugins and their connected MCP
 tools. Agent Feed uses OpenAI Secure MCP Tunnel for private acceptance testing
@@ -94,9 +94,32 @@ tunnel-client doctor --profile agent-feed-chatgpt --explain
 tunnel-client run --profile agent-feed-chatgpt
 ```
 
-Keep `tunnel-client run`, PostgreSQL, and the MCP child healthy for every
-scheduled occurrence. The tunnel admin UI, `/healthz`, `/readyz`, and metrics
-are operational evidence; do not log protocol payloads or secrets.
+Keep the tunnel daemon, PostgreSQL, and the MCP child healthy for every
+scheduled occurrence. `tunnel-client run` is a foreground acceptance path; it
+stops when its terminal or owning process ends. Use `tunnel-client runtimes
+connect` or an operating-system service supervisor for unattended schedules.
+The tunnel admin UI, `/healthz`, `/readyz`, and metrics are operational
+evidence; do not log protocol payloads or secrets.
+
+`tunnel-client doctor` validates the profile but does not prove that a daemon
+is currently polling. Before enabling a Scheduled Task, require the daemon
+PID, both health endpoints, and at least one authenticated control-plane poll.
+The supported Agent Feed gate invokes the tunnel client's structured health
+probe and fails closed if any signal is absent:
+
+```sh
+bin/agent-feed doctor \
+  --require-tunnel \
+  --tunnel-url-file /private/path/to/tunnel-health.url \
+  --tunnel-pid-file /private/path/to/tunnel-client.pid
+```
+
+On macOS, a login-persistent `launchd` service must set `RunAtLoad` and
+unconditional `KeepAlive`. A service-launched process does not inherit the
+interactive shell's Homebrew path, so either provide an explicit minimal
+`PATH` containing the installed Node.js directory or use a launcher with an
+absolute Node.js path. Keep the profile, PID file, and logs owner-readable
+only. Do not enable raw HTTP or MCP payload capture.
 
 If the tunnel is healthy but ChatGPT does not list it, re-open the Platform
 tunnel and confirm that both the Platform organization and the exact ChatGPT
@@ -201,3 +224,24 @@ outbox events (`run.started` and `run.completed`). The PostgreSQL receipt and
 terminal counts are the authoritative acceptance evidence; account IDs,
 runtime keys, producer secrets, and database credentials are intentionally not
 recorded here.
+
+## 2026-08-23 unattended-runtime incident
+
+A paused Rewards monitoring occurrence failed twice before `begin_run` issued
+a run ID. PostgreSQL contained no partial run. The installed MCP launcher then
+completed a fresh zero-finding V Point lifecycle, proving that protocol,
+authorization, and persistence were healthy. The missing boundary was the
+long-lived tunnel daemon: the previous foreground/managed process had stopped.
+
+The private macOS acceptance machine now runs the configured tunnel through a
+login-persistent `launchd` service. Initial supervision exposed and fixed two
+operator defects: `launchd` lacked the Homebrew Node.js path, and conditional
+`SuccessfulExit` keepalive did not restart a cleanly terminated daemon. The
+final service uses an explicit minimal path and unconditional keepalive. A
+forced-termination test produced a new PID and returned to `ready`; the
+authoritative health command also proved a live PID, `healthz`, `readyz`, and a
+successful authenticated control-plane poll. ChatGPT then completed
+zero-finding run `d6319150-cb23-4177-888f-529ff084d2c0` through the tunnel on
+stream `economy.vpoint-smbc`. PostgreSQL confirmed `completed` with zero
+batches, findings, evidence, and errors. The affected Scheduled Task was
+resumed after that receipt was verified.

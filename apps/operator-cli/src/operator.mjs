@@ -284,6 +284,45 @@ function commandExists(command) {
   return result.status === 0;
 }
 
+export function tunnelHealthArguments(urlFile, pidFile) {
+  if (typeof urlFile !== "string" || urlFile.length === 0 || typeof pidFile !== "string" || pidFile.length === 0) {
+    throw new OperatorError("tunnel_health_paths_required");
+  }
+  return [
+    "health",
+    "--url-file",
+    path.resolve(urlFile),
+    "--pid-file",
+    path.resolve(pidFile),
+    "--require-control-plane-poll",
+    "--json",
+  ];
+}
+
+export function tunnelHealthResultOk(result) {
+  if (result?.error || result?.status !== 0 || typeof result.stdout !== "string") return false;
+  try {
+    const payload = JSON.parse(result.stdout);
+    return payload?.result === "ok"
+      && payload?.process?.running === true
+      && payload?.healthz?.ok === true
+      && payload?.readyz?.ok === true
+      && payload?.control_plane_poll?.ok === true;
+  } catch {
+    return false;
+  }
+}
+
+function tunnelRuntimeHealthy(urlFile, pidFile, runCommand = spawnSync) {
+  const result = runCommand("tunnel-client", tunnelHealthArguments(urlFile, pidFile), {
+    encoding: "utf8",
+    maxBuffer: 262144,
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: 15000,
+  });
+  return tunnelHealthResultOk(result);
+}
+
 async function databaseReachable(databaseUrl, timeoutMs = 2000) {
   const parsed = new URL(databaseUrl);
   const port = Number(parsed.port || 5432);
@@ -324,7 +363,18 @@ export async function runDoctor(options = {}) {
   if (!options.offline && config) {
     record("PostgreSQL socket", await databaseReachable(config.database_url), "configured host and port");
   }
-  if (options.require_tunnel) record("tunnel-client", commandExists("tunnel-client"), "required for private ChatGPT setup");
+  if (options.require_tunnel) {
+    const binaryPresent = (options.command_exists ?? commandExists)("tunnel-client");
+    record("tunnel-client binary", binaryPresent, "required for private ChatGPT setup");
+    if (!options.tunnel_url_file || !options.tunnel_pid_file) {
+      record("tunnel runtime health", false, "provide --tunnel-url-file and --tunnel-pid-file");
+    } else if (!binaryPresent) {
+      record("tunnel runtime health", false, "tunnel-client binary unavailable");
+    } else {
+      const healthy = (options.tunnel_health_probe ?? tunnelRuntimeHealthy)(options.tunnel_url_file, options.tunnel_pid_file);
+      record("tunnel runtime health", healthy, "PID, live, ready, and authenticated control-plane poll");
+    }
+  }
   return checks;
 }
 

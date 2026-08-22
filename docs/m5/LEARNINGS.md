@@ -105,3 +105,32 @@ two-client test caught this integration behavior beyond the isolated SQL fake.
 the migration as complete without `VALIDATE CONSTRAINT` leaves historical rows
 outside the promised tenant boundary. The migration now validates before its
 ledger entry.
+
+## M5-L017 — Profile validity is not daemon liveness
+
+A tunnel profile can pass `doctor` while no process is polling the control
+plane. Scheduled-task readiness needs four independent observations: the
+expected PID is running, `healthz` is live, `readyz` is ready, and at least one
+authenticated control-plane poll has completed.
+
+## M5-L018 — Service environments are smaller than interactive shells
+
+Foreground success can hide an undeclared executable-path dependency.
+Supervised MCP launchers must either pin Node.js explicitly or declare the
+smallest safe `PATH`; they must not inherit the operator's full shell or secret
+environment.
+
+## M5-L019 — Restart policy must cover graceful exits
+
+A daemon can stop cleanly after its MCP child fails or receives a termination
+signal. A policy that restarts only nonzero exits does not provide scheduled
+task availability. Test recovery with a controlled termination and require a
+new top-level PID plus restored readiness.
+
+## M5-L020 — Binary presence is not a useful unattended-runtime gate
+
+An installed tunnel client can coexist with a stopped daemon. A release gate
+must consume structured runtime evidence and reject partial success: process
+running, live, ready, and authenticated control-plane polling are all required.
+The operator should return bounded check names rather than echoing raw tunnel
+output, which can contain deployment-specific paths or endpoints.

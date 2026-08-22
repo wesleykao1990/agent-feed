@@ -19,6 +19,8 @@ export function checkInstallabilityTexts({ compose, configuration, operator, cli
   requireText(operator, "const env = {}", "operator");
   requireText(operator, "stdio: \"inherit\"", "operator");
   requireText(operator, "mode: 0o700", "operator");
+  requireText(operator, "--require-control-plane-poll", "operator");
+  requireText(operator, "tunnelHealthResultOk", "operator");
   requireText(configuration, "validateDatabaseUrl", "operator configuration");
   requireText(configuration, "generateSecret", "operator configuration");
   requireText(configuration, "renderMcpWrapper", "operator configuration");
@@ -37,7 +39,7 @@ export function checkInstallabilityTexts({ compose, configuration, operator, cli
       failures.push(`environment example appears to contain a real secret in ${match.groups.name}`);
     }
   }
-  for (const marker of ["bin/agent-feed setup", "bin/agent-feed doctor", "explicit account-side", "never prints secrets"]) {
+  for (const marker of ["bin/agent-feed setup", "bin/agent-feed doctor", "--tunnel-url-file", "explicit account-side", "never prints secrets"]) {
     requireText(runbook, marker, "GitHub installation runbook");
   }
   if (!packageJson.scripts?.["m5:conformance"]) failures.push("root package is missing m5:conformance");
