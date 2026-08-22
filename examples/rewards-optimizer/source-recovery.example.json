@@ -100,7 +100,7 @@
   },
   "persistence": {
     "agent_feed_wire_payload": false,
-    "ledger_label_preservation": "not_claimed",
-    "note": "The current generic sidecar outcome enum does not accept the recovery labels; do not encode them into locator, digest, count, or claim fields."
+    "ledger_label_preservation": "recovery_detail",
+    "note": "A producer may append each exact recovery label as the nullable provider-neutral recovery_detail beside a coherent coarse outcome; this synthetic trace is not itself a database row or Agent Feed wire payload."
   }
 }

@@ -75,12 +75,14 @@ publisher, domain, title, and role-marker checks.
 This is producer recovery guidance, not a new Agent Feed protocol or crawler.
 Alternate locators remain leads until fetched and validated. LR-D006 remains
 in force: Agent Feed does not know family/role policy and does not decide
-support or canonical truth. The current target-attempt sidecar still accepts
-only its existing coarse outcome enum; this checkpoint intentionally does not
-pretend that enum preserves the six recovery labels. A lossless durable
-`recovery_outcome` field requires a separately reviewed additive migration and
-is outside this owned documentation/example scope. The producer must not
-smuggle that label through a locator, digest, count, or claim field.
+support or canonical truth. The additive `0009_target_attempt_recovery_detail`
+migration preserves the existing coarse target-attempt `outcome` and adds a
+nullable exact `recovery_detail`, with closed coarse/detail coherence checks,
+payload-hash/idempotency coverage, and latest/last-resolved projection output.
+Legacy callers remain valid with `recovery_detail: null`; the field is a
+provider-neutral ledger diagnostic, not a canonical finding/evidence or
+economic decision. The producer must not smuggle unsupported detail through a
+locator, digest, count, or claim field.
 
 The synthetic unresolved trace at
 `examples/rewards-optimizer/source-recovery.example.json` demonstrates two

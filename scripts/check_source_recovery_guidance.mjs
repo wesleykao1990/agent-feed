@@ -37,6 +37,8 @@ for (const marker of [
   "JavaScript-empty",
   "operator_capture_required",
   "publisher, domain, title, and role marker",
+  "recovery_detail",
+  "legacy null-detail hash fallback",
   "LR-D006",
 ]) requireText(recovery, marker, "SOURCE_RECOVERY.md");
 
@@ -75,6 +77,7 @@ if (example.terminal?.outcome !== "operator_capture_required" || example.termina
   failures.push("example: unresolved terminal must be operator_capture_required with resolved=false");
 }
 if (example.persistence?.agent_feed_wire_payload !== false) failures.push("example: must not be an Agent Feed wire payload");
+if (example.persistence?.ledger_label_preservation !== "recovery_detail") failures.push("example: exact labels must be represented by recovery_detail");
 
 const unsafe = /(?:https?:\/\/[^/\s]+@|[?#]|data:|(?:bearer|basic)[\s:=]+[A-Za-z0-9._~+/=-]{8,}|(?:api[_-]?key|access[_-]?key|password|secret|token|cookie)[\s:=/]+[^\s/]+)/iu;
 const serialized = JSON.stringify(example);

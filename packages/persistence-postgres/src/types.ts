@@ -855,6 +855,32 @@ export const TARGET_ATTEMPT_OUTCOMES = [
 ] as const;
 export type TargetAttemptOutcome = typeof TARGET_ATTEMPT_OUTCOMES[number];
 
+/** Exact provider-neutral source-recovery detail for one target attempt. */
+export const TARGET_ATTEMPT_RECOVERY_DETAILS = [
+  "http_failure",
+  "js_empty",
+  "marker_missing",
+  "partial_role",
+  "safety_rejected",
+  "resolved",
+] as const;
+export type TargetAttemptRecoveryDetail = typeof TARGET_ATTEMPT_RECOVERY_DETAILS[number];
+
+/**
+ * Recovery detail is finer-grained than the existing coarse outcome.  Keep
+ * this compatibility table provider-neutral and closed so a detail cannot
+ * turn a failed attempt into a resolution or smuggle domain policy into the
+ * sidecar.
+ */
+export const TARGET_ATTEMPT_RECOVERY_DETAIL_COMPATIBLE_OUTCOMES = Object.freeze({
+  http_failure: ["not_found", "access", "auth", "timeout"],
+  js_empty: ["unsupported", "validation_rejected"],
+  marker_missing: ["validation_rejected"],
+  partial_role: ["validation_rejected"],
+  safety_rejected: ["access", "auth", "validation_rejected"],
+  resolved: ["resolved"],
+} as const);
+
 /**
  * Append-only target-attempt input.  This is deliberately a sidecar contract:
  * none of these fields are part of protocol 0.1 or a provider/domain schema.
@@ -869,6 +895,7 @@ export interface TargetAttemptInput {
   idempotency_key: string;
   input_digest: string;
   outcome: TargetAttemptOutcome;
+  recovery_detail?: TargetAttemptRecoveryDetail | null;
   locator_digest?: string | null;
   locator_reference?: string | null;
   accepted_finding_count: number;
@@ -888,6 +915,7 @@ export interface TargetAttempt {
   payload_hash: string;
   input_digest: string;
   outcome: TargetAttemptOutcome;
+  recovery_detail: TargetAttemptRecoveryDetail | null;
   locator_digest: string | null;
   locator_reference: string | null;
   accepted_finding_count: number;

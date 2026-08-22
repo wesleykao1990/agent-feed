@@ -85,18 +85,20 @@ personal data, or secret-like values in a locator or attempt record. The
 producer may retain a short stable reason code, HTTP class, marker names, and
 digests, but not an unsafe excerpt.
 
-The current additive Agent Feed target-attempt sidecar has its own coarse
-`outcome` enum (`resolved`, `not_found`, `access`, `auth`, `timeout`,
-`unsupported`, `validation_rejected`, `interrupted`). The six recovery labels
-above are intentionally not silently collapsed into those values, and this
-task does not change the protected migration, TypeScript sidecar contract, or
-protocol `0.1`. Until an additive ledger field/version is approved, a producer
-must either use a host-owned recovery record that preserves the exact label or
-record only a truthful current coarse outcome; it must not encode the label in
-`locator_reference`, `locator_digest`, counts, or claim content. Therefore this
-document does not claim that the current sidecar durably persists the exact
-recovery vocabulary. Adding that lossless persistence requires a separately
-reviewed migration.
+The current additive Agent Feed target-attempt sidecar keeps its existing
+coarse `outcome` enum (`resolved`, `not_found`, `access`, `auth`, `timeout`,
+`unsupported`, `validation_rejected`, `interrupted`) and now also accepts a
+nullable `recovery_detail` with exactly the six labels above. The migration and
+TypeScript sidecar enforce provider-neutral coarse/detail coherence: `resolved`
+detail requires coarse `resolved`; each failure detail accepts only its
+documented non-resolved coarse classes. Old callers that omit the field remain
+valid and persist `null`. The detail participates in the canonical payload
+hash, idempotency conflict check, append-only row, and latest/last-resolved
+projections. It is a ledger diagnostic only; it does not change protocol `0.1`
+or decide source authority, family/role support, or economic truth.
+Rows written before the extension remain exact-retry compatible through the
+legacy null-detail hash fallback; new rows include the nullable field in their
+payload hash.
 
 ## Claims and run closure
 

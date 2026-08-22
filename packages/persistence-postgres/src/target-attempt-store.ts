@@ -9,9 +9,14 @@ import type {
   TargetAttemptInput,
   TargetAttemptListOptions,
   TargetAttemptOutcome,
+  TargetAttemptRecoveryDetail,
   TargetAttemptProjection,
 } from "./types.ts";
-import { TARGET_ATTEMPT_OUTCOMES } from "./types.ts";
+import {
+  TARGET_ATTEMPT_OUTCOMES,
+  TARGET_ATTEMPT_RECOVERY_DETAIL_COMPATIBLE_OUTCOMES,
+  TARGET_ATTEMPT_RECOVERY_DETAILS,
+} from "./types.ts";
 
 const MAX_IDENTIFIER_LENGTH = 512;
 const MAX_DIGEST_LENGTH = 64;
@@ -23,9 +28,10 @@ const DIGEST_PATTERN = /^[a-f0-9]{64}$/u;
 const TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/u;
 const SENSITIVE_LOCATOR_PATTERN = /(bearer|basic)[\s:=]+[A-Za-z0-9._~+/=-]{8,}|(?:api[_-]?key|access[_-]?key|credential|password|secret|signature|token)[\s:=/]+[^\s/]+/iu;
 
-type NormalizedTargetAttemptInput = Omit<Required<TargetAttemptInput>, "locator_digest" | "locator_reference"> & {
+type NormalizedTargetAttemptInput = Omit<Required<TargetAttemptInput>, "locator_digest" | "locator_reference" | "recovery_detail"> & {
   locator_digest: string | null;
   locator_reference: string | null;
+  recovery_detail: TargetAttemptRecoveryDetail | null;
 };
 
 interface DbTargetAttemptRow extends QueryResultRow {
@@ -40,6 +46,7 @@ interface DbTargetAttemptRow extends QueryResultRow {
   payload_hash: string;
   input_digest: string;
   outcome: TargetAttemptOutcome;
+  recovery_detail: TargetAttemptRecoveryDetail | null;
   locator_digest: string | null;
   locator_reference: string | null;
   accepted_finding_count: number | string;
@@ -113,6 +120,22 @@ function nullableLocator(value: unknown, field: string): string | null {
   return value;
 }
 
+function nullableRecoveryDetail(value: unknown, field: string): TargetAttemptRecoveryDetail | null {
+  if (value === null) return null;
+  if (typeof value !== "string" || !(TARGET_ATTEMPT_RECOVERY_DETAILS as readonly string[]).includes(value)) {
+    invalid(`${field} is not supported`, { field });
+  }
+  return value as TargetAttemptRecoveryDetail;
+}
+
+function assertRecoveryDetailCoherence(outcome: TargetAttemptOutcome, recoveryDetail: TargetAttemptRecoveryDetail | null): void {
+  if (recoveryDetail === null) return;
+  const compatible = TARGET_ATTEMPT_RECOVERY_DETAIL_COMPATIBLE_OUTCOMES[recoveryDetail] as readonly string[];
+  if (!compatible.includes(outcome)) {
+    invalid("recovery_detail is incompatible with outcome", { field: "recovery_detail", outcome, recovery_detail: recoveryDetail });
+  }
+}
+
 function positiveInteger(value: unknown, field: string): number {
   if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1 || value > MAX_INTEGER) invalid(`${field} must be a positive integer`, { field });
   return value;
@@ -134,11 +157,13 @@ function normalizeInput(input: TargetAttemptInput): NormalizedTargetAttemptInput
   const value = plainRecord(input, "target_attempt");
   exactKeys(value,
     ["job_deployment_id", "run_id", "work_unit_id", "target_id", "attempt_number", "idempotency_key", "input_digest", "outcome", "accepted_finding_count", "accepted_evidence_count", "attempted_at"],
-    ["tenant_id", "locator_digest", "locator_reference"],
+    ["tenant_id", "recovery_detail", "locator_digest", "locator_reference"],
     "target_attempt");
   const tenantId = Object.hasOwn(value, "tenant_id") ? text(value.tenant_id, "tenant_id") : "default";
   const outcome = value.outcome;
   if (typeof outcome !== "string" || !(TARGET_ATTEMPT_OUTCOMES as readonly string[]).includes(outcome)) invalid("outcome is not supported", { field: "outcome" });
+  const recoveryDetail = Object.hasOwn(value, "recovery_detail") ? nullableRecoveryDetail(value.recovery_detail, "recovery_detail") : null;
+  assertRecoveryDetailCoherence(outcome as TargetAttemptOutcome, recoveryDetail);
   const locatorDigest = Object.hasOwn(value, "locator_digest") ? nullableDigest(value.locator_digest, "locator_digest") : null;
   const locatorReference = Object.hasOwn(value, "locator_reference") ? nullableLocator(value.locator_reference, "locator_reference") : null;
   return {
@@ -151,6 +176,7 @@ function normalizeInput(input: TargetAttemptInput): NormalizedTargetAttemptInput
     idempotency_key: text(value.idempotency_key, "idempotency_key"),
     input_digest: digest(value.input_digest, "input_digest"),
     outcome: outcome as TargetAttemptOutcome,
+    recovery_detail: recoveryDetail,
     locator_digest: locatorDigest,
     locator_reference: locatorReference,
     accepted_finding_count: count(value.accepted_finding_count, "accepted_finding_count"),
@@ -184,6 +210,7 @@ function mapAttempt(row: DbTargetAttemptRow): TargetAttempt {
     payload_hash: row.payload_hash,
     input_digest: row.input_digest,
     outcome: row.outcome,
+    recovery_detail: row.recovery_detail,
     locator_digest: row.locator_digest,
     locator_reference: row.locator_reference,
     accepted_finding_count: integer(row.accepted_finding_count, "accepted_finding_count"),
@@ -205,12 +232,24 @@ function mapDatabaseError(error: unknown): never {
 }
 
 const ATTEMPT_COLUMNS = `id, tenant_id, job_deployment_id, run_id, work_unit_id, target_id,
-  attempt_number, idempotency_key, payload_hash, input_digest, outcome,
+  attempt_number, idempotency_key, payload_hash, input_digest, outcome, recovery_detail,
   locator_digest, locator_reference, accepted_finding_count, accepted_evidence_count,
   attempted_at, recorded_at`;
 
 function lockKey(input: NormalizedTargetAttemptInput): string {
   return [input.tenant_id, input.job_deployment_id, input.run_id, input.work_unit_id, input.target_id].join("\u001f");
+}
+
+function attemptPayloadHash(input: NormalizedTargetAttemptInput): string {
+  return payloadHash(input as unknown as Record<string, unknown>);
+}
+
+function legacyAttemptPayloadHash(input: NormalizedTargetAttemptInput): string | null {
+  if (input.recovery_detail !== null) return null;
+  // Rows written before migration 0009 were hashed without the nullable
+  // extension. Keep those exact retries valid while new rows hash the field.
+  const { recovery_detail: _recoveryDetail, ...legacyCompatible } = input;
+  return payloadHash(legacyCompatible as unknown as Record<string, unknown>);
 }
 
 function projection(
@@ -240,7 +279,8 @@ export class PostgresTargetAttemptRepository {
 
   async appendTargetAttempt(input: TargetAttemptInput): Promise<AppendTargetAttemptResult> {
     const normalized = normalizeInput(input);
-    const hash = payloadHash(normalized as unknown as Record<string, unknown>);
+    const hash = attemptPayloadHash(normalized);
+    const legacyHash = legacyAttemptPayloadHash(normalized);
     const client = await this.pool.connect();
     let transactionFailed = false;
     let transactionError: unknown;
@@ -285,7 +325,9 @@ export class PostgresTargetAttemptRepository {
       );
       if (existing.rows[0]) {
         const attempt = existing.rows[0];
-        if (attempt.payload_hash !== hash) throw new PersistenceError("idempotency_payload_conflict", "target attempt idempotency key was reused with a different payload", { idempotency_key: normalized.idempotency_key });
+        if (attempt.payload_hash !== hash && attempt.payload_hash !== legacyHash) {
+          throw new PersistenceError("idempotency_payload_conflict", "target attempt idempotency key was reused with a different payload", { idempotency_key: normalized.idempotency_key });
+        }
         const mapped = mapAttempt(attempt);
         const state = await this.projectionWithClient(client, normalized);
         await client.query("commit");
@@ -310,13 +352,13 @@ export class PostgresTargetAttemptRepository {
         `insert into agent_feed.target_attempts (
            id, tenant_id, job_deployment_id, run_id, work_unit_id, target_id,
            attempt_number, idempotency_key, payload_hash, input_digest, outcome,
-           locator_digest, locator_reference, accepted_finding_count, accepted_evidence_count, attempted_at
-         ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+           recovery_detail, locator_digest, locator_reference, accepted_finding_count, accepted_evidence_count, attempted_at
+         ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
          returning ${ATTEMPT_COLUMNS}`,
         [randomUUID(), normalized.tenant_id, normalized.job_deployment_id, normalized.run_id, normalized.work_unit_id,
           normalized.target_id, normalized.attempt_number, normalized.idempotency_key, hash, normalized.input_digest,
-          normalized.outcome, normalized.locator_digest, normalized.locator_reference, normalized.accepted_finding_count,
-          normalized.accepted_evidence_count, normalized.attempted_at],
+          normalized.outcome, normalized.recovery_detail, normalized.locator_digest, normalized.locator_reference,
+          normalized.accepted_finding_count, normalized.accepted_evidence_count, normalized.attempted_at],
       );
       const row = inserted.rows[0];
       if (!row) throw new PersistenceError("storage_error", "target attempt insert returned no row");

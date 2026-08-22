@@ -311,30 +311,55 @@ export const ASSESSMENT_MIGRATION_SQL_URL = JOB_PROOF_MIGRATION_SQL_URL;
 export const JOB_REGISTRY_MIGRATION_SQL_URL = new URL("../migrations/0006_job_registry.sql", import.meta.url);
 export const UTILITY_FEEDBACK_MIGRATION_SQL_URL = new URL("../migrations/0007_utility_feedback.sql", import.meta.url);
 export const TARGET_ATTEMPT_LEDGER_MIGRATION_SQL_URL = new URL("../migrations/0008_target_attempt_ledger.sql", import.meta.url);
+export const TARGET_ATTEMPT_RECOVERY_DETAIL_MIGRATION_SQL_URL = new URL("../migrations/0009_target_attempt_recovery_detail.sql", import.meta.url);
+
+type OrderedMigration = { version: string; sql: string };
+
+async function appliedMigrationVersions(client: PoolClient): Promise<Set<string>> {
+  try {
+    const result = await client.query<{ version: string }>(
+      "select version from agent_feed.schema_migrations",
+    );
+    return new Set(result.rows.map((row) => row.version));
+  } catch (error) {
+    const code = typeof error === "object" && error !== null && "code" in error
+      ? String((error as { code: unknown }).code)
+      : "";
+    if (code === "42P01") return new Set();
+    throw error;
+  }
+}
 
 /** Apply the ordered foundation and sidecar migrations. */
 export async function migrateAgentFeed(pool: PgPool, sql?: string): Promise<void> {
-  const migrations = sql === undefined
+  const migrations: OrderedMigration[] = sql === undefined
     ? [
-      await readFile(MIGRATION_SQL_URL, "utf8"),
-      await readFile(DELIVERY_MIGRATION_SQL_URL, "utf8"),
-      await readFile(WIRE_RUN_ID_MIGRATION_SQL_URL, "utf8"),
-      await readFile(OCCURRENCE_LEDGER_MIGRATION_SQL_URL, "utf8"),
-      await readFile(JOB_PROOF_MIGRATION_SQL_URL, "utf8"),
-      await readFile(JOB_REGISTRY_MIGRATION_SQL_URL, "utf8"),
-      await readFile(UTILITY_FEEDBACK_MIGRATION_SQL_URL, "utf8"),
-      await readFile(TARGET_ATTEMPT_LEDGER_MIGRATION_SQL_URL, "utf8"),
+      { version: "0001_agent_feed", sql: await readFile(MIGRATION_SQL_URL, "utf8") },
+      { version: "0002_durable_delivery", sql: await readFile(DELIVERY_MIGRATION_SQL_URL, "utf8") },
+      { version: "0003_wire_run_id", sql: await readFile(WIRE_RUN_ID_MIGRATION_SQL_URL, "utf8") },
+      { version: "0004_occurrence_ledger", sql: await readFile(OCCURRENCE_LEDGER_MIGRATION_SQL_URL, "utf8") },
+      { version: "0005_job_proof", sql: await readFile(JOB_PROOF_MIGRATION_SQL_URL, "utf8") },
+      { version: "0006_job_registry", sql: await readFile(JOB_REGISTRY_MIGRATION_SQL_URL, "utf8") },
+      { version: "0007_utility_feedback", sql: await readFile(UTILITY_FEEDBACK_MIGRATION_SQL_URL, "utf8") },
+      { version: "0008_target_attempt_ledger", sql: await readFile(TARGET_ATTEMPT_LEDGER_MIGRATION_SQL_URL, "utf8") },
+      { version: "0009_target_attempt_recovery_detail", sql: await readFile(TARGET_ATTEMPT_RECOVERY_DETAIL_MIGRATION_SQL_URL, "utf8") },
     ]
-    : [sql];
+    : [{ version: "", sql }];
   // Two application processes may start against an empty database at the same
   // time.  PostgreSQL DDL/function replacement can deadlock without a single
   // migration session, so serialize this short startup critical section.
   const client = await pool.connect();
   try {
     await client.query("select pg_advisory_lock(hashtextextended('agent_feed:migrations', 0))");
+    const applied = sql === undefined ? await appliedMigrationVersions(client) : new Set<string>();
     for (const migration of migrations) {
+      // 0009 appends a column to the 0008 views. Replaying 0008 after that
+      // would try to remove the appended column; preserve all other legacy
+      // migration replay behavior, including 0004's quarantine backfill.
+      if (migration.version === "0008_target_attempt_ledger" && applied.has(migration.version)) continue;
       // \set is a psql client directive and must not be sent through pg's protocol.
-      await client.query(migration.replace(/^\\set ON_ERROR_STOP on\s*/u, ""));
+      await client.query(migration.sql.replace(/^\\set ON_ERROR_STOP on\s*/u, ""));
+      if (migration.version !== "") applied.add(migration.version);
     }
   } finally {
     try { await client.query("select pg_advisory_unlock(hashtextextended('agent_feed:migrations', 0))"); } catch { /* preserve migration failure */ }

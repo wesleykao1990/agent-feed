@@ -4,6 +4,7 @@ export {
   JOB_REGISTRY_MIGRATION_SQL_URL,
   UTILITY_FEEDBACK_MIGRATION_SQL_URL,
   TARGET_ATTEMPT_LEDGER_MIGRATION_SQL_URL,
+  TARGET_ATTEMPT_RECOVERY_DETAIL_MIGRATION_SQL_URL,
   ASSESSMENT_MIGRATION_SQL_URL,
   MIGRATION_SQL_URL,
   OCCURRENCE_MIGRATION_SQL_URL,
@@ -131,10 +132,15 @@ export type {
   JobDeploymentBindingVersion,
   JobRegistryListOptions,
   TargetAttemptOutcome,
+  TargetAttemptRecoveryDetail,
   TargetAttemptInput,
   TargetAttempt,
   TargetAttemptProjection,
   AppendTargetAttemptResult,
   TargetAttemptListOptions,
 } from "./types.ts";
-export { TARGET_ATTEMPT_OUTCOMES } from "./types.ts";
+export {
+  TARGET_ATTEMPT_OUTCOMES,
+  TARGET_ATTEMPT_RECOVERY_DETAILS,
+  TARGET_ATTEMPT_RECOVERY_DETAIL_COMPATIBLE_OUTCOMES,
+} from "./types.ts";
