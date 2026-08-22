@@ -5,21 +5,20 @@ yet claimed**
 
 ## Evidence reviewed
 
-Rewards Optimizer `origin/main` commit `3b51de3` contains
-`docs/reviews/p0-provisional-agent-feed-rehearsal-2026-08-21.md`. The rehearsal
-proved one exact `merchant.7eleven / accepted_payment_methods` path:
+The prior rehearsal proved one exact synthetic target path:
 
 1. validate a local protocol `0.1` run bundle;
-2. map one finding into an untrusted observation;
+2. map one finding into an explicitly untrusted observation;
 3. retain submitted evidence as lead-only;
-4. admit one under-review experimental candidate; and
-5. remove it from selection after a credible correction.
+4. record one bounded target attempt; and
+5. preserve a later correction without publishing domain truth.
 
-It did not prove broad P0 coverage. Its own next-step record says 44 source
-families require explicit producer inputs, truthful family-role coverage,
-deterministic support checks, extractor authenticity, and correction
-adjudication. Those remain Rewards consumer and producer responsibilities;
-Agent Feed must carry their outputs without inventing them.
+It did not prove broad target coverage. A larger cohort still requires explicit
+producer inputs, truthful locator/marker validation, deterministic extraction,
+authenticity checks, and correction handling. Those remain producer and
+downstream-consumer responsibilities; Agent Feed records attempts and
+transports untrusted findings/evidence without deciding downstream support or
+publishing domain truth.
 
 ## Transport gap found
 
@@ -56,7 +55,7 @@ locator material, and generic outcomes. A tenant-scoped immutable run-to-
 deployment binding proves that all attempts in a run use one registered job
 deployment. Derived latest and last-resolved projections preserve a prior
 resolution when a later retry fails. This ledger does not change protocol
-`0.1`, job scheduling, or domain/economic semantics.
+`0.1`, job scheduling, or downstream-domain semantics.
 
 ## Generic source recovery
 
@@ -70,24 +69,19 @@ credentials/cookies, CAPTCHA, WAF bypass, search snippets as evidence, and
 invented claims. Each attempt has one of the generic recovery results
 `http_failure`, `js_empty`, `marker_missing`, `partial_role`,
 `safety_rejected`, or `resolved`; a resolved candidate must pass the configured
-publisher, domain, title, and role-marker checks.
+publisher, domain, title, and marker checks.
 
 This is producer recovery guidance, not a new Agent Feed protocol or crawler.
 Alternate locators remain leads until fetched and validated. LR-D006 remains
-in force: Agent Feed does not know family/role policy and does not decide
-support or canonical truth. The additive `0009_target_attempt_recovery_detail`
+in force: Agent Feed records attempts/findings/evidence but does not decide
+downstream product support, source authority, or canonical truth. The additive `0009_target_attempt_recovery_detail`
 migration preserves the existing coarse target-attempt `outcome` and adds a
 nullable exact `recovery_detail`, with closed coarse/detail coherence checks,
 payload-hash/idempotency coverage, and latest/last-resolved projection output.
 Legacy callers remain valid with `recovery_detail: null`; the field is a
 provider-neutral ledger diagnostic, not a canonical finding/evidence or
-economic decision. The producer must not smuggle unsupported detail through a
+downstream-domain decision. The producer must not smuggle unsupported detail through a
 locator, digest, count, or claim field.
-
-The synthetic unresolved trace at
-`examples/rewards-optimizer/source-recovery.example.json` demonstrates two
-credential-free locator inputs, ordered attempt outcomes, and explicit operator
-capture without claiming a real source or economic result.
 
 Input order, fixed `submitted_at`, metadata, limits, and content are part of
 plan identity. Replaying those exact inputs produces byte-equal requests.
@@ -98,7 +92,7 @@ Changing any of them is a new plan, not a resume.
 - no protocol `0.1` schema change;
 - no larger ingress or database limits;
 - no automatic run completion;
-- no domain family/role vocabulary in Agent Feed;
+- no provider/domain support vocabulary in Agent Feed;
 - no automatic crawler, scheduler, or canonical-evidence promotion;
 - no claim that 250 synthetic units establish sustained production throughput;
   and
@@ -109,9 +103,9 @@ Changing any of them is a new plan, not a resume.
 
 The synthetic live PostgreSQL gate proves 250 findings and evidence records
 across three batches plus exact terminal retry. It is durability evidence, not
-a throughput benchmark. Use the authorized 44-family producer inputs when
-available to run a live rehearsal through durable REST. Record total bytes, batches,
-rate-limit delay, transient retries, database latency, delivery backlog,
-consumer review yield, and interruption recovery. Production scale requires a
-shared limiter or gateway for multiple API replicas; the built-in limiter is
-process-local by design.
+a throughput benchmark. Use an authorized target cohort when available to run a
+live rehearsal through durable REST. Record total bytes, batches, rate-limit
+delay, transient retries, database latency, delivery backlog, downstream review
+yield, and interruption recovery. Production scale requires a shared limiter or
+gateway for multiple API replicas; the built-in limiter is process-local by
+design.

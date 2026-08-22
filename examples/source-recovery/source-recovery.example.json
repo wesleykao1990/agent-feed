@@ -1,5 +1,7 @@
 {
-  "contract": "agent-feed.source-recovery.v0",
+  "example_scope": "consumer_owned_optional",
+  "not_generic_agent_feed_contract": true,
+  "contract": "consumer-owned.source-recovery.example.v0",
   "synthetic": true,
   "trust": "untrusted",
   "target": {
@@ -61,7 +63,7 @@
         "publisher": true,
         "domain": true,
         "title": false,
-        "role_marker": false
+        "marker": false
       }
     },
     {
@@ -74,7 +76,7 @@
         "publisher": true,
         "domain": true,
         "title": true,
-        "role_marker": false
+        "marker": false
       }
     },
     {

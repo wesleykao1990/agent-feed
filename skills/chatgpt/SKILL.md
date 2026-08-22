@@ -133,10 +133,12 @@ Record every attempt and its generic recovery result (`http_failure`,
 `js_empty`, `marker_missing`, `partial_role`, `safety_rejected`, or
 `resolved`) in the producer's target-attempt workflow. Alternate locators are
 discovery leads until fetched and validated for publisher, domain, title, and
-the configured role marker. Agent Feed remains provider/domain neutral; it does
-not decide family/role support, source authority, canonical truth, or economic
-validity. See the source-recovery document for the current ledger compatibility
-boundary; do not encode a recovery label into a locator, hash, count, or claim.
+the configured marker. Agent Feed remains provider/domain neutral: it records
+attempts and transports untrusted findings/evidence, but does not decide
+downstream product support, source authority, canonical truth, or publish
+domain truth. See the source-recovery document for the current ledger
+compatibility boundary; do not encode a recovery label into a locator, hash,
+count, or claim.
 
 ## Structured Rewards claims
 

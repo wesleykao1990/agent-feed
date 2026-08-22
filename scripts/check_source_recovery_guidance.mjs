@@ -14,7 +14,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const recoveryPath = resolve(ROOT, "skills/chatgpt/SOURCE_RECOVERY.md");
 const skillPath = resolve(ROOT, "skills/chatgpt/SKILL.md");
 const scalingPath = resolve(ROOT, "docs/25_p0_large_run_scaling.md");
-const examplePath = resolve(ROOT, "examples/rewards-optimizer/source-recovery.example.json");
+const examplePath = resolve(ROOT, "examples/source-recovery/source-recovery.example.json");
 
 const recovery = readFileSync(recoveryPath, "utf8");
 const skill = readFileSync(skillPath, "utf8");
@@ -36,7 +36,7 @@ for (const marker of [
   "static, PDF, language, or CDN",
   "JavaScript-empty",
   "operator_capture_required",
-  "publisher, domain, title, and role marker",
+  "publisher, domain, title, and marker",
   "recovery_detail",
   "legacy null-detail hash fallback",
   "LR-D006",
@@ -58,8 +58,22 @@ for (const marker of [
 requireText(scaling, "operator_capture_required", "docs/25_p0_large_run_scaling.md");
 requireText(scaling, "does not decide", "docs/25_p0_large_run_scaling.md");
 
+for (const forbidden of [
+  "Rewards",
+  "examples/rewards-optimizer",
+  "structured Rewards",
+  "family/role policy",
+  "role-marker",
+]) {
+  if (recovery.includes(forbidden) || scaling.includes(forbidden)) {
+    failures.push(`generic guidance must not contain ${forbidden}`);
+  }
+}
+
 if (example.synthetic !== true) failures.push("example: synthetic must be true");
 if (example.trust !== "untrusted") failures.push("example: trust must be untrusted");
+if (example.example_scope !== "consumer_owned_optional") failures.push("example: must be explicitly consumer-owned and optional");
+if (example.not_generic_agent_feed_contract !== true) failures.push("example: must be marked outside the generic Agent Feed contract");
 if (!example.target || !Array.isArray(example.target.locators) || example.target.locators.length !== 2) {
   failures.push("example: exactly two locator inputs are required");
 }
