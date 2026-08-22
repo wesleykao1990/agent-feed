@@ -40,9 +40,10 @@ architecture 4, live PostgreSQL 3, delivery-core 18, delivery-consumer 10,
 persistence 11, webhook 8, worker 6, and API 5. The corrected serialized live
 PostgreSQL gate and all seven clean package installs/builds/tests pass. Hosted
 GitHub Actions CI run #5 also passed on draft PR #2 for commit `ad4ea3a`. The
-API remains transport-neutral with no deployable HTTP server; the
-worker has no production process/CLI entrypoint, and observability
-exporter/deployment work remains future operational scope.
+API remains transport-neutral with no deployable HTTP server; the worker now
+has a bounded process/CLI entrypoint with owner-only signing-key reference
+resolution, and observability exporter/deployment work remains future
+operational scope.
 
 ## Namespacing
 

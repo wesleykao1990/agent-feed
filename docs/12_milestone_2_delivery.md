@@ -5,14 +5,14 @@ Status: **implementation gate complete in this repository; operational follow-up
 This document is the canonical design and status record for Agent Feed
 Milestone 2. The current branch contains the protocol runtime, pure delivery
 core, consumer service, PostgreSQL delivery repository/outbox, webhook adapter,
-worker composition, transport-neutral API handlers, and explicit `0001`,
+worker composition and bounded worker CLI, transport-neutral API handlers, and explicit `0001`,
 `0002`, then `0003` migration loading. The combined acceptance is green: architecture 4,
 pure conformance 6, live PostgreSQL 3, protocol-runtime 5, delivery-core 18,
-delivery-consumer 10, persistence 11, webhook adapter 8, worker 6, and API 5.
+delivery-consumer 10, persistence 11, webhook adapter 8, worker 10, and API 5.
 All seven M2 packages/applications have clean installs, builds, and tests. The
-API remains transport-neutral without a deployable HTTP server; the worker has
-no production process/CLI entrypoint; and observability exporter/deployment
-remains future operational work. The repository workflow installs/builds/tests
+API remains transport-neutral without a deployable HTTP server; the worker now
+has a bounded process/CLI entrypoint with secret-reference resolution; and
+observability exporter/deployment remains future operational work. The repository workflow installs/builds/tests
 all seven with live PostgreSQL; GitHub Actions CI run #5 passed on draft PR #2
 for commit `ad4ea3a`.
 
@@ -148,11 +148,11 @@ Owns process lifecycle, queue claiming, lease renewal, webhook transport,
 signing-key selection, retry scheduling, graceful shutdown, and metrics
 export. It consumes `delivery-core` ports and does not issue SQL directly.
 `apps/delivery-worker` now provides the composition root, protocol signer,
-webhook retry bridge, recovery-before-claim cycle, and abortable loop. Its 6/6
-tests, clean install, and TypeScript build pass. It has no production
-deployment/CLI entrypoint; the live PostgreSQL acceptance covers repository
-lease/retry/replay behavior, while an external endpoint deployment remains
-future operational work. The pure worker remains in
+webhook retry bridge, recovery-before-claim cycle, abortable loop, bounded
+one-shot CLI, and owner-only signing-key-file resolver. Its focused tests,
+clean install, and TypeScript build pass. The live PostgreSQL acceptance covers
+repository lease/retry/replay behavior, while an external endpoint deployment
+remains future operational work. The pure worker remains in
 `packages/delivery-core/src/worker.ts`.
 
 ### `apps/delivery-api/`
@@ -357,8 +357,8 @@ live PostgreSQL URL. GitHub Actions CI run #5 passed on draft PR #2 for commit
 The following are accepted nonblocking scope caveats, not failed M2 evidence:
 
 - `apps/delivery-api` is transport-neutral and has no deployable HTTP server;
-- `apps/delivery-worker` has no production process/CLI entrypoint or hosted
-  external webhook deployment;
+- `apps/delivery-worker` has a bounded process/CLI entrypoint; hosted external
+  webhook deployment remains operational work;
 - observability exporter/deployment remains future operational work;
 - migration loading is explicitly `0001_agent_feed.sql`,
   `0002_durable_delivery.sql`, then `0003_wire_run_id.sql`, rather than

@@ -92,13 +92,14 @@ with tested legacy compatibility.
 Milestone 2 status: **implementation gate complete in this repository**. The
 corrected full acceptance is green: architecture 4, pure conformance 6, live
 PostgreSQL 3, protocol-runtime 5, delivery-core 18, delivery-consumer 10,
-persistence 11, webhook adapter 8, delivery worker 6, and delivery API 5.
+persistence 11, webhook adapter 8, delivery worker 10, and delivery API 5.
 All seven M2 packages/applications pass clean installs, builds, and tests.
 M2-023 through M2-038 and M2-L027 through M2-L042 are resolved in the
 append-only bug/learning logs. The
 delivery API remains transport-neutral (there is no deployable HTTP server),
-the worker has no production process/CLI entrypoint, and observability
-exporter/deployment work remains future operational work. The migration loader
+and observability exporter/deployment work remains future operational work. The
+worker now has a bounded, secret-reference-based process/CLI entrypoint; hosted
+endpoint deployment remains operational work. The migration loader
 is intentionally explicit for `0001_agent_feed.sql`,
 `0002_durable_delivery.sql`, then `0003_wire_run_id.sql`.
 
@@ -124,7 +125,7 @@ apps/mcp-server
 apps/mcp-http (authenticated Streamable HTTP and optional OAuth PKCE pilot)
 apps/api
 apps/delivery-api (transport-neutral handlers; no HTTP server)
-apps/delivery-worker (composition foundation; no production entrypoint yet)
+apps/delivery-worker (durable worker composition and bounded CLI entrypoint)
 packages/operations-core (pure retention/audit contracts)
 packages/operations-observability (bounded metrics/Prometheus contract)
 packages/operations-postgres (PostgreSQL operations adapter)

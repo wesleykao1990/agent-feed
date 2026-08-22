@@ -43,7 +43,8 @@ identity. Consumers reject stale timestamps and record the event before
 returning success. The M2 consumer service, live PostgreSQL repository, webhook
 adapter, and worker composition pass the implementation gate; the
 transport-neutral `apps/delivery-api` remains without a deployable HTTP server
-and the worker remains without a production process/CLI entrypoint. The
+and `apps/delivery-worker` now provides a bounded process/CLI entrypoint with
+owner-only signing-key reference resolution. The
 generated finding
 events precede one terminal event (`run.completed`, `run.partial`, or
 `run.failed`); cancellation remains represented by the terminal payload while

@@ -19,10 +19,12 @@
   },
   "scripts": {
     "build": "tsc --noEmit",
+    "start": "node --experimental-strip-types src/main.ts",
     "test": "node --experimental-strip-types --test test/*.test.ts"
   },
   "dependencies": {
     "@agent-feed/delivery-core": "file:../../packages/delivery-core",
+    "@agent-feed/persistence-postgres": "file:../../packages/persistence-postgres",
     "@agent-feed/protocol-runtime": "file:../../packages/protocol-runtime",
     "@agent-feed/webhook-adapter": "file:../../packages/webhook-adapter"
   },

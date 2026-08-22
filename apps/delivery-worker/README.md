@@ -1,12 +1,48 @@
 # Agent Feed delivery worker
 
-Status: **composition and integration boundary accepted; production process
-deployment remains future operational work.**
+Status: **durable worker composition and a bounded production-shaped process
+entrypoint are implemented; deployment hosting remains operational work.**
 
-This is the composition root for outbound delivery. It wires the existing
-delivery-core state machine to the protocol runtime signer and the injected
-webhook transport. It contains no SQL, `pg`, HTTP server, subscription/domain
-logic, or secret-manager implementation.
+This is the composition root and process entrypoint for outbound delivery. It
+wires the existing delivery-core state machine to the PostgreSQL delivery
+repository, protocol runtime signer, and injected webhook transport. The
+worker still contains no SQL or alternate delivery state machine: PostgreSQL
+claims/leases and the delivery-core worker remain the durable source of truth.
+
+Run one bounded recovery-and-claim cycle from the repository root with:
+
+```sh
+npm --prefix apps/delivery-worker start -- --once \
+  --database-url-file .runtime/agent-feed/database-url \
+  --tenant-id rewards-local \
+  --consumer-id rewards-optimizer \
+  --signing-keys-file .runtime/agent-feed/delivery-keys.json
+```
+
+Omit `--once` for the abortable polling loop. The equivalent environment
+variables are documented by `npm --prefix apps/delivery-worker start -- --help`.
+The command prints only bounded counters and stable error codes; it never
+prints database URLs, endpoint URLs, event payloads, or signing key material.
+
+The key file is an owner-only JSON map keyed by the subscription's
+`signing_secret_ref`:
+
+```json
+{
+  "rewards-optimizer-key-2026": {
+    "secret": "stored-outside-source-control"
+  }
+}
+```
+
+The loader rejects symlinks, group/other-readable files, malformed entries,
+and unsafe key references. A deployment can replace the file resolver with a
+secret-manager-backed `DeliveryKeyResolver`; the worker contract is the same.
+
+The subscription owns stream and event-type selection. This means terminal
+protocol events (`run.completed`, `run.partial`, and `run.failed`) are
+delivered for a rewards stream when that durable subscription selects them;
+Agent Feed does not contain rewards-specific source or rule logic.
 
 `ProtocolDeliverySigner` maps the internal camelCase event to the exact
 snake_case protocol-0.1 body. The body is canonicalized and signed as the
@@ -37,7 +73,10 @@ not mutate or recompute that source-event value. On retry, only the envelope
 attempt changes, so the signed raw bytes and HMAC legitimately change while
 the event ID, occurrence time, payload, and source payload hash remain stable.
 
-The package has 6/6 tests, a clean install, and a clean TypeScript build. The
-combined live PostgreSQL suite validates repository lease/retry/replay
-behavior, while this package intentionally remains a composition root without
-a CLI/process entrypoint or hosted webhook deployment.
+The package tests the signer, retry bridge, loop, key-reference resolver, CLI
+argument/config boundary, and summary output. The combined live PostgreSQL
+suite validates repository lease/retry/replay behavior. A local one-shot run
+is bounded and replay-safe: the worker recovers expired leases, claims due
+rows with `SKIP LOCKED`, sends the signed event, and acknowledges by the
+existing `(subscription_id,event_id)` durable identity. External endpoint
+hosting and secret-manager deployment remain operational work.
