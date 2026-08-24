@@ -38,14 +38,18 @@ test("submit_bounded_run is published on the remote surface with server-managed 
   const descriptor = toolDescriptor("submit_bounded_run");
   const schema = descriptor.inputSchema;
   assert.deepEqual(schema.required, ["begin", "batches", "complete"]);
-  const properties = schema.properties as Record<string, Record<string, unknown>>;
-  const batchItems = properties.batches.items as Record<string, unknown>;
+  const properties = schema.properties as Record<string, Record<string, unknown> | undefined>;
+  const batches = properties.batches;
+  const complete = properties.complete;
+  assert.ok(batches);
+  assert.ok(complete);
+  const batchItems = batches.items as Record<string, unknown>;
   const batchProperties = batchItems.properties as Record<string, unknown>;
-  const completeProperties = (properties.complete.properties ?? {}) as Record<string, unknown>;
+  const completeProperties = (complete.properties ?? {}) as Record<string, unknown>;
   assert.equal(Object.hasOwn(batchProperties, "run_id"), false);
   assert.equal(Object.hasOwn(completeProperties, "run_id"), false);
   assert.equal((batchItems.required as unknown[]).includes("run_id"), false);
-  assert.equal((properties.complete.required as unknown[]).includes("run_id"), false);
+  assert.equal((complete.required as unknown[]).includes("run_id"), false);
 });
 
 test("submit_bounded_run executes begin, batches, completion and injects returned run_id", async () => {
