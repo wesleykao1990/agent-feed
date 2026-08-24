@@ -64,8 +64,6 @@ function safeResult(value: unknown): { text: string; structured?: unknown; faile
   try {
     const serialized = JSON.stringify(value);
     if (serialized === undefined) return { text: "null" };
-    // Parse the serialized form back so the response cannot retain a cyclic
-    // object, BigInt, function, or custom `toJSON` value from an adapter fake.
     return { text: serialized, structured: JSON.parse(serialized) as unknown };
   } catch {
     return { text: JSON.stringify({ error: "internal_error" }), failed: true };
@@ -93,8 +91,6 @@ function containsSecretControlKey(value: unknown): boolean {
 
 function toolArguments(value: unknown): Record<string, unknown> {
   if (!isRecord(value)) throw invalidParams("Invalid params", { error: "invalid_tool_arguments" });
-  // Authentication belongs to the composition root. Do not pass a caller's
-  // attempted credential field to the producer service or echo it in errors.
   if (containsSecretControlKey(value)) {
     throw invalidParams("Invalid params", { error: "authentication_fields_are_not_tool_arguments" });
   }
@@ -110,7 +106,7 @@ function requireRunId(value: Record<string, unknown>): string {
 
 function returnedRunId(value: unknown): string {
   if (!isRecord(value) || typeof value.run_id !== "string" || value.run_id.length === 0) {
-    throw new ProducerServiceError("internal_error", "begin_run did not return a run_id");
+    throw new ProducerServiceError("storage_error", "begin_run did not return a run_id");
   }
   return value.run_id;
 }
@@ -136,11 +132,6 @@ function boundedParts(value: Record<string, unknown>): {
   };
 }
 
-/**
- * Tool-level adapter for the existing producer application service. It does
- * not validate or persist protocol records itself; the service remains the
- * sole lifecycle policy boundary.
- */
 export class LifecycleToolRouter {
   readonly service: ProducerServiceBoundary;
   readonly #injectedPrincipal: ProducerPrincipal | undefined;
