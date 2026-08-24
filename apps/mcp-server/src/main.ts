@@ -6,9 +6,9 @@ import {
 import { ProducerService, StaticProducerAuthenticator } from "@agent-feed/producer-service";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { authorizationFromEnvironment, credentialsFromEnvironment } from "./composition.ts";
-import { createOfficialMcpServer } from "./sdk.ts";
+import { createOfficialRemoteMcpServer } from "./sdk.ts";
 
-/** Production PostgreSQL-backed MCP composition root. */
+/** Production PostgreSQL-backed MCP composition root used by Secure MCP Tunnel. */
 export async function main(): Promise<void> {
   let pool: ReturnType<typeof createAgentFeedPool> | undefined;
   try {
@@ -23,13 +23,12 @@ export async function main(): Promise<void> {
       service,
       authorization: authorizationFromEnvironment(credentials),
     };
-    // `serveStdio(factory)` owns the era decision for the connection. A
-    // modern client probes `server/discover` and sends per-request `_meta`;
-    // older clients use the same factory through `initialize`.
-    const handle = serveStdio(() => createOfficialMcpServer(serverOptions), {
-      // The MCP wire must remain free of diagnostics and secrets. Startup
-      // failures are handled below; SDK transport errors are intentionally
-      // observed without writing arbitrary messages to stderr.
+    // The production tunnel executable exposes the primitive lifecycle tools
+    // plus submit_bounded_run so an interactive client cannot be stranded
+    // between begin/submit/complete when a conversation turn is interrupted.
+    // The lower-level createOfficialMcpServer/serveAgentFeedMcpStdio exports
+    // retain the historical three-tool conformance surface for embedders.
+    const handle = serveStdio(() => createOfficialRemoteMcpServer(serverOptions), {
       onerror: () => undefined,
     });
     await waitForStdioShutdown();
