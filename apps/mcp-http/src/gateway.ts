@@ -7,7 +7,7 @@ import {
   type OAuthMetadata,
 } from "@modelcontextprotocol/server";
 import {
-  createOfficialMcpServer,
+  createOfficialRemoteMcpServer,
   type ProducerServiceBoundary,
 } from "@agent-feed/mcp-server";
 import {
@@ -76,7 +76,7 @@ function boundedBody(request: Request, maximum: number): Response | undefined {
 
 /**
  * Transport composition only: auth produces a trusted principal and the
- * existing official MCP server remains the sole lifecycle tool definition.
+ * remote MCP server remains the sole lifecycle tool definition for HTTP.
  */
 export function createMcpHttpGateway(options: McpHttpGatewayOptions): McpHttpGateway {
   if (options.public_url.protocol !== "https:"
@@ -96,7 +96,7 @@ export function createMcpHttpGateway(options: McpHttpGatewayOptions): McpHttpGat
     resourceMetadataUrl: protectedResourceMetadataUrl,
   });
   const handler = createMcpHandler(
-    (context) => createOfficialMcpServer({
+    (context) => createOfficialRemoteMcpServer({
       service: options.service,
       principal: principalFromAuthInfo(context.authInfo),
       max_argument_bytes: maximum,
