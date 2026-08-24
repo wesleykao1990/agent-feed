@@ -108,6 +108,34 @@ function requireRunId(value: Record<string, unknown>): string {
   return value.run_id;
 }
 
+function returnedRunId(value: unknown): string {
+  if (!isRecord(value) || typeof value.run_id !== "string" || value.run_id.length === 0) {
+    throw new ProducerServiceError("internal_error", "begin_run did not return a run_id");
+  }
+  return value.run_id;
+}
+
+function boundedParts(value: Record<string, unknown>): {
+  begin: Record<string, unknown>;
+  batches: Record<string, unknown>[];
+  complete: Record<string, unknown>;
+} {
+  if (!isRecord(value.begin) || !Array.isArray(value.batches) || !isRecord(value.complete)) {
+    throw invalidParams("Invalid params", { error: "invalid_bounded_run_arguments" });
+  }
+  if (!value.batches.every((item) => isRecord(item))) {
+    throw invalidParams("Invalid params", { error: "invalid_bounded_run_batch" });
+  }
+  if (Object.hasOwn(value.complete, "run_id") || value.batches.some((batch) => Object.hasOwn(batch, "run_id"))) {
+    throw invalidParams("Invalid params", { error: "bounded_run_run_id_is_server_managed" });
+  }
+  return {
+    begin: value.begin,
+    batches: value.batches as Record<string, unknown>[],
+    complete: value.complete,
+  };
+}
+
 /**
  * Tool-level adapter for the existing producer application service. It does
  * not validate or persist protocol records itself; the service remains the
@@ -138,7 +166,7 @@ export class LifecycleToolRouter {
     if (serializedBytes(args) > this.#maxArgumentBytes) {
       return safeToolError(new ProducerServiceError("body_too_large", "tool arguments exceed the configured limit"));
     }
-    const runId = name === "begin_run" ? undefined : requireRunId(args);
+    const runId = name === "begin_run" || name === "submit_bounded_run" ? undefined : requireRunId(args);
 
     let principal: ProducerPrincipal;
     try {
@@ -148,7 +176,9 @@ export class LifecycleToolRouter {
         ? await this.service.beginRun(args, principal)
         : name === "submit_batch"
           ? await this.service.submitBatch(runId!, args, principal)
-          : await this.service.completeRun(runId!, args, principal);
+          : name === "complete_run"
+            ? await this.service.completeRun(runId!, args, principal)
+            : await this.#submitBoundedRun(args, principal);
       const serialized = safeResult(result);
       const response: McpToolCallResult = {
         content: [{ type: "text", text: serialized.text }],
@@ -160,6 +190,23 @@ export class LifecycleToolRouter {
       if (error instanceof McpProtocolError) throw error;
       return safeToolError(error);
     }
+  }
+
+  async #submitBoundedRun(args: Record<string, unknown>, principal: ProducerPrincipal): Promise<Record<string, unknown>> {
+    const { begin, batches, complete } = boundedParts(args);
+    const beginResult = await this.service.beginRun(begin, principal);
+    const runId = returnedRunId(beginResult);
+    const batchResults: unknown[] = [];
+    for (const batch of batches) {
+      batchResults.push(await this.service.submitBatch(runId, { ...batch, run_id: runId }, principal));
+    }
+    const completeResult = await this.service.completeRun(runId, { ...complete, run_id: runId }, principal);
+    return {
+      run_id: runId,
+      begin: beginResult,
+      batches: batchResults,
+      complete: completeResult,
+    };
   }
 
   #resolvePrincipal(): ProducerPrincipal {
