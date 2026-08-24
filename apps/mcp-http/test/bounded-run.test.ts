@@ -62,6 +62,7 @@ function modern(extra: Record<string, unknown> = {}): Record<string, unknown> {
 }
 
 function request(body: Record<string, unknown>): Request {
+  const params = body.params && typeof body.params === "object" ? body.params as Record<string, unknown> : undefined;
   return new Request(PUBLIC_URL, {
     method: "POST",
     headers: {
@@ -69,6 +70,8 @@ function request(body: Record<string, unknown>): Request {
       accept: "application/json, text/event-stream",
       authorization: "Bearer valid-token",
       "content-type": "application/json",
+      "mcp-method": String(body.method ?? ""),
+      ...(typeof params?.name === "string" ? { "mcp-name": params.name } : {}),
     },
     body: JSON.stringify(body),
   });
@@ -89,7 +92,7 @@ test("enabled remote gateway advertises and executes submit_bounded_run", async 
       method: "tools/list",
       params: modern(),
     }));
-    assert.equal(listed.status, 200);
+    assert.equal(listed.status, 200, await listed.clone().text());
     const listBody = await listed.json() as Record<string, unknown>;
     const names = (((listBody.result as Record<string, unknown>).tools as Array<Record<string, unknown>>)
       .map((tool) => tool.name));
