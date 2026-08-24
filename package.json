@@ -3,9 +3,9 @@
   "version": "0.1.1",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@10",
+  "packageManager": "pnpm@10.15.1",
   "engines": {
-    "node": ">=22"
+    "node": "22.x"
   },
   "scripts": {
     "validate:foundation": "python3 scripts/validate_package.py",
