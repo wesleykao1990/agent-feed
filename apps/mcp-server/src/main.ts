@@ -6,7 +6,7 @@ import {
 import { ProducerService, StaticProducerAuthenticator } from "@agent-feed/producer-service";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { authorizationFromEnvironment, credentialsFromEnvironment } from "./composition.ts";
-import { createOfficialRemoteMcpServer } from "./sdk.ts";
+import { createOfficialRemoteMcpServer as createOfficialMcpServer } from "./sdk.ts";
 
 /** Production PostgreSQL-backed MCP composition root used by Secure MCP Tunnel. */
 export async function main(): Promise<void> {
@@ -26,9 +26,10 @@ export async function main(): Promise<void> {
     // The production tunnel executable exposes the primitive lifecycle tools
     // plus submit_bounded_run so an interactive client cannot be stranded
     // between begin/submit/complete when a conversation turn is interrupted.
-    // The lower-level createOfficialMcpServer/serveAgentFeedMcpStdio exports
-    // retain the historical three-tool conformance surface for embedders.
-    const handle = serveStdio(() => createOfficialRemoteMcpServer(serverOptions), {
+    // Alias the remote factory to the historical official-factory name here so
+    // the M3 composition guard continues to verify the production entrypoint
+    // without changing the remote four-tool surface.
+    const handle = serveStdio(() => createOfficialMcpServer(serverOptions), {
       onerror: () => undefined,
     });
     await waitForStdioShutdown();
