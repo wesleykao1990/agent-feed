@@ -94,11 +94,17 @@ test("submit_bounded_run executes begin, batches, completion and injects returne
 test("submit_bounded_run rejects caller supplied downstream run_id", async () => {
   const service = new FakeService();
   const router = new LifecycleToolRouter({ service, principal: PRINCIPAL });
-  const result = await router.call("submit_bounded_run", {
-    begin: {},
-    batches: [{ run_id: "caller-run" }],
-    complete: {},
-  });
-  assert.equal(result.isError, true);
+  await assert.rejects(
+    () => router.call("submit_bounded_run", {
+      begin: {},
+      batches: [{ run_id: "caller-run" }],
+      complete: {},
+    }),
+    (error: unknown) => {
+      assert.equal(typeof error, "object");
+      assert.equal((error as { code?: number }).code, -32602);
+      return true;
+    },
+  );
   assert.deepEqual(service.calls, []);
 });
