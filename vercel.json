@@ -9,8 +9,7 @@
   ],
   "functions": {
     "api/gateway.ts": {
-      "maxDuration": 60,
-      "includeFiles": "{apps/mcp-http/**,apps/mcp-server/**,packages/**}"
+      "maxDuration": 60
     }
   }
 }
