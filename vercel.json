@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "corepack enable && pnpm install --no-frozen-lockfile --filter @agent-feed/mcp-http...",
+  "rewrites": [
+    { "source": "/mcp", "destination": "/api/gateway?__agent_feed_path=/mcp" },
+    { "source": "/health", "destination": "/api/gateway?__agent_feed_path=/health" },
+    { "source": "/oauth/:path*", "destination": "/api/gateway?__agent_feed_path=/oauth/:path*" },
+    { "source": "/.well-known/:path*", "destination": "/api/gateway?__agent_feed_path=/.well-known/:path*" }
+  ],
+  "functions": {
+    "api/gateway.ts": {
+      "maxDuration": 60
+    }
+  }
+}
