@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "npx --yes pnpm@10.15.1 install --no-frozen-lockfile --filter @agent-feed/mcp-http...",
+  "installCommand": "npx --yes pnpm@10.15.1 install --no-frozen-lockfile --filter @agent-feed/mcp-http... && npx --yes esbuild@0.25.9 apps/mcp-http/src/hosted.ts --bundle --platform=node --format=esm --target=node22 --outfile=api/hosted.bundle.mjs",
   "rewrites": [
     { "source": "/mcp", "destination": "/api/gateway?__agent_feed_path=/mcp" },
     { "source": "/health", "destination": "/api/gateway?__agent_feed_path=/health" },
