@@ -13,8 +13,11 @@ import {
   McpProtocolError,
 } from "./errors.ts";
 import { LifecycleToolRouter } from "./lifecycle.ts";
-import { MCP_TOOL_DEFINITIONS } from "./tools.ts";
-import type { McpServerOptions } from "./types.ts";
+import {
+  MCP_REMOTE_TOOL_DEFINITIONS,
+  MCP_TOOL_DEFINITIONS,
+} from "./tools.ts";
+import type { McpServerOptions, McpToolDescriptor } from "./types.ts";
 
 const INSTRUCTIONS = "Agent Feed producer lifecycle tools. All records are validated and scoped by the producer application service.";
 
@@ -33,7 +36,7 @@ function toolResult(result: Awaited<ReturnType<LifecycleToolRouter["call"]>>): C
   };
 }
 
-function sdkToolDescriptor(descriptor: (typeof MCP_TOOL_DEFINITIONS)[number]): Tool {
+function sdkToolDescriptor(descriptor: McpToolDescriptor): Tool {
   const annotations = descriptor.annotations;
   return {
     name: descriptor.name,
@@ -50,12 +53,7 @@ function sdkToolDescriptor(descriptor: (typeof MCP_TOOL_DEFINITIONS)[number]): T
   };
 }
 
-/**
- * Build the official SDK server for one stdio connection. The server only
- * registers the three lifecycle methods; all auth, validation, rate policy,
- * idempotency, and persistence remain in LifecycleToolRouter/ProducerService.
- */
-export function createOfficialMcpServer(options: McpServerOptions): Server {
+function createServer(options: McpServerOptions, definitions: readonly McpToolDescriptor[]): Server {
   const router = new LifecycleToolRouter(options);
   const server = new Server(
     {
@@ -69,22 +67,27 @@ export function createOfficialMcpServer(options: McpServerOptions): Server {
   );
 
   server.setRequestHandler("tools/list", () => ({
-    // The published schema descriptors are already JSON-safe and are copied
-    // by the router module before exposure to an untrusted client.
-    tools: MCP_TOOL_DEFINITIONS.map((descriptor) => sdkToolDescriptor(structuredClone(descriptor))),
+    tools: definitions.map((descriptor) => sdkToolDescriptor(structuredClone(descriptor))),
   }));
   server.setRequestHandler("tools/call", async (request) => {
     try {
       const result = await router.call(request.params.name, request.params.arguments ?? {});
       return toolResult(result);
     } catch (error) {
-      // LifecycleToolRouter throws only bounded protocol errors for malformed
-      // tool requests. Translate them to the SDK's branded error so the SDK
-      // emits deterministic JSON-RPC error bodies without leaking exceptions.
       throw sdkProtocolError(error);
     }
   });
   return server;
+}
+
+/** Keep the historical three primitive lifecycle tools for stdio/conformance. */
+export function createOfficialMcpServer(options: McpServerOptions): Server {
+  return createServer(options, MCP_TOOL_DEFINITIONS);
+}
+
+/** Remote HTTP composition adds the interruption-safe composite tool. */
+export function createOfficialRemoteMcpServer(options: McpServerOptions): Server {
+  return createServer(options, MCP_REMOTE_TOOL_DEFINITIONS);
 }
 
 /** Official dual-era stdio composition used by tests and embedding hosts. */
