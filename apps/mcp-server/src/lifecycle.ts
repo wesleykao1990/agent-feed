@@ -4,7 +4,7 @@ import {
   invalidParams,
   safeToolError,
 } from "./errors.ts";
-import { MCP_TOOL_NAMES, type McpToolName } from "./tools.ts";
+import { MCP_REMOTE_TOOL_NAMES, type McpToolName } from "./tools.ts";
 import type {
   McpServerOptions,
   McpToolCallResult,
@@ -71,7 +71,7 @@ function safeResult(value: unknown): { text: string; structured?: unknown; faile
 }
 
 function toolName(value: string): value is McpToolName {
-  return (MCP_TOOL_NAMES as readonly string[]).includes(value);
+  return (MCP_REMOTE_TOOL_NAMES as readonly string[]).includes(value);
 }
 
 function containsSecretControlKey(value: unknown): boolean {
