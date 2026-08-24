@@ -3,7 +3,7 @@ import type {
   OAuthStateStore,
   StoredClient,
   TokenGrant,
-} from "./auth.ts";
+} from "./persistent-auth.ts";
 
 interface QueryResult<Row> {
   rows: Row[];
