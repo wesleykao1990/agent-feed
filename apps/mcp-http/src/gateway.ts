@@ -13,18 +13,22 @@ import {
 } from "@agent-feed/mcp-server";
 import {
   MCP_WRITE_SCOPE,
-  PilotOAuthProvider,
   principalFromAuthInfo,
   type AccessTokenVerifier,
 } from "./auth.ts";
 
 const DEFAULT_MAX_BODY_BYTES = 1_048_576;
 
+export interface OAuthRouteProvider {
+  metadata(): Record<string, unknown>;
+  route(request: Request): Promise<Response | undefined>;
+}
+
 export interface McpHttpGatewayOptions {
   public_url: URL;
   service: ProducerServiceBoundary;
   verifier: AccessTokenVerifier;
-  oauth?: PilotOAuthProvider;
+  oauth?: OAuthRouteProvider;
   allowed_hosts?: readonly string[];
   allowed_origins?: readonly string[];
   max_body_bytes?: number;
