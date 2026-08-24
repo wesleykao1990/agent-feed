@@ -68,6 +68,7 @@ async function main(): Promise<void> {
       allowed_hosts: [...new Set([publicUrl.hostname, "127.0.0.1", "localhost", "[::1]", ...list(process.env.AGENT_FEED_MCP_ALLOWED_HOSTS)])],
       allowed_origins: list(process.env.AGENT_FEED_MCP_ALLOWED_ORIGINS),
       max_body_bytes: positiveInteger(process.env.AGENT_FEED_MCP_MAX_BODY_BYTES, service.security.max_body_bytes),
+      enable_bounded_run: true,
       on_error: (error) => console.error(`Agent Feed MCP request error: ${error.message}`),
     });
     server = createNodeGatewayServer({

@@ -4,6 +4,8 @@
 // from the package root.
 export { LifecycleToolRouter, createLifecycleToolRouter } from "./lifecycle.ts";
 export {
+  MCP_REMOTE_TOOL_DEFINITIONS,
+  MCP_REMOTE_TOOL_NAMES,
   MCP_TOOL_DEFINITIONS,
   MCP_TOOL_NAMES,
   toolDescriptor,
@@ -28,6 +30,7 @@ export {
 } from "./errors.ts";
 export {
   createOfficialMcpServer,
+  createOfficialRemoteMcpServer,
   serveAgentFeedMcpStdio,
 } from "./sdk.ts";
 export type * from "./types.ts";

@@ -8,6 +8,7 @@ import {
 } from "@modelcontextprotocol/server";
 import {
   createOfficialMcpServer,
+  createOfficialRemoteMcpServer,
   type ProducerServiceBoundary,
 } from "@agent-feed/mcp-server";
 import {
@@ -27,6 +28,7 @@ export interface McpHttpGatewayOptions {
   allowed_hosts?: readonly string[];
   allowed_origins?: readonly string[];
   max_body_bytes?: number;
+  enable_bounded_run?: boolean;
   on_error?: (error: Error) => void;
 }
 
@@ -74,10 +76,6 @@ function boundedBody(request: Request, maximum: number): Response | undefined {
   return parsed > maximum ? new Response("Request body too large", { status: 413 }) : undefined;
 }
 
-/**
- * Transport composition only: auth produces a trusted principal and the
- * existing official MCP server remains the sole lifecycle tool definition.
- */
 export function createMcpHttpGateway(options: McpHttpGatewayOptions): McpHttpGateway {
   if (options.public_url.protocol !== "https:"
     && options.public_url.hostname !== "127.0.0.1"
@@ -96,11 +94,16 @@ export function createMcpHttpGateway(options: McpHttpGatewayOptions): McpHttpGat
     resourceMetadataUrl: protectedResourceMetadataUrl,
   });
   const handler = createMcpHandler(
-    (context) => createOfficialMcpServer({
-      service: options.service,
-      principal: principalFromAuthInfo(context.authInfo),
-      max_argument_bytes: maximum,
-    }),
+    (context) => {
+      const serverOptions = {
+        service: options.service,
+        principal: principalFromAuthInfo(context.authInfo),
+        max_argument_bytes: maximum,
+      };
+      return options.enable_bounded_run === true
+        ? createOfficialRemoteMcpServer(serverOptions)
+        : createOfficialMcpServer(serverOptions);
+    },
     {
       legacy: "stateless",
       responseMode: "auto",
