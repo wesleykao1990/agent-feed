@@ -15,7 +15,7 @@ def main() -> int:
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--write", action="store_true")
     group.add_argument("--check", action="store_true")
-    group.parse_args()
+    parser.parse_args()
     print("Agent Feed repository checksum gating is retired; no checksum verification is performed.")
     return 0
 
