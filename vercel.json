@@ -9,8 +9,7 @@
   ],
   "functions": {
     "api/gateway.ts": {
-      "maxDuration": 60,
-      "includeFiles": "api/hosted.bundle.mjs"
+      "maxDuration": 60
     }
   }
 }
