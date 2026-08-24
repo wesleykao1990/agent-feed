@@ -3,7 +3,7 @@ import test from "node:test";
 import type { ProducerPrincipal } from "@agent-feed/producer-service";
 import {
   LifecycleToolRouter,
-  MCP_TOOL_NAMES,
+  MCP_REMOTE_TOOL_NAMES,
   toolDescriptor,
 } from "../src/index.ts";
 import type { ProducerServiceBoundary } from "../src/types.ts";
@@ -33,8 +33,8 @@ class FakeService implements ProducerServiceBoundary {
   }
 }
 
-test("submit_bounded_run is published with server-managed downstream run_id", () => {
-  assert.equal(MCP_TOOL_NAMES.includes("submit_bounded_run"), true);
+test("submit_bounded_run is published on the remote surface with server-managed downstream run_id", () => {
+  assert.equal(MCP_REMOTE_TOOL_NAMES.includes("submit_bounded_run"), true);
   const descriptor = toolDescriptor("submit_bounded_run");
   const schema = descriptor.inputSchema;
   assert.deepEqual(schema.required, ["begin", "batches", "complete"]);
