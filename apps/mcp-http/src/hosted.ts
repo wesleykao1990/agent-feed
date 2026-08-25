@@ -1,5 +1,6 @@
 import {
   createAgentFeedPool,
+  migrateAgentFeed,
   PostgresAgentFeedPersistence,
 } from "@agent-feed/persistence-postgres";
 import {
@@ -54,6 +55,7 @@ async function createHostedRuntime(): Promise<HostedRuntime> {
 
   const pool = createAgentFeedPool();
   try {
+    await migrateAgentFeed(pool);
     await ensureMcpOAuthState(pool);
     const credentials = credentialsFromEnvironment(process.env);
     const service = new ProducerService({
