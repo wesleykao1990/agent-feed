@@ -22,6 +22,8 @@ jobs:
           node-version: 22
       - name: Install hosted MCP dependency graph
         run: npx --yes pnpm@10.15.1 install --no-frozen-lockfile --filter @agent-feed/mcp-http...
+      - name: Build generated schema dependency
+        run: npm --prefix packages/schema run build
       - name: Build exact Vercel hosted bundle
         run: npx --yes esbuild@0.25.9 apps/mcp-http/src/hosted.ts --bundle --platform=node --format=esm --target=node22 --outfile=hosted.bundle.mjs
       - name: Upload exact hosted bundle
