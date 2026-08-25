@@ -35,6 +35,15 @@ function positiveInteger(value: string | undefined, fallback: number): number {
   return result;
 }
 
+function boundedDiagnostic(error: unknown): { error_name: string; error_code: string | null; error_message: string | null } {
+  const value = error as { name?: unknown; code?: unknown; message?: unknown };
+  return {
+    error_name: typeof value?.name === "string" ? value.name : "Error",
+    error_code: typeof value?.code === "string" ? value.code : null,
+    error_message: typeof value?.message === "string" ? value.message.slice(0, 500) : null,
+  };
+}
+
 async function createHostedRuntime(): Promise<HostedRuntime> {
   const publicUrlValue = process.env.AGENT_FEED_MCP_PUBLIC_URL;
   if (publicUrlValue === undefined || publicUrlValue === "") throw new Error("agent_feed_mcp_public_url_required");
@@ -45,8 +54,6 @@ async function createHostedRuntime(): Promise<HostedRuntime> {
 
   const pool = createAgentFeedPool();
   try {
-    // The primary Agent Feed schema is deployed independently. The hosted
-    // gateway creates only its small, idempotent OAuth sidecar on cold start.
     await ensureMcpOAuthState(pool);
     const credentials = credentialsFromEnvironment(process.env);
     const service = new ProducerService({
@@ -77,8 +84,6 @@ async function createHostedRuntime(): Promise<HostedRuntime> {
       allowed_origins: list(process.env.AGENT_FEED_MCP_ALLOWED_ORIGINS),
       max_body_bytes: positiveInteger(process.env.AGENT_FEED_MCP_MAX_BODY_BYTES, service.security.max_body_bytes),
       enable_bounded_run: true,
-      // Do not emit request payloads, credentials, or raw errors from a public
-      // serverless boundary. Runtime observability uses status/health only.
       on_error: () => undefined,
     });
     return { gateway };
@@ -95,7 +100,13 @@ export async function hostedAgentFeedFetch(request: Request): Promise<Response> 
   });
   try {
     return await (await runtimePromise).gateway.fetch(request);
-  } catch {
+  } catch (error) {
+    if (new URL(request.url).pathname === "/health") {
+      return Response.json(
+        { ok: false, stage: "hosted_runtime_initialization", ...boundedDiagnostic(error) },
+        { status: 503, headers: { "cache-control": "no-store" } },
+      );
+    }
     return new Response("Agent Feed MCP unavailable", {
       status: 503,
       headers: {
