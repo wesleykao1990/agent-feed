@@ -184,7 +184,7 @@ export class GitHubActionsOidcVerifier implements AccessTokenVerifier {
         claims.actor !== this.#repositoryOwner ||
         claims.ref !== this.#ref ||
         claims.event_name !== "issues" ||
-        claims.job_workflow_ref !== this.#workflowRef ||
+        claims.workflow_ref !== this.#workflowRef ||
         claims.runner_environment !== "github-hosted" ||
         exp === undefined ||
         iat === undefined ||
