@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
@@ -38,6 +39,12 @@ test("Vercel deterministically rebuilds the hosted MCP bundle behind diagnostic 
   assert.match(entrypoint, /error_message:/);
   assert.doesNotMatch(entrypoint, /@agent-feed\//);
 
+  // hosted.bundle.mjs is intentionally generated and not committed. Build it
+  // here so the conformance gate validates the exact artifact Vercel creates.
+  execFileSync("bash", ["scripts/vercel_build.sh"], {
+    cwd: new URL("../../../", import.meta.url),
+    stdio: "pipe",
+  });
   const bundle = await readFile(bundleUrl, "utf8");
   assert.doesNotMatch(bundle, /bundle_placeholder_loaded/);
   assert.match(bundle, /hostedAgentFeedFetch/);
