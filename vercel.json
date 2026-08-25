@@ -11,7 +11,8 @@
   ],
   "functions": {
     "api/gateway.ts": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "includeFiles": "migrations/**"
     }
   }
 }
