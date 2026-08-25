@@ -13,6 +13,7 @@ import {
 } from "@agent-feed/mcp-server";
 import {
   CompositeAccessTokenVerifier,
+  CHATGPT_ORIGIN,
   PilotOAuthProvider,
   ProducerCredentialVerifier,
   createMcpHttpGateway,
@@ -66,7 +67,10 @@ async function main(): Promise<void> {
       verifier,
       ...(oauth === undefined ? {} : { oauth }),
       allowed_hosts: [...new Set([publicUrl.hostname, "127.0.0.1", "localhost", "[::1]", ...list(process.env.AGENT_FEED_MCP_ALLOWED_HOSTS)])],
-      allowed_origins: list(process.env.AGENT_FEED_MCP_ALLOWED_ORIGINS),
+      allowed_origins: [...new Set([
+        CHATGPT_ORIGIN,
+        ...list(process.env.AGENT_FEED_MCP_ALLOWED_ORIGINS),
+      ])],
       max_body_bytes: positiveInteger(process.env.AGENT_FEED_MCP_MAX_BODY_BYTES, service.security.max_body_bytes),
       enable_bounded_run: true,
       on_error: (error) => console.error(`Agent Feed MCP request error: ${error.message}`),

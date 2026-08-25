@@ -15,7 +15,7 @@ import {
   CompositeAccessTokenVerifier,
   ProducerCredentialVerifier,
 } from "./auth.ts";
-import { createMcpHttpGateway, type McpHttpGateway } from "./gateway.ts";
+import { CHATGPT_ORIGIN, createMcpHttpGateway, type McpHttpGateway } from "./gateway.ts";
 import { PersistentOAuthProvider } from "./persistent-auth.ts";
 import { ensureMcpOAuthState, PostgresOAuthStateStore } from "./oauth-store.ts";
 
@@ -83,7 +83,10 @@ async function createHostedRuntime(): Promise<HostedRuntime> {
         publicUrl.hostname,
         ...list(process.env.AGENT_FEED_MCP_ALLOWED_HOSTS),
       ])],
-      allowed_origins: list(process.env.AGENT_FEED_MCP_ALLOWED_ORIGINS),
+      allowed_origins: [...new Set([
+        CHATGPT_ORIGIN,
+        ...list(process.env.AGENT_FEED_MCP_ALLOWED_ORIGINS),
+      ])],
       max_body_bytes: positiveInteger(process.env.AGENT_FEED_MCP_MAX_BODY_BYTES, service.security.max_body_bytes),
       enable_bounded_run: true,
       on_error: () => undefined,

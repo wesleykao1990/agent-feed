@@ -30,11 +30,12 @@ AGENT_FEED_MCP_OAUTH_OPERATOR_SECRET=<24+ character operator passphrase>
 
 The usual individual producer credential environment variables may be used instead of `AGENT_FEED_PRODUCER_CREDENTIALS` when only one principal is configured.
 
-Optional hardening:
+ChatGPT's `https://chatgpt.com` origin is allowed by default. Additional browser
+origins and optional hardening can be configured with:
 
 ```text
 AGENT_FEED_MCP_ALLOWED_HOSTS=preview-or-additional-host.example
-AGENT_FEED_MCP_ALLOWED_ORIGINS=https://chatgpt.com
+AGENT_FEED_MCP_ALLOWED_ORIGINS=https://additional-client.example
 AGENT_FEED_MCP_MAX_BODY_BYTES=1048576
 ```
 
