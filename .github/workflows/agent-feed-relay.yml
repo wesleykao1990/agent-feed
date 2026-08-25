@@ -1,0 +1,221 @@
+name: Agent Feed Relay
+
+on:
+  issues:
+    types:
+      - opened
+      - reopened
+
+permissions:
+  contents: read
+  deployments: read
+  id-token: write
+  issues: write
+
+jobs:
+  submit-bounded-run:
+    if: >-
+      startsWith(github.event.issue.title, '[Agent Feed Relay]') &&
+      github.event.issue.user.login == github.repository_owner &&
+      github.event.issue.author_association == 'OWNER'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Submit bounded Agent Feed run
+        env:
+          AGENT_FEED_OIDC_AUDIENCE: urn:agent-feed:github-actions
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const API_VERSION = '2022-11-28';
+          const EVENT = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8'));
+          const REPOSITORY = process.env.GITHUB_REPOSITORY;
+          const TOKEN = process.env.GITHUB_TOKEN;
+          const ISSUE = EVENT.issue;
+          const OWNER = REPOSITORY.split('/')[0];
+
+          function fail(code) {
+            const error = new Error(code);
+            error.code = code;
+            throw error;
+          }
+
+          function plainObject(value) {
+            return value !== null && typeof value === 'object' && !Array.isArray(value);
+          }
+
+          async function github(path, options = {}) {
+            const response = await fetch(`https://api.github.com${path}`, {
+              ...options,
+              headers: {
+                accept: 'application/vnd.github+json',
+                authorization: `Bearer ${TOKEN}`,
+                'x-github-api-version': API_VERSION,
+                ...(options.headers ?? {}),
+              },
+            });
+            const text = await response.text();
+            if (!response.ok) fail(`github_api_${response.status}`);
+            return text === '' ? null : JSON.parse(text);
+          }
+
+          async function comment(body) {
+            await github(`/repos/${REPOSITORY}/issues/${ISSUE.number}/comments`, {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ body }),
+            });
+          }
+
+          async function productionMcpUrl() {
+            const deployments = await github(`/repos/${REPOSITORY}/deployments?per_page=30`);
+            if (Array.isArray(deployments)) {
+              for (const deployment of deployments) {
+                if (!plainObject(deployment)) continue;
+                if (String(deployment.environment ?? '').toLowerCase() !== 'production') continue;
+                const statuses = await github(`/repos/${REPOSITORY}/deployments/${deployment.id}/statuses?per_page=20`);
+                if (!Array.isArray(statuses)) continue;
+                const ready = statuses.find((status) =>
+                  plainObject(status) &&
+                  status.state === 'success' &&
+                  typeof status.environment_url === 'string' &&
+                  status.environment_url.startsWith('https://'));
+                if (ready !== undefined) return new URL('/mcp', ready.environment_url).href;
+              }
+            }
+            // Vercel's stable project alias is a safe fallback when its GitHub
+            // deployment object has not yet propagated.
+            return 'https://agent-feed-mcp.vercel.app/mcp';
+          }
+
+          async function githubOidcToken() {
+            const requestUrl = process.env.ACTIONS_ID_TOKEN_REQUEST_URL;
+            const requestToken = process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN;
+            if (!requestUrl || !requestToken) fail('github_oidc_environment_missing');
+            const url = new URL(requestUrl);
+            url.searchParams.set('audience', process.env.AGENT_FEED_OIDC_AUDIENCE);
+            const response = await fetch(url, {
+              headers: { authorization: `Bearer ${requestToken}` },
+            });
+            if (!response.ok) fail(`github_oidc_${response.status}`);
+            const body = await response.json();
+            if (!body || typeof body.value !== 'string' || body.value.length < 100)
+              fail('github_oidc_token_missing');
+            return body.value;
+          }
+
+          function extractReceipt(result) {
+            if (!plainObject(result)) fail('mcp_result_invalid');
+            if (result.isError === true) fail('agent_feed_tool_error');
+            if (plainObject(result.structuredContent)) return result.structuredContent;
+            if (Array.isArray(result.content)) {
+              const text = result.content.find((item) => plainObject(item) && item.type === 'text' && typeof item.text === 'string')?.text;
+              if (typeof text === 'string') {
+                const parsed = JSON.parse(text);
+                if (plainObject(parsed)) return parsed;
+              }
+            }
+            fail('agent_feed_receipt_missing');
+          }
+
+          async function closeIssue() {
+            await github(`/repos/${REPOSITORY}/issues/${ISSUE.number}`, {
+              method: 'PATCH',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ state: 'closed' }),
+            });
+          }
+
+          try {
+            if (ISSUE.user?.login !== OWNER || ISSUE.author_association !== 'OWNER')
+              fail('owner_trigger_required');
+            const raw = ISSUE.body ?? '';
+            if (Buffer.byteLength(raw, 'utf8') > 950_000) fail('request_too_large');
+            let request;
+            try {
+              request = JSON.parse(raw);
+            } catch {
+              fail('request_json_invalid');
+            }
+            if (!plainObject(request) || !plainObject(request.begin) || !Array.isArray(request.batches) || !plainObject(request.complete))
+              fail('bounded_run_shape_required');
+            if (request.begin?.producer?.producer_id !== 'chatgpt-scheduled-task')
+              fail('producer_id_not_allowed');
+            if (request.begin?.metadata?.reward_rule_version_action !== 'none' || request.complete?.metadata?.reward_rule_version_action !== 'none')
+              fail('reward_rule_version_action_must_be_none');
+            if (request.begin?.metadata?.canonical_publication !== false || request.complete?.metadata?.canonical_publication !== false)
+              fail('canonical_publication_must_be_false');
+
+            const endpoint = await productionMcpUrl();
+            const oidc = await githubOidcToken();
+            const rpc = {
+              jsonrpc: '2.0',
+              id: `issue-${ISSUE.number}`,
+              method: 'tools/call',
+              params: {
+                name: 'submit_bounded_run',
+                arguments: request,
+                _meta: {
+                  'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+                  'io.modelcontextprotocol/clientCapabilities': {},
+                  'io.modelcontextprotocol/clientInfo': {
+                    name: 'github-agent-feed-relay',
+                    version: '1',
+                  },
+                },
+              },
+            };
+            const response = await fetch(endpoint, {
+              method: 'POST',
+              headers: {
+                accept: 'application/json, text/event-stream',
+                authorization: `Bearer ${oidc}`,
+                'content-type': 'application/json',
+                'mcp-method': 'tools/call',
+                'mcp-name': 'submit_bounded_run',
+              },
+              body: JSON.stringify(rpc),
+            });
+            const responseText = await response.text();
+            if (!response.ok) fail(`mcp_http_${response.status}`);
+            let payload;
+            try {
+              payload = JSON.parse(responseText);
+            } catch {
+              fail('mcp_response_json_invalid');
+            }
+            if (payload?.error) fail(`mcp_jsonrpc_${payload.error.code ?? 'error'}`);
+            const receipt = extractReceipt(payload?.result);
+            const runId = typeof receipt.run_id === 'string' ? receipt.run_id : null;
+            const status = plainObject(receipt.complete) && typeof receipt.complete.status === 'string'
+              ? receipt.complete.status
+              : null;
+            if (!runId || !status) fail('terminal_receipt_incomplete');
+            const batchCount = Array.isArray(receipt.batches) ? receipt.batches.length : null;
+            await comment([
+              'Agent Feed relay completed.',
+              '',
+              `- run_id: \`${runId}\``,
+              `- terminal status: \`${status}\``,
+              `- accepted batch receipts: \`${batchCount ?? 'unknown'}\``,
+              '',
+              'The relay used GitHub Actions OIDC and the existing `submit_bounded_run` MCP tool; no producer secret was copied into GitHub.',
+            ].join('\n'));
+            await closeIssue();
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `Agent Feed run: ${runId}\nStatus: ${status}\n`);
+          } catch (error) {
+            const code = typeof error?.code === 'string' ? error.code : 'relay_failed';
+            try {
+              await comment(`Agent Feed relay failed closed with \`${code.slice(0, 120)}\`. No direct database fallback was attempted.`);
+            } catch {}
+            console.error(code);
+            process.exitCode = 1;
+          }
+          NODE

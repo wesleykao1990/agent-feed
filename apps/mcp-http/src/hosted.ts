@@ -6,6 +6,7 @@ import {
 import {
   ProducerService,
   StaticProducerAuthenticator,
+  type ProducerPrincipal,
 } from "@agent-feed/producer-service";
 import {
   authorizationFromEnvironment,
@@ -14,8 +15,10 @@ import {
 import {
   CompositeAccessTokenVerifier,
   ProducerCredentialVerifier,
+  type AccessTokenVerifier,
 } from "./auth.ts";
 import { CHATGPT_ORIGIN, createMcpHttpGateway, type McpHttpGateway } from "./gateway.ts";
+import { GitHubActionsOidcVerifier } from "./github-actions-oidc.ts";
 import { PersistentOAuthProvider } from "./persistent-auth.ts";
 import { ensureMcpOAuthState, PostgresOAuthStateStore } from "./oauth-store.ts";
 
@@ -34,6 +37,44 @@ function positiveInteger(value: string | undefined, fallback: number): number {
   const result = Number(value);
   if (!Number.isSafeInteger(result) || result <= 0) throw new Error("invalid_positive_integer_configuration");
   return result;
+}
+
+function hostname(value: string | undefined): string | undefined {
+  if (value === undefined || value.trim() === "") return undefined;
+  try {
+    const normalized = value.includes("://") ? value : `https://${value}`;
+    return new URL(normalized).hostname;
+  } catch {
+    return undefined;
+  }
+}
+
+function githubActionsVerifier(
+  publicUrl: URL,
+  principal: ProducerPrincipal,
+): AccessTokenVerifier | undefined {
+  const repositoryId = process.env.VERCEL_GIT_REPO_ID;
+  const repositoryOwner = process.env.VERCEL_GIT_REPO_OWNER;
+  const repositorySlug = process.env.VERCEL_GIT_REPO_SLUG;
+  const commitRef = process.env.VERCEL_GIT_COMMIT_REF;
+  if (
+    repositoryId === undefined || repositoryId === "" ||
+    repositoryOwner === undefined || repositoryOwner === "" ||
+    repositorySlug === undefined || repositorySlug === "" ||
+    commitRef === undefined || commitRef === ""
+  ) {
+    return undefined;
+  }
+  const repository = `${repositoryOwner}/${repositorySlug}`;
+  const ref = `refs/heads/${commitRef}`;
+  return new GitHubActionsOidcVerifier({
+    resource: publicUrl,
+    principal,
+    repository,
+    repository_id: repositoryId,
+    ref,
+    workflow_ref: `${repository}/.github/workflows/agent-feed-relay.yml@${ref}`,
+  });
 }
 
 function boundedDiagnostic(error: unknown): { error_name: string; error_code: string | null; error_message: string | null } {
@@ -70,10 +111,18 @@ async function createHostedRuntime(): Promise<HostedRuntime> {
       principal,
       store: new PostgresOAuthStateStore(pool),
     });
-    const verifier = new CompositeAccessTokenVerifier([
+    const githubOidc = githubActionsVerifier(publicUrl, principal);
+    const verifiers: AccessTokenVerifier[] = [
       oauth,
       new ProducerCredentialVerifier(service, publicUrl),
-    ]);
+    ];
+    if (githubOidc !== undefined) verifiers.push(githubOidc);
+    const verifier = new CompositeAccessTokenVerifier(verifiers);
+    const deploymentHosts = [
+      hostname(process.env.VERCEL_URL),
+      hostname(process.env.VERCEL_BRANCH_URL),
+      hostname(process.env.VERCEL_PROJECT_PRODUCTION_URL),
+    ].filter((value): value is string => value !== undefined);
     const gateway = createMcpHttpGateway({
       public_url: publicUrl,
       service,
@@ -81,6 +130,7 @@ async function createHostedRuntime(): Promise<HostedRuntime> {
       oauth,
       allowed_hosts: [...new Set([
         publicUrl.hostname,
+        ...deploymentHosts,
         ...list(process.env.AGENT_FEED_MCP_ALLOWED_HOSTS),
       ])],
       allowed_origins: [...new Set([
