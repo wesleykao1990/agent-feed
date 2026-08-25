@@ -77,26 +77,40 @@ jobs:
           npm --prefix packages/schema ci
           npm --prefix packages/producer-service ci
           npm --prefix packages/adapters/local-file ci
-          npm --prefix packages/adapters/chatgpt ci
+          # The durable M1 gate now imports the ChatGPT adapter directly.
+          # Install it here rather than waiting for the later M3 gate.
+          npm --prefix packages/adapters/chatgpt-manual-export ci
+          npm --prefix packages/adapters/rest ci
+          # The executable API is the composition root for the durable adapter.
+          # Install every source-linked adapter dependency before the API clean build.
+          npm --prefix packages/protocol-runtime ci
+          npm --prefix packages/delivery-core ci
+          npm --prefix packages/delivery-consumer ci
+          npm --prefix packages/occurrence-core ci
+          npm --prefix packages/assessment-core ci
+          npm --prefix packages/job-registry-core ci
+          npm --prefix packages/persistence-postgres ci
           npm --prefix apps/api ci
 
       - name: Build Milestone 1 corrective packages and API
         run: |
+          npm run m1:architecture
           npm --prefix packages/schema run build
           npm --prefix packages/producer-service run build
           npm --prefix packages/adapters/local-file run build
-          npm --prefix packages/adapters/chatgpt run build
           npm --prefix apps/api run build
 
       - name: Test Milestone 1 corrective packages and API
         run: |
+          npm --prefix packages/schema test
           npm --prefix packages/producer-service test
           npm --prefix packages/adapters/local-file test
-          npm --prefix packages/adapters/chatgpt test
           npm --prefix apps/api test
 
       - name: Build immutable schema release candidate
-        run: npm run schema:artifact
+        run: |
+          npm run schema:artifact:test
+          npm run schema:artifact
 
       - name: Verify schema release candidate as an external consumer
         run: npm run schema:artifact:verify
@@ -106,23 +120,36 @@ jobs:
         env:
           AGENT_FEED_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_feed_test
 
+      # Keep the integrity/checksum steps above the install steps: node_modules
+      # is intentionally excluded from SHA256SUMS, while every package,
+      # workflow, test, and M2 script must be covered by the manifest.
       - name: Install Milestone 2 package dependencies
         run: |
-          npm --prefix packages/protocol-runtime ci
-          npm --prefix packages/delivery-core ci
-          npm --prefix packages/delivery-consumer ci
-          npm --prefix packages/occurrence-core ci
-          npm --prefix packages/assessment-core ci
-          npm --prefix packages/job-registry-core ci
-          npm --prefix packages/persistence-postgres ci
-          npm --prefix apps/mcp-server ci
-          npm --prefix apps/mcp-http ci
+          npm --prefix packages/webhook-adapter ci
+          npm --prefix apps/delivery-worker ci
+          npm --prefix apps/delivery-api ci
 
       - name: Build Milestone 2 packages and applications
-        run: true
+        run: |
+          npm --prefix packages/protocol-runtime run build
+          npm --prefix packages/delivery-core run build
+          npm --prefix packages/delivery-consumer run build
+          npm --prefix packages/persistence-postgres run build
+          npm --prefix packages/webhook-adapter run build
+          npm --prefix apps/delivery-worker run build
+          npm --prefix apps/delivery-api run build
 
       - name: Test Milestone 2 packages and applications
-        run: true
+        run: |
+          npm --prefix packages/protocol-runtime test
+          npm --prefix packages/delivery-core test
+          npm --prefix packages/delivery-consumer test
+          npm --prefix packages/persistence-postgres test
+          npm --prefix packages/webhook-adapter test
+          npm --prefix apps/delivery-worker test
+          npm --prefix apps/delivery-api test
+        env:
+          AGENT_FEED_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_feed_test
 
       - name: Run combined Milestone 2 conformance gate
         run: npm run m2:conformance
@@ -131,16 +158,13 @@ jobs:
 
       - name: Install Milestone 3 package dependencies
         run: |
-          npm --prefix packages/operations-core ci
-          npm --prefix packages/operations-observability ci
-          npm --prefix packages/operations-postgres ci
-          npm --prefix apps/admin-dashboard ci
+          npm --prefix apps/mcp-server ci
+          npm --prefix packages/sdk/typescript ci
+          npm --prefix packages/adapters/generic-webhook ci
+          npm --prefix packages/adapters/claude-hook ci
 
       - name: Run combined Milestone 3 conformance gate
         run: npm run m3:conformance
-        env:
-          AGENT_FEED_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_feed_test
-          AGENT_FEED_OPERATIONS_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_feed_test
 
       - name: Run bounded large-run scaling gate
         run: npm run large-run:conformance
@@ -149,19 +173,27 @@ jobs:
 
   milestone-4-reference:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+
     steps:
       - uses: actions/checkout@v7
+
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+
       - name: Install generic reference-consumer dependencies
-        run: npm --prefix apps/reference-consumer ci
+        run: |
+          npm --prefix packages/sdk/typescript ci
+          npm --prefix examples/rewards-optimizer ci
+
       - name: Run Milestone 4 generic reference-consumer gate
         run: npm run m4:conformance
 
   milestone-5-installability:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
     services:
       postgres:
         image: postgres:16-alpine
@@ -176,11 +208,14 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+
     steps:
       - uses: actions/checkout@v7
+
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+
       - name: Install locked Milestone 5 dependencies
         run: |
           npm --prefix apps/mcp-server ci
@@ -195,6 +230,7 @@ jobs:
           npm --prefix packages/operations-observability ci
           npm --prefix packages/operations-postgres ci
           npm --prefix apps/admin-dashboard ci
+
       - name: Run full Milestone 5 portability and operations gate
         run: npm run m5:conformance
         env:
@@ -204,6 +240,7 @@ jobs:
   milestone-6-remote-mcp:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
     services:
       postgres:
         image: postgres:16-alpine
@@ -218,11 +255,14 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+
     steps:
       - uses: actions/checkout@v7
+
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+
       - name: Install locked remote MCP dependencies
         run: |
           npm --prefix packages/schema ci
@@ -236,10 +276,7 @@ jobs:
           npm --prefix packages/persistence-postgres ci
           npm --prefix apps/mcp-server ci
           npm --prefix apps/mcp-http ci
-      - name: Build checked-in Vercel hosted bundle candidate
-        run: npx --yes esbuild@0.25.9 apps/mcp-http/src/hosted.ts --bundle --platform=node --format=esm --target=node22 --outfile=/tmp/hosted.bundle.mjs
-      - name: Verify checked-in Vercel hosted bundle is current
-        run: cmp --silent /tmp/hosted.bundle.mjs api/hosted.bundle.mjs || { echo "api/hosted.bundle.mjs is stale; regenerate with esbuild@0.25.9"; exit 1; }
+
       - name: Run Milestone 6 remote MCP gate
         run: npm run m6:conformance
         env:
@@ -248,6 +285,7 @@ jobs:
   milestone-7-occurrence-ledger:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
     services:
       postgres:
         image: postgres:16-alpine
@@ -262,24 +300,42 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+
     steps:
       - uses: actions/checkout@v7
+
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
       - name: Install protocol validation dependencies
         run: python -m pip install -r requirements-dev.txt
+
       - name: Install locked occurrence dependencies
-        run: npm --prefix packages/occurrence-core ci
+        run: |
+          npm --prefix packages/protocol-runtime ci
+          npm --prefix packages/delivery-core ci
+          npm --prefix packages/delivery-consumer ci
+          npm --prefix packages/occurrence-core ci
+          npm --prefix packages/assessment-core ci
+          npm --prefix packages/job-registry-core ci
+          npm --prefix packages/persistence-postgres ci
+
       - name: Run Milestone 7 occurrence ledger gate
         run: npm run m7:conformance
+        env:
+          AGENT_FEED_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_feed_test
 
   milestone-8-job-proof:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
     services:
       postgres:
         image: postgres:16-alpine
@@ -294,24 +350,42 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+
     steps:
       - uses: actions/checkout@v7
+
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
       - name: Install protocol validation dependencies
         run: python -m pip install -r requirements-dev.txt
+
       - name: Install locked job-proof dependencies
-        run: npm --prefix packages/job-registry-core ci
+        run: |
+          npm --prefix packages/protocol-runtime ci
+          npm --prefix packages/delivery-core ci
+          npm --prefix packages/delivery-consumer ci
+          npm --prefix packages/occurrence-core ci
+          npm --prefix packages/assessment-core ci
+          npm --prefix packages/job-registry-core ci
+          npm --prefix packages/persistence-postgres ci
+
       - name: Run Milestone 8 independent job-proof gate
         run: npm run m8:conformance
+        env:
+          AGENT_FEED_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_feed_test
 
   milestone-9-job-registry:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
     services:
       postgres:
         image: postgres:16-alpine
@@ -326,24 +400,42 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+
     steps:
       - uses: actions/checkout@v7
+
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
       - name: Install protocol validation dependencies
         run: python -m pip install -r requirements-dev.txt
+
       - name: Install locked job-registry dependencies
-        run: npm --prefix packages/job-registry-core ci
+        run: |
+          npm --prefix packages/protocol-runtime ci
+          npm --prefix packages/delivery-core ci
+          npm --prefix packages/delivery-consumer ci
+          npm --prefix packages/occurrence-core ci
+          npm --prefix packages/assessment-core ci
+          npm --prefix packages/job-registry-core ci
+          npm --prefix packages/persistence-postgres ci
+
       - name: Run Milestone 9 portable job-registry gate
         run: npm run m9:conformance
+        env:
+          AGENT_FEED_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_feed_test
 
   milestone-10-control-plane:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
     services:
       postgres:
         image: postgres:16-alpine
@@ -358,42 +450,85 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+
     steps:
       - uses: actions/checkout@v7
+
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
       - name: Install protocol validation dependencies
         run: python -m pip install -r requirements-dev.txt
+
       - name: Install locked control-plane dependencies
-        run: npm --prefix packages/operations-core ci
+        run: |
+          npm --prefix packages/protocol-runtime ci
+          npm --prefix packages/delivery-core ci
+          npm --prefix packages/delivery-consumer ci
+          npm --prefix packages/occurrence-core ci
+          npm --prefix packages/assessment-core ci
+          npm --prefix packages/job-registry-core ci
+          npm --prefix packages/persistence-postgres ci
+          npm --prefix packages/control-plane-core ci
+          npm --prefix packages/control-plane-postgres ci
+
       - name: Run Milestone 10 tenant-scoped control-plane gate
         run: npm run m10:conformance
+        env:
+          AGENT_FEED_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_feed_test
 
   milestone-11-provider-conformance:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
     steps:
       - uses: actions/checkout@v7
+
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
       - name: Install protocol validation dependencies
         run: python -m pip install -r requirements-dev.txt
+
       - name: Install locked provider-conformance dependencies
-        run: npm --prefix packages/schema ci
+        run: |
+          npm --prefix packages/schema ci
+          npm --prefix packages/protocol-runtime ci
+          npm --prefix packages/delivery-core ci
+          npm --prefix packages/delivery-consumer ci
+          npm --prefix packages/occurrence-core ci
+          npm --prefix packages/assessment-core ci
+          npm --prefix packages/job-registry-core ci
+          npm --prefix packages/persistence-postgres ci
+          npm --prefix packages/producer-service ci
+          npm --prefix packages/adapters/local-file ci
+          npm --prefix packages/adapters/chatgpt-manual-export ci
+          npm --prefix packages/adapters/claude-hook ci
+          npm --prefix packages/adapters/rest ci
+          npm --prefix apps/mcp-server ci
+          npm --prefix packages/provider-conformance-core ci
+
       - name: Run Milestone 11 multi-provider conformance gate
         run: npm run m11:conformance
 
   milestone-12-utility-feedback:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
     services:
       postgres:
         image: postgres:16-alpine
@@ -408,17 +543,36 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+
     steps:
       - uses: actions/checkout@v7
+
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
       - name: Install protocol validation dependencies
         run: python -m pip install -r requirements-dev.txt
+
       - name: Install locked utility-feedback dependencies
-        run: npm --prefix packages/operations-core ci
+        run: |
+          npm --prefix packages/protocol-runtime ci
+          npm --prefix packages/delivery-core ci
+          npm --prefix packages/delivery-consumer ci
+          npm --prefix packages/occurrence-core ci
+          npm --prefix packages/assessment-core ci
+          npm --prefix packages/job-registry-core ci
+          npm --prefix packages/utility-feedback-core ci
+          npm --prefix packages/utility-feedback-service ci
+          npm --prefix packages/persistence-postgres ci
+
       - name: Run Milestone 12 utility-feedback gate
         run: npm run m12:conformance
+        env:
+          AGENT_FEED_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/agent_feed_test
