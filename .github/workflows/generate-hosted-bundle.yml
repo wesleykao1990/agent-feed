@@ -6,6 +6,7 @@ on:
       - "apps/mcp-http/src/**"
       - "apps/mcp-http/api/**"
       - "packages/**"
+      - "vercel.json"
       - ".github/workflows/generate-hosted-bundle.yml"
 
 permissions:
@@ -21,6 +22,8 @@ jobs:
           node-version: 22
       - name: Install remote MCP dependencies
         run: npx --yes pnpm@10.15.1 install --no-frozen-lockfile --filter @agent-feed/mcp-http...
+      - name: Build generated schema dependency
+        run: npm --prefix packages/schema run build
       - name: Generate self-contained hosted bundle
         run: npx --yes esbuild@0.25.9 apps/mcp-http/src/hosted.ts --bundle --platform=node --format=esm --target=node22 --outfile=hosted.bundle.mjs
       - name: Upload hosted bundle
