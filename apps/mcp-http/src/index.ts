@@ -7,7 +7,7 @@ export {
   principalFromAuthInfo,
 } from "./auth.ts";
 export type { AccessTokenVerifier, PilotOAuthOptions } from "./auth.ts";
-export { createMcpHttpGateway } from "./gateway.ts";
+export { CHATGPT_ORIGIN, createMcpHttpGateway } from "./gateway.ts";
 export type { McpHttpGateway, McpHttpGatewayOptions } from "./gateway.ts";
 export { createNodeGatewayServer } from "./node-server.ts";
 export type { NodeGatewayServerOptions } from "./node-server.ts";

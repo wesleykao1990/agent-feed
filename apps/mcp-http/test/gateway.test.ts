@@ -5,6 +5,7 @@ import { OAuthError, OAuthErrorCode, type AuthInfo } from "@modelcontextprotocol
 import type { ProducerPrincipal } from "@agent-feed/producer-service";
 import {
   AUTH_PRINCIPAL_KEY,
+  CHATGPT_ORIGIN,
   MCP_WRITE_SCOPE,
   PilotOAuthProvider,
   createMcpHttpGateway,
@@ -86,6 +87,16 @@ function mcpRequest(body: Record<string, unknown>, token = "valid-token", header
 });
 }
 
+async function mcpResponseJson(response: Response): Promise<Record<string, unknown>> {
+  const text = await response.text();
+  if (response.headers.get("content-type")?.startsWith("text/event-stream")) {
+    const data = text.split("\n").find((line) => line.startsWith("data: "))?.slice(6);
+    assert.notEqual(data, undefined, text);
+    return JSON.parse(data!) as Record<string, unknown>;
+  }
+  return JSON.parse(text) as Record<string, unknown>;
+}
+
 function beginArguments(): Record<string, unknown> {
   return {
     protocol_version: "0.1",
@@ -117,7 +128,12 @@ test("gateway requires bounded bearer auth and advertises protected-resource dis
 
 test("gateway exposes exactly the shared lifecycle tools over modern Streamable HTTP", async () => {
   const service = new FakeService();
-  const gateway = createMcpHttpGateway({ public_url: PUBLIC_URL, service, verifier: new FixedVerifier() });
+  const gateway = createMcpHttpGateway({
+    public_url: PUBLIC_URL,
+    service,
+    verifier: new FixedVerifier(),
+    enable_bounded_run: true,
+  });
   try {
     const response = await gateway.fetch(mcpRequest({
       jsonrpc: "2.0",
@@ -130,8 +146,98 @@ test("gateway exposes exactly the shared lifecycle tools over modern Streamable 
     const result = body.result as Record<string, unknown>;
     assert.equal(result.resultType, "complete");
     const names = (result.tools as Array<Record<string, unknown>>).map((tool) => tool.name);
-    assert.deepEqual(names, ["begin_run", "submit_batch", "complete_run"]);
+    assert.deepEqual(names, ["begin_run", "submit_batch", "complete_run", "submit_bounded_run"]);
     assert.equal(service.calls.length, 0);
+  } finally {
+    await gateway.close();
+  }
+});
+
+test("gateway completes the legacy initialize and tools/list discovery sequence", async () => {
+  const service = new FakeService();
+  const gateway = createMcpHttpGateway({
+    public_url: PUBLIC_URL,
+    service,
+    verifier: new FixedVerifier(),
+    enable_bounded_run: true,
+  });
+  try {
+    const initialize = await gateway.fetch(mcpRequest({
+      jsonrpc: "2.0",
+      id: "initialize-1",
+      method: "initialize",
+      params: {
+        protocolVersion: "2025-11-25",
+        capabilities: {},
+        clientInfo: { name: "chatgpt-contract-test", version: "1" },
+      },
+    }, "valid-token", { "mcp-protocol-version": "2025-11-25" }));
+    assert.equal(initialize.status, 200, await initialize.clone().text());
+    const initializeBody = await mcpResponseJson(initialize);
+    assert.equal((initializeBody.result as Record<string, unknown>).protocolVersion, "2025-11-25");
+
+    const initialized = await gateway.fetch(mcpRequest({
+      jsonrpc: "2.0",
+      method: "notifications/initialized",
+    }, "valid-token", { "mcp-protocol-version": "2025-11-25" }));
+    assert.equal(initialized.status, 202, await initialized.clone().text());
+
+    const listed = await gateway.fetch(mcpRequest({
+      jsonrpc: "2.0",
+      id: "list-after-initialize-1",
+      method: "tools/list",
+    }, "valid-token", { "mcp-protocol-version": "2025-11-25" }));
+    assert.equal(listed.status, 200, await listed.clone().text());
+    const listBody = await mcpResponseJson(listed);
+    const names = (((listBody.result as Record<string, unknown>).tools as Array<Record<string, unknown>>)
+      .map((tool) => tool.name));
+    assert.deepEqual(names, ["begin_run", "submit_batch", "complete_run", "submit_bounded_run"]);
+  } finally {
+    await gateway.close();
+  }
+});
+
+test("gateway accepts ChatGPT CORS preflight and preserves the OAuth challenge", async () => {
+  const gateway = createMcpHttpGateway({
+    public_url: PUBLIC_URL,
+    service: new FakeService(),
+    verifier: new FixedVerifier(),
+    allowed_origins: [CHATGPT_ORIGIN],
+  });
+  try {
+    const preflight = request("/mcp", {
+      method: "OPTIONS",
+      headers: {
+        origin: CHATGPT_ORIGIN,
+        "access-control-request-method": "POST",
+        "access-control-request-headers": "authorization,content-type,mcp-protocol-version",
+      },
+    });
+    const preflightResponse = await gateway.fetch(preflight);
+    assert.equal(preflightResponse.status, 204);
+    assert.equal(preflightResponse.headers.get("access-control-allow-origin"), CHATGPT_ORIGIN);
+    assert.match(preflightResponse.headers.get("access-control-allow-headers") ?? "", /mcp-protocol-version/u);
+
+    const unauthenticated = await gateway.fetch(request("/mcp", {
+      method: "POST",
+      headers: {
+        accept: "application/json, text/event-stream",
+        "content-type": "application/json",
+        origin: CHATGPT_ORIGIN,
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "initialize",
+        params: { protocolVersion: "2025-11-25", capabilities: {}, clientInfo: { name: "ChatGPT", version: "1" } },
+      }),
+    }));
+    assert.equal(unauthenticated.status, 401, await unauthenticated.clone().text());
+    assert.equal(unauthenticated.headers.get("access-control-allow-origin"), CHATGPT_ORIGIN);
+    assert.match(
+      unauthenticated.headers.get("www-authenticate") ?? "",
+      /resource_metadata="https:\/\/feed\.example\/\.well-known\/oauth-protected-resource\/mcp"/u,
+    );
   } finally {
     await gateway.close();
   }

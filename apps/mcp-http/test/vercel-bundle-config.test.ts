@@ -6,6 +6,7 @@ import test from "node:test";
 const configUrl = new URL("../../../vercel.json", import.meta.url);
 const buildScriptUrl = new URL("../../../scripts/vercel_build.sh", import.meta.url);
 const entrypointUrl = new URL("../../../api/gateway.ts", import.meta.url);
+const hostedUrl = new URL("../src/hosted.ts", import.meta.url);
 const bundleUrl = new URL("../../../api/hosted.bundle.mjs", import.meta.url);
 
 test("Vercel deterministically rebuilds the hosted MCP bundle behind diagnostic boundaries", async () => {
@@ -29,6 +30,7 @@ test("Vercel deterministically rebuilds the hosted MCP bundle behind diagnostic 
   assert.match(buildScript, /public\/\.vercel-output-sentinel/);
 
   const entrypoint = await readFile(entrypointUrl, "utf8");
+  const hosted = await readFile(hostedUrl, "utf8");
   assert.match(entrypoint, /publicPath === "\/health"/);
   assert.match(entrypoint, /stage: "gateway_bootstrap"/);
   assert.match(entrypoint, /probeRuntime/);
@@ -38,6 +40,8 @@ test("Vercel deterministically rebuilds the hosted MCP bundle behind diagnostic 
   assert.match(entrypoint, /await import\("\.\/hosted\.bundle\.mjs"\)/);
   assert.match(entrypoint, /error_message:/);
   assert.doesNotMatch(entrypoint, /@agent-feed\//);
+  assert.match(hosted, /CHATGPT_ORIGIN/);
+  assert.match(hosted, /allowed_origins:/);
 
   // hosted.bundle.mjs is intentionally generated and not committed. Build it
   // here so the conformance gate validates the exact artifact Vercel creates.

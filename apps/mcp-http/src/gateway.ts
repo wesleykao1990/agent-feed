@@ -18,6 +18,7 @@ import {
 } from "./auth.ts";
 
 const DEFAULT_MAX_BODY_BYTES = 1_048_576;
+export const CHATGPT_ORIGIN = "https://chatgpt.com" as const;
 
 export interface OAuthRouteProvider {
   metadata(): Record<string, unknown>;
