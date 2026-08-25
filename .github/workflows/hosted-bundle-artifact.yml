@@ -1,0 +1,33 @@
+name: Hosted bundle artifact
+
+on:
+  pull_request:
+    paths:
+      - "apps/mcp-http/**"
+      - "apps/mcp-server/**"
+      - "packages/**"
+      - "api/**"
+      - ".github/workflows/hosted-bundle-artifact.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-hosted-bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Install hosted MCP dependency graph
+        run: npx --yes pnpm@10.15.1 install --no-frozen-lockfile --filter @agent-feed/mcp-http...
+      - name: Build exact Vercel hosted bundle
+        run: npx --yes esbuild@0.25.9 apps/mcp-http/src/hosted.ts --bundle --platform=node --format=esm --target=node22 --outfile=hosted.bundle.mjs
+      - name: Upload exact hosted bundle
+        uses: actions/upload-artifact@v6
+        with:
+          name: hosted-vercel-bundle
+          path: hosted.bundle.mjs
+          if-no-files-found: error
+          retention-days: 1
