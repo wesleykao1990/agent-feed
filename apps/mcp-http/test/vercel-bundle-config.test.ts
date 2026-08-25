@@ -20,8 +20,9 @@ test("Vercel deterministically rebuilds the hosted MCP bundle behind diagnostic 
   assert.match(buildScript, /esbuild@0\.25\.9/);
   assert.match(buildScript, /apps\/mcp-http\/src\/hosted\.ts/);
   assert.match(buildScript, /--outfile=api\/hosted\.bundle\.mjs/);
+  assert.match(buildScript, /cp -R packages\/persistence-postgres\/migrations migrations/);
   assert.match(buildScript, /public\/\.vercel-output-sentinel/);
-  assert.equal(config.functions?.["api/gateway.ts"]?.includeFiles, undefined);
+  assert.equal(config.functions?.["api/gateway.ts"]?.includeFiles, "migrations/**");
 
   const entrypoint = await readFile(entrypointUrl, "utf8");
   assert.match(entrypoint, /publicPath === "\/health"/);
@@ -37,4 +38,5 @@ test("Vercel deterministically rebuilds the hosted MCP bundle behind diagnostic 
   const bundle = await readFile(bundleUrl, "utf8");
   assert.doesNotMatch(bundle, /bundle_placeholder_loaded/);
   assert.match(bundle, /hostedAgentFeedFetch/);
+  assert.match(bundle, /migrateAgentFeed/);
 });
