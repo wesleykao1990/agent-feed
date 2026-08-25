@@ -1,13 +1,19 @@
+import { createRequire } from "node:module";
+
 export const runtime = "nodejs";
 
 /**
- * Root Vercel Web Standard handler. Load the checked-in self-contained hosted
- * runtime inside fetch so cold-start/module-evaluation failures are returned as
- * structured diagnostics instead of FUNCTION_INVOCATION_FAILED.
+ * The checked-in esbuild ESM bundle contains CommonJS dependencies (notably
+ * node-postgres) whose generated interop helper expects Node's `require` to be
+ * available at runtime. Vercel evaluates this function as ESM, where `require`
+ * is otherwise absent. Expose a Node createRequire bridge before evaluating the
+ * hosted bundle, while keeping the import behind the diagnostic boundary.
  */
 export default {
   async fetch(request: Request): Promise<Response> {
     try {
+      const runtimeGlobal = globalThis as typeof globalThis & { require?: NodeRequire };
+      runtimeGlobal.require ??= createRequire(import.meta.url);
       const { hostedAgentFeedFetch } = await import("./hosted.bundle.mjs");
       const incoming = new URL(request.url);
       const publicPath = incoming.searchParams.get("__agent_feed_path");
