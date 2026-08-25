@@ -1,5 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "env": {
+    "AGENT_FEED_GITHUB_RELAY_REPOSITORY": "wesleykao1990/agent-feed",
+    "AGENT_FEED_GITHUB_RELAY_REPOSITORY_ID": "1337089949",
+    "AGENT_FEED_GITHUB_RELAY_REF": "refs/heads/main",
+    "AGENT_FEED_GITHUB_RELAY_WORKFLOW_REF": "wesleykao1990/agent-feed/.github/workflows/agent-feed-relay.yml@refs/heads/main"
+  },
   "rewrites": [
     { "source": "/mcp", "destination": "/api/gateway?__agent_feed_path=/mcp" },
     { "source": "/health", "destination": "/api/gateway?__agent_feed_path=/health" },

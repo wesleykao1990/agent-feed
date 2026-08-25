@@ -26,10 +26,23 @@ interface HostedRuntime {
   gateway: McpHttpGateway;
 }
 
+export interface GitHubRelayIdentity {
+  repository: string;
+  repository_id: string;
+  ref: string;
+  workflow_ref: string;
+}
+
 let runtimePromise: Promise<HostedRuntime> | undefined;
 
 function list(value: string | undefined): string[] {
   return (value ?? "").split(",").map((item) => item.trim()).filter(Boolean);
+}
+
+function nonEmpty(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  const normalized = value.trim();
+  return normalized.length === 0 ? undefined : normalized;
 }
 
 function positiveInteger(value: string | undefined, fallback: number): number {
@@ -49,31 +62,72 @@ function hostname(value: string | undefined): string | undefined {
   }
 }
 
-function githubActionsVerifier(
-  publicUrl: URL,
-  principal: ProducerPrincipal,
-): AccessTokenVerifier | undefined {
-  const repositoryId = process.env.VERCEL_GIT_REPO_ID;
-  const repositoryOwner = process.env.VERCEL_GIT_REPO_OWNER;
-  const repositorySlug = process.env.VERCEL_GIT_REPO_SLUG;
-  const commitRef = process.env.VERCEL_GIT_COMMIT_REF;
+/**
+ * Resolve the non-secret identity that GitHub Actions OIDC must match.
+ * Explicit Agent Feed settings are the production trust anchor. Vercel Git
+ * metadata remains a convenience fallback for older deployments. A partially
+ * configured explicit identity fails closed rather than silently weakening the
+ * binding.
+ */
+export function githubRelayIdentityFromEnvironment(
+  environment: NodeJS.ProcessEnv = process.env,
+): GitHubRelayIdentity | undefined {
+  const explicit = {
+    repository: nonEmpty(environment.AGENT_FEED_GITHUB_RELAY_REPOSITORY),
+    repository_id: nonEmpty(environment.AGENT_FEED_GITHUB_RELAY_REPOSITORY_ID),
+    ref: nonEmpty(environment.AGENT_FEED_GITHUB_RELAY_REF),
+    workflow_ref: nonEmpty(environment.AGENT_FEED_GITHUB_RELAY_WORKFLOW_REF),
+  };
+  const explicitValues = Object.values(explicit);
+  const explicitCount = explicitValues.filter(
+    (value): value is string => value !== undefined,
+  ).length;
+  if (explicitCount > 0 && explicitCount < explicitValues.length)
+    throw new Error("agent_feed_github_relay_config_incomplete");
+  if (explicitCount === explicitValues.length) {
+    return {
+      repository: explicit.repository!,
+      repository_id: explicit.repository_id!,
+      ref: explicit.ref!,
+      workflow_ref: explicit.workflow_ref!,
+    };
+  }
+
+  const repositoryId = nonEmpty(environment.VERCEL_GIT_REPO_ID);
+  const repositoryOwner = nonEmpty(environment.VERCEL_GIT_REPO_OWNER);
+  const repositorySlug = nonEmpty(environment.VERCEL_GIT_REPO_SLUG);
+  const commitRef = nonEmpty(environment.VERCEL_GIT_COMMIT_REF);
   if (
-    repositoryId === undefined || repositoryId === "" ||
-    repositoryOwner === undefined || repositoryOwner === "" ||
-    repositorySlug === undefined || repositorySlug === "" ||
-    commitRef === undefined || commitRef === ""
+    repositoryId === undefined ||
+    repositoryOwner === undefined ||
+    repositorySlug === undefined ||
+    commitRef === undefined
   ) {
     return undefined;
   }
   const repository = `${repositoryOwner}/${repositorySlug}`;
   const ref = `refs/heads/${commitRef}`;
-  return new GitHubActionsOidcVerifier({
-    resource: publicUrl,
-    principal,
+  return {
     repository,
     repository_id: repositoryId,
     ref,
     workflow_ref: `${repository}/.github/workflows/agent-feed-relay.yml@${ref}`,
+  };
+}
+
+function githubActionsVerifier(
+  publicUrl: URL,
+  principal: ProducerPrincipal,
+): AccessTokenVerifier | undefined {
+  const identity = githubRelayIdentityFromEnvironment();
+  if (identity === undefined) return undefined;
+  return new GitHubActionsOidcVerifier({
+    resource: publicUrl,
+    principal,
+    repository: identity.repository,
+    repository_id: identity.repository_id,
+    ref: identity.ref,
+    workflow_ref: identity.workflow_ref,
   });
 }
 
