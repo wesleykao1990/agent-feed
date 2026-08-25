@@ -20,9 +20,12 @@ test("Vercel deterministically rebuilds the hosted MCP bundle behind diagnostic 
   assert.match(buildScript, /esbuild@0\.25\.9/);
   assert.match(buildScript, /apps\/mcp-http\/src\/hosted\.ts/);
   assert.match(buildScript, /--outfile=api\/hosted\.bundle\.mjs/);
+
+  // The bundle lives under api/, and persistence resolves ../migrations/* from
+  // import.meta.url, so the migration assets must be staged at repository root.
   assert.match(buildScript, /cp -R packages\/persistence-postgres\/migrations migrations/);
-  assert.match(buildScript, /public\/\.vercel-output-sentinel/);
   assert.equal(config.functions?.["api/gateway.ts"]?.includeFiles, "migrations/**");
+  assert.match(buildScript, /public\/\.vercel-output-sentinel/);
 
   const entrypoint = await readFile(entrypointUrl, "utf8");
   assert.match(entrypoint, /publicPath === "\/health"/);
