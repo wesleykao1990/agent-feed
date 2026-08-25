@@ -6,7 +6,7 @@ const configUrl = new URL("../../../vercel.json", import.meta.url);
 const entrypointUrl = new URL("../../../api/gateway.ts", import.meta.url);
 const bundleUrl = new URL("../../../api/hosted.bundle.mjs", import.meta.url);
 
-test("Vercel statically imports a checked-in self-contained hosted MCP bundle", async () => {
+test("Vercel loads a checked-in self-contained hosted MCP bundle behind a diagnostic boundary", async () => {
   const config = JSON.parse(await readFile(configUrl, "utf8"));
   const installCommand = config.installCommand as string;
 
@@ -15,8 +15,9 @@ test("Vercel statically imports a checked-in self-contained hosted MCP bundle", 
   assert.equal(config.functions?.["api/gateway.ts"]?.includeFiles, undefined);
 
   const entrypoint = await readFile(entrypointUrl, "utf8");
-  assert.match(entrypoint, /import \{ hostedAgentFeedFetch \} from "\.\/hosted\.bundle\.mjs";/);
-  assert.doesNotMatch(entrypoint, /import\("\.\/hosted\.bundle\.mjs"\)/);
+  assert.match(entrypoint, /await import\("\.\/hosted\.bundle\.mjs"\)/);
+  assert.match(entrypoint, /stage: "hosted_bundle_evaluation"/);
+  assert.match(entrypoint, /error_message:/);
   assert.doesNotMatch(entrypoint, /@agent-feed\//);
 
   const bundle = await readFile(bundleUrl, "utf8");
