@@ -7,7 +7,7 @@ const buildScriptUrl = new URL("../../../scripts/vercel_build.sh", import.meta.u
 const entrypointUrl = new URL("../../../api/gateway.ts", import.meta.url);
 const bundleUrl = new URL("../../../api/hosted.bundle.mjs", import.meta.url);
 
-test("Vercel deterministically rebuilds the hosted MCP bundle behind a diagnostic boundary", async () => {
+test("Vercel deterministically rebuilds the hosted MCP bundle behind diagnostic boundaries", async () => {
   const config = JSON.parse(await readFile(configUrl, "utf8"));
   const installCommand = config.installCommand as string;
   const buildCommand = config.buildCommand as string;
@@ -26,9 +26,11 @@ test("Vercel deterministically rebuilds the hosted MCP bundle behind a diagnosti
   const entrypoint = await readFile(entrypointUrl, "utf8");
   assert.match(entrypoint, /publicPath === "\/health"/);
   assert.match(entrypoint, /stage: "gateway_bootstrap"/);
+  assert.match(entrypoint, /probeRuntime/);
+  assert.match(entrypoint, /"hosted_runtime_probe"/);
+  assert.match(entrypoint, /stage = "hosted_bundle_evaluation"/);
   assert.match(entrypoint, /createRequire\(import\.meta\.url\)/);
   assert.match(entrypoint, /await import\("\.\/hosted\.bundle\.mjs"\)/);
-  assert.match(entrypoint, /stage: "hosted_bundle_evaluation"/);
   assert.match(entrypoint, /error_message:/);
   assert.doesNotMatch(entrypoint, /@agent-feed\//);
 
