@@ -55,7 +55,7 @@ function claims(extra: Record<string, unknown> = {}): Record<string, unknown> {
     actor: "wesleykao1990",
     ref: REF,
     event_name: "issues",
-    job_workflow_ref: WORKFLOW_REF,
+    workflow_ref: WORKFLOW_REF,
     runner_environment: "github-hosted",
     iat: NOW - 10,
     nbf: NOW - 10,
@@ -124,7 +124,7 @@ test("rejects a token from any other workflow or branch", async () => {
   const { verifier, privateKey } = setup();
   await assert.rejects(
     verifier.verifyAccessToken(token(privateKey, claims({
-      job_workflow_ref: `${REPOSITORY}/.github/workflows/other.yml@${REF}`,
+      workflow_ref: `${REPOSITORY}/.github/workflows/other.yml@${REF}`,
     }))),
     /Invalid access token/u,
   );
